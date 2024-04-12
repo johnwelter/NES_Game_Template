@@ -103,6 +103,7 @@ CallDynamicSubroutine:
 
   
   .include "Routines/BackgroundUtil.asm"
+  .include "Routines/DebugRoutines.asm"
   
   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

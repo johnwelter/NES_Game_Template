@@ -207,67 +207,64 @@
     2                       ;;move the mouse cursor around
     3                     
     4  00:C091  AD 0D 00          LDA mouseData+1
-    5  00:C094  29 70             AND #$70
-    6                             ;;BNE .leaveEarly
-    7  00:C096  F0 08             BEQ .hasController
-    8                             
-    9  00:C098  A9 00             LDA #$00
-   10  00:C09A  8D 0E 00          STA mouseData+2
-   11  00:C09D  8D 0F 00          STA mouseData+3
-   12                             
-   13  00:C0A0            .hasController:
-   14                             ;;the first byte has only one of two options- 8x or FF. so if it's 8, we know the mouse is
-   15                             ;;plugged in
-   16                             
-   17                             ;;now, use the top nibble of the next two bytes for the Y and X speed respectively
-   18                             
-   19  00:C0A0  AD 0E 00          LDA mouseData+2
-   20  00:C0A3  29 0F             AND #$0F
-   21  00:C0A5  8D 10 00          STA mouseVelocity
-   22                             
-   23  00:C0A8  AD 0F 00          LDA mouseData+3
-   24  00:C0AB  29 0F             AND #$0F
-   25  00:C0AD  8D 11 00          STA mouseVelocity+1
-   26                             
-   27  00:C0B0  AD 0E 00          LDA mouseData+2
-   28  00:C0B3  29 80             AND #$80
-   29  00:C0B5  F0 0C             BEQ .addVert
-   30  00:C0B7  A2 00             LDX #SPRITE_YPOS
-   31  00:C0B9  BD 00 02          LDA SPRITE_DATA, x
-   32  00:C0BC  38                SEC
-   33  00:C0BD  ED 10 00          SBC mouseVelocity
-   34  00:C0C0  4C CC C0          JMP .completeVertMove
-   35                             
-   36  00:C0C3            .addVert:
-   37  00:C0C3  A2 00             LDX #SPRITE_YPOS
-   38  00:C0C5  BD 00 02          LDA SPRITE_DATA, x
-   39  00:C0C8  18                CLC
-   40  00:C0C9  6D 10 00          ADC mouseVelocity
-   41                             
-   42  00:C0CC            .completeVertMove:
-   43  00:C0CC  9D 00 02          STA SPRITE_DATA, x
-   44                     
-   45  00:C0CF  AD 0F 00          LDA mouseData+3
-   46  00:C0D2  29 80             AND #$80
-   47  00:C0D4  F0 0C             BEQ .addHori
-   48  00:C0D6  A2 03             LDX #SPRITE_XPOS
-   49  00:C0D8  BD 00 02          LDA SPRITE_DATA, x
-   50  00:C0DB  38                SEC
-   51  00:C0DC  ED 11 00          SBC mouseVelocity+1
-   52  00:C0DF  4C EB C0          JMP .completeHoriMove
-   53                             
-   54  00:C0E2            .addHori:
-   55  00:C0E2  A2 03             LDX #SPRITE_XPOS
-   56  00:C0E4  BD 00 02          LDA SPRITE_DATA, x
-   57  00:C0E7  18                CLC
-   58  00:C0E8  6D 11 00          ADC mouseVelocity+1
-   59  00:C0EB            .completeHoriMove:
-   60  00:C0EB  9D 00 02          STA SPRITE_DATA, x
-   61                       
-   62                     ;;.leaveEarly:
-   63                     
-   64                     
-   65  00:C0EE  60          RTS
+    5  00:C094  29 0E             AND #$0E
+    6  00:C096  F0 08             BEQ .hasMouse
+    7                             
+    8  00:C098  A9 00             LDA #$00
+    9  00:C09A  8D 0E 00          STA mouseData+2
+   10  00:C09D  8D 0F 00          STA mouseData+3
+   11                             
+   12  00:C0A0            .hasMouse:
+   13                             ;;the first byte has only one of two options- 8x or FF. so if it's 8, we know the mouse is
+   14                             ;;plugged in
+   15                             
+   16                             ;;now, use the top nibble of the next two bytes for the Y and X speed respectively
+   17                             
+   18  00:C0A0  AD 0E 00          LDA mouseData+2
+   19  00:C0A3  29 0F             AND #$0F
+   20  00:C0A5  8D 10 00          STA mouseVelocity
+   21                             
+   22  00:C0A8  AD 0F 00          LDA mouseData+3
+   23  00:C0AB  29 0F             AND #$0F
+   24  00:C0AD  8D 11 00          STA mouseVelocity+1
+   25                             
+   26  00:C0B0  AD 0E 00          LDA mouseData+2
+   27  00:C0B3  29 80             AND #$80
+   28  00:C0B5  F0 0C             BEQ .addVert
+   29  00:C0B7  A2 00             LDX #SPRITE_YPOS
+   30  00:C0B9  BD 00 02          LDA SPRITE_DATA, x
+   31  00:C0BC  38                SEC
+   32  00:C0BD  ED 10 00          SBC mouseVelocity
+   33  00:C0C0  4C CC C0          JMP .completeVertMove
+   34                             
+   35  00:C0C3            .addVert:
+   36  00:C0C3  A2 00             LDX #SPRITE_YPOS
+   37  00:C0C5  BD 00 02          LDA SPRITE_DATA, x
+   38  00:C0C8  18                CLC
+   39  00:C0C9  6D 10 00          ADC mouseVelocity
+   40                             
+   41  00:C0CC            .completeVertMove:
+   42  00:C0CC  9D 00 02          STA SPRITE_DATA, x
+   43                     
+   44  00:C0CF  AD 0F 00          LDA mouseData+3
+   45  00:C0D2  29 80             AND #$80
+   46  00:C0D4  F0 0C             BEQ .addHori
+   47  00:C0D6  A2 03             LDX #SPRITE_XPOS
+   48  00:C0D8  BD 00 02          LDA SPRITE_DATA, x
+   49  00:C0DB  38                SEC
+   50  00:C0DC  ED 11 00          SBC mouseVelocity+1
+   51  00:C0DF  4C EB C0          JMP .completeHoriMove
+   52                             
+   53  00:C0E2            .addHori:
+   54  00:C0E2  A2 03             LDX #SPRITE_XPOS
+   55  00:C0E4  BD 00 02          LDA SPRITE_DATA, x
+   56  00:C0E7  18                CLC
+   57  00:C0E8  6D 11 00          ADC mouseVelocity+1
+   58  00:C0EB            .completeHoriMove:
+   59  00:C0EB  9D 00 02          STA SPRITE_DATA, x
+   60                       
+   61                     
+   62  00:C0EE  60          RTS
 #[1]   Kyudojo.asm
 #[2]   States/UpdateGameOver.asm
    98                       .include "States/UpdateGameOver.asm"
@@ -381,159 +378,157 @@
    75                             
    76                       
 #[1]   Kyudojo.asm
-  106                       
+#[2]   Routines/DebugRoutines.asm
+  106                       .include "Routines/DebugRoutines.asm"
+    1  00:C170            DebugDraws:
+    2                       ;;draw a debug tile at the top right corner
+    3  00:C170  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
+    4  00:C173  A9 20       LDA #$20
+    5  00:C175  8D 06 20    STA $2006             ; write the high byte of $2000 address
+    6  00:C178  A9 42       LDA #$42
+    7  00:C17A  8D 06 20    STA $2006             ; write the low byte of $2000 address
+    8                       
+    9  00:C17D  A2 00       LDX #$00
+   10                     
+   11  00:C17F            drawDebugMouseData:
+   12  00:C17F  BD 0D 00    LDA mouseData+1, x
+   13  00:C182  4A          LSR A
+   14  00:C183  4A          LSR A
+   15  00:C184  4A          LSR A
+   16  00:C185  4A          LSR A
+   17  00:C186  8D 07 20    STA $2007
+   18  00:C189  BD 0D 00    LDA mouseData+1, x
+   19  00:C18C  29 0F       AND #$0F
+   20  00:C18E  8D 07 20    STA $2007
+   21  00:C191  A9 24       LDA #$24
+   22  00:C193  8D 07 20    STA $2007
+   23  00:C196  E8          INX
+   24  00:C197  E0 04       CPX #$04
+   25  00:C199  D0 E4       BNE drawDebugMouseData
+   26                       
+   27  00:C19B  60          RTS
+   28                       
+#[1]   Kyudojo.asm
   107                       
-  108                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  109                     ;;     NMI                  ;;
-  110                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  111                     
+  108                       
+  109                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  110                     ;;     NMI                  ;;
+  111                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  112                     
 #[2]   Routines/NMI.asm
-  112                       .include "Routines/NMI.asm"
+  113                       .include "Routines/NMI.asm"
     1                      
-    2  00:C170            NMI:
+    2  00:C19C            NMI:
     3                     
-    4  00:C170  48          PHA                              ;protect the registers
-    5  00:C171  8A          TXA
-    6  00:C172  48          PHA
-    7  00:C173  98          TYA
-    8  00:C174  48          PHA
+    4  00:C19C  48          PHA                              ;protect the registers
+    5  00:C19D  8A          TXA
+    6  00:C19E  48          PHA
+    7  00:C19F  98          TYA
+    8  00:C1A0  48          PHA
     9                       
-   10  00:C175            nmi_started:
-   11  00:C175  A9 00       LDA #$00
-   12  00:C177  8D 03 20    STA $2003       ; set the low byte (00) of the RAM address
-   13  00:C17A  A9 02       LDA #$02
-   14  00:C17C  8D 14 40    STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+   10  00:C1A1            nmi_started:
+   11  00:C1A1  A9 00       LDA #$00
+   12  00:C1A3  8D 03 20    STA $2003       ; set the low byte (00) of the RAM address
+   13  00:C1A6  A9 02       LDA #$02
+   14  00:C1A8  8D 14 40    STA $4014       ; set the high byte (02) of the RAM address, start the transfer
    15                       
-   16                       
-   17                       
-   18                       
-   19  00:C17F  AD 06 00    LDA game_mode_switching
-   20  00:C182  F0 03       BEQ update_controllers
-   21  00:C184  4C FE C1    JMP WakeUp
-   22                     
-   23  00:C187            update_controllers:
-   24                     
+   16  00:C1AB  AD 06 00    LDA game_mode_switching
+   17  00:C1AE  F0 03       BEQ update_NMI
+   18  00:C1B0  4C FF C1    JMP WakeUp
+   19                     
+   20  00:C1B3            update_NMI:
+   21                     
 #[3]   Routines/ReadControllers.asm
-   25                       .include "Routines/ReadControllers.asm"
+   22                       .include "Routines/ReadControllers.asm"
     1                     
-    2  00:C187  8A            TXA
-    3  00:C188  48                PHA
-    4  00:C189  98                TYA
-    5  00:C18A  48                PHA
+    2  00:C1B3  8A            TXA
+    3  00:C1B4  48                PHA
+    4  00:C1B5  98                TYA
+    5  00:C1B6  48                PHA
     6                     
-    7  00:C18B  A2 00             LDX #$00
+    7  00:C1B7  A2 00             LDX #$00
     8                     
-    9  00:C18D            GamePadCheck:
-   10  00:C18D  A9 01             LDA #$01        ;load 1
-   11  00:C18F  8D 16 40          STA $4016       ; turn latch on
+    9  00:C1B9            GamePadCheck:
+   10  00:C1B9  A9 01             LDA #$01        ;load 1
+   11  00:C1BB  8D 16 40          STA $4016       ; turn latch on
    12                             ;STA gamepad2
-   13  00:C192  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
-   14  00:C193  8D 16 40          STA $4016       ;turn latch off
+   13  00:C1BE  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
+   14  00:C1BF  8D 16 40          STA $4016       ;turn latch off
    15                             
    16                             ;do a ring counter technique- load %10000000 into both
-   17  00:C196  A9 80             LDA #$80
-   18  00:C198  8D 0B 00          STA gamepad
+   17  00:C1C2  A9 80             LDA #$80
+   18  00:C1C4  8D 0B 00          STA gamepad
    19                     
-   20  00:C19B            ReadControllerABytesLoop:
-   21  00:C19B  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
-   22  00:C19E  29 03             AND #%00000011  ;acc: %00000001 c: 0
-   23  00:C1A0  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
+   20  00:C1C7            ReadControllerABytesLoop:
+   21  00:C1C7  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
+   22  00:C1CA  29 03             AND #%00000011  ;acc: %00000001 c: 0
+   23  00:C1CC  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
    24                             ;ror shifts everything right one position: carry->bit 7, bit 0-> carry
-   25  00:C1A2  6E 0B 00          ROR gamepad             ;gamepad: %11000000
+   25  00:C1CE  6E 0B 00          ROR gamepad             ;gamepad: %11000000
    26                             ;eventually, the ROR sends out the 1 instead of all the leading 0s, BCC (branch carry clear) gets the 1 and does not loop
-   27  00:C1A5  90 F4             BCC ReadControllerABytesLoop
+   27  00:C1D1  90 F4             BCC ReadControllerABytesLoop
    28                             
    29                     ;gotta do this 4 times, and we need to ROL not ROR
    30                     ;first byte is junk
    31                     ;2nd byte: RLSS0001
    32                     ;3rd byte: yYYYYYYY
    33                     ;4th byte: xXXXXXXX
-   34  00:C1A7            SetMouseRing:
-   35  00:C1A7  A9 01             LDA #$01        
-   36  00:C1A9  9D 0C 00          STA mouseData, X
-   37  00:C1AC            ReadMouseBytesLoop:
-   38  00:C1AC  AD 17 40          LDA $4017
-   39  00:C1AF  29 03             AND #%00000011
-   40  00:C1B1  C9 01             CMP #%00000001
-   41  00:C1B3  3E 0C 00          ROL mouseData, X
-   42  00:C1B6  90 F4             BCC ReadMouseBytesLoop
+   34  00:C1D3            SetMouseRing:
+   35  00:C1D3  A9 01             LDA #$01        
+   36  00:C1D5  9D 0C 00          STA mouseData, X
+   37  00:C1D8            ReadMouseBytesLoop:
+   38  00:C1D8  AD 17 40          LDA $4017
+   39  00:C1DB  29 03             AND #%00000011
+   40  00:C1DD  C9 01             CMP #%00000001
+   41  00:C1DF  3E 0C 00          ROL mouseData, X
+   42  00:C1E2  90 F4             BCC ReadMouseBytesLoop
    43                             
-   44  00:C1B8  E8                INX ; increment X
-   45  00:C1B9  E0 04             CPX #$04
-   46  00:C1BB  D0 EA             BNE SetMouseRing
+   44  00:C1E4  E8                INX ; increment X
+   45  00:C1E5  E0 04             CPX #$04
+   46  00:C1E7  D0 EA             BNE SetMouseRing
    47                             
    48                     ;return x and y... before resetting them all over again- always good to make sure we're clean
-   49  00:C1BD  68                PLA
-   50  00:C1BE  A8                TAY
-   51  00:C1BF  68                PLA
-   52  00:C1C0  AA                TAX     
+   49  00:C1E9  68                PLA
+   50  00:C1EA  A8                TAY
+   51  00:C1EB  68                PLA
+   52  00:C1EC  AA                TAX     
    53                             
    54                             
 #[2]   Routines/NMI.asm
-   26                       
-   27                       
-   28                       
-   29                       ;;draw a debug tile at the top right corner
-   30  00:C1C1  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
-   31  00:C1C4  A9 20       LDA #$20
-   32  00:C1C6  8D 06 20    STA $2006             ; write the high byte of $2000 address
-   33  00:C1C9  A9 42       LDA #$42
-   34  00:C1CB  8D 06 20    STA $2006             ; write the low byte of $2000 address
-   35                       
-   36  00:C1CE  A2 00       LDX #$00
-   37                     
-   38  00:C1D0            drawDebugMouseData:
-   39  00:C1D0  BD 0D 00    LDA mouseData+1, x
-   40  00:C1D3  4A          LSR A
-   41  00:C1D4  4A          LSR A
-   42  00:C1D5  4A          LSR A
-   43  00:C1D6  4A          LSR A
-   44  00:C1D7  8D 07 20    STA $2007
-   45  00:C1DA  BD 0D 00    LDA mouseData+1, x
-   46  00:C1DD  29 0F       AND #$0F
-   47  00:C1DF  8D 07 20    STA $2007
-   48  00:C1E2  A9 24       LDA #$24
-   49  00:C1E4  8D 07 20    STA $2007
-   50  00:C1E7  E8          INX
-   51  00:C1E8  E0 04       CPX #$04
-   52  00:C1EA  D0 E4       BNE drawDebugMouseData
-   53                       
-   54                       
-   55                       ;;This is the PPU clean up section, so rendering the next frame starts properly.
-   56  00:C1EC  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
-   57  00:C1EE  8D 00 20    STA $2000
-   58  00:C1F1  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
-   59  00:C1F3  8D 01 20    STA $2001
-   60  00:C1F6  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
-   61  00:C1F8  8D 05 20    STA $2005
-   62  00:C1FB  8D 05 20    STA $2005
-   63                       
-   64  00:C1FE            WakeUp:
-   65  00:C1FE  A9 00       LDA #$00
-   66  00:C200  8D 04 00    STA sleeping
-   67                       
-   68  00:C203            skip_graphics_updates:
-   69                     
-   70  00:C203  68          PLA                              ;restore the registers
-   71  00:C204  A8          TAY 
-   72  00:C205  68          PLA
-   73  00:C206  AA          TAX
-   74  00:C207  68          PLA
-   75                     
-   76  00:C208  40          RTI             ; return from interrupt
+   23                         
+   24                       ;;This is the PPU clean up section, so rendering the next frame starts properly.
+   25  00:C1ED  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+   26  00:C1EF  8D 00 20    STA $2000
+   27  00:C1F2  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
+   28  00:C1F4  8D 01 20    STA $2001
+   29  00:C1F7  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
+   30  00:C1F9  8D 05 20    STA $2005
+   31  00:C1FC  8D 05 20    STA $2005
+   32                       
+   33  00:C1FF            WakeUp:
+   34  00:C1FF  A9 00       LDA #$00
+   35  00:C201  8D 04 00    STA sleeping
+   36                       
+   37  00:C204  68          PLA                              ;restore the registers
+   38  00:C205  A8          TAY 
+   39  00:C206  68          PLA
+   40  00:C207  AA          TAX
+   41  00:C208  68          PLA
+   42                     
+   43  00:C209  40          RTI             ; return from interrupt
 #[1]   Kyudojo.asm
-  113                       
-  114                     ;;**************************;;
-  115                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  116                     ;;       PRG ROM DATA       ;;
-  117                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  118                     ;;**************************;; 
-  119                       
-  120           0001        .bank 1
-  121           E000        .org $E000
-  122                     
+  114                       
+  115                     ;;**************************;;
+  116                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  117                     ;;       PRG ROM DATA       ;;
+  118                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  119                     ;;**************************;; 
+  120                       
+  121           0001        .bank 1
+  122           E000        .org $E000
+  123                     
 #[2]   NameTables/Tables.asm
-  123                       .include "NameTables/Tables.asm"
+  124                       .include "NameTables/Tables.asm"
     1  01:E000            sprites:
     2                          ;vert tile attr horiz
     3  01:E000  80 32 00    .db $80, $32, $00, $80   ;sprite 0
@@ -587,7 +582,7 @@
    43                             
 #[1]   Kyudojo.asm
 #[2]   Sprites/Sprites.asm
-  124                       .include "Sprites/Sprites.asm"
+  125                       .include "Sprites/Sprites.asm"
     1                     
     2                     ;;Byte0
     3                     ;;Y position of top of sprite
@@ -629,20 +624,20 @@
    39  01:EC4C  90 06 00          .db $90,$06,$00,$90
        01:EC4F  90        
 #[1]   Kyudojo.asm
-  125                     
-  126           FFFA        .org $FFFA     ;first of the three vectors starts here
-  127  01:FFFA  70 C1       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
-  128                                        ;processor will jump to the label NMI:
-  129  01:FFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
-  130                                        ;to the label RESET:
-  131  01:FFFE  00 00       .dw 0          ;external interrupt IRQ is not used in this tutorial
-  132                       
-  133                     ;;**************************;;
-  134                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  135                     ;;      CHR ROM DATA        ;;
-  136                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  137                     ;;**************************;; 
-  138                       
-  139           0002        .bank 2
-  140           0000        .org $0000
-  141  02:0000              .incbin "CHRROM/Kyudojo.chr"   ;includes 8KB graphics file from SMB1
+  126                     
+  127           FFFA        .org $FFFA     ;first of the three vectors starts here
+  128  01:FFFA  9C C1       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+  129                                        ;processor will jump to the label NMI:
+  130  01:FFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
+  131                                        ;to the label RESET:
+  132  01:FFFE  00 00       .dw 0          ;external interrupt IRQ is not used in this tutorial
+  133                       
+  134                     ;;**************************;;
+  135                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  136                     ;;      CHR ROM DATA        ;;
+  137                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  138                     ;;**************************;; 
+  139                       
+  140           0002        .bank 2
+  141           0000        .org $0000
+  142  02:0000              .incbin "CHRROM/Kyudojo.chr"   ;includes 8KB graphics file from SMB1
