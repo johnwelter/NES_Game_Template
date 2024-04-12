@@ -11,6 +11,7 @@
 
 ;;;; Variables and Macros ;;;;
 
+  .include "Defines/Constants.asm"
   .include "Defines/RamDefines.asm"
   .include "Macros/Macros.asm"
 
@@ -37,7 +38,7 @@ LoadSprites:
   LDX #$00              ; start at 0
 LoadSpritesLoop:
   LDA Pointer, x        ; load data from address (sprites +  x)
-  STA $0200, x          ; store into RAM address ($0200 + x)
+  STA SPRITE_DATA, x          ; store into RAM address ($0200 + x)
   INX                   ; X = X + 1
   CPX #$05              ; Compare X to hex $10, decimal 16
   BNE LoadSpritesLoop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero

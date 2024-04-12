@@ -5,12 +5,6 @@ sprites:
   .db $88, $34, $00, $80   ;sprite 2
   .db $88, $35, $00, $88   ;sprite 3
 
-
-TITLE_IDX = $00
-GAME_IDX = $01
-GAMEOVER_IDX = $02
-
-
 Palettes:
 
   .word Title_Palette, Game_Palette, GameOver_Palette

@@ -11,3 +11,4 @@ table_address  .rs 2
 jump_address  .rs 2
 gamepad .rs 1
 mouseData .rs 4
+mouseVelocity .rs 2

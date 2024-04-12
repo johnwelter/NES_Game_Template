@@ -2,8 +2,19 @@
    11                     
    12                     ;;;; Variables and Macros ;;;;
    13                     
+#[2]   Defines/Constants.asm
+   14                       .include "Defines/Constants.asm"
+    1                             ;; define constants here
+    2                             
+    3           0000      TITLE_IDX = $00
+    4           0001      GAME_IDX = $01
+    5           0002      GAMEOVER_IDX = $02
+    6           0000      SPRITE_YPOS = $00
+    7           0003      SPRITE_XPOS = $03
+    8           0200      SPRITE_DATA = $0200
+#[1]   Kyudojo.asm
 #[2]   Defines/RamDefines.asm
-   14                       .include "Defines/RamDefines.asm"
+   15                       .include "Defines/RamDefines.asm"
     1                             ;; define 0 page stuff here, and SRAM stuff if we have it
     2                             
     3           0000      temp1  .rs 1
@@ -17,9 +28,10 @@
    11           0009      jump_address  .rs 2
    12           000B      gamepad .rs 1
    13           000C      mouseData .rs 4
+   14           0010      mouseVelocity .rs 2
 #[1]   Kyudojo.asm
 #[2]   Macros/Macros.asm
-   15                       .include "Macros/Macros.asm"
+   16                       .include "Macros/Macros.asm"
     1                             ;; include list of macros here
     2                             
 #[3]   Macros/LoadAllPalMacro.asm
@@ -61,22 +73,22 @@
    16                       .endm
 #[2]   Macros/Macros.asm
 #[1]   Kyudojo.asm
-   16                     
-   17                     ;;**************************;;
-   18                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   19                     ;;       PRG ROM            ;;
-   20                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   21                     ;;**************************;; 
-   22                     
-   23           0000        .bank 0
-   24           C000        .org $C000 
-   25                     
-   26                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   27                     ;;     Initialization       ;;
-   28                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   29                     
+   17                     
+   18                     ;;**************************;;
+   19                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   20                     ;;       PRG ROM            ;;
+   21                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   22                     ;;**************************;; 
+   23                     
+   24           0000        .bank 0
+   25           C000        .org $C000 
+   26                     
+   27                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   28                     ;;     Initialization       ;;
+   29                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   30                     
 #[2]   Routines/Init.asm
-   30                       .include "Routines/Init.asm"
+   31                       .include "Routines/Init.asm"
     1  00:C000            RESET:
     2  00:C000  78          SEI          ; disable IRQs
     3  00:C001  D8          CLD          ; disable decimal mode
@@ -111,296 +123,350 @@
    32  00:C038  2C 02 20    BIT $2002
    33  00:C03B  10 FB       BPL vblankwait2
 #[1]   Kyudojo.asm
-   31                     
    32                     
-   33  00:C03D  A9 00       LDA #TITLE_IDX
-   34  00:C03F  20 DF C0    JSR ChangeGameMode
-   35                     
-   36  00:C042            LoadSprites:
-   37  00:C042  A2 00       LDX #$00              ; start at 0
-   38  00:C044            LoadSpritesLoop:
-   39  00:C044  BD 4C EC    LDA Pointer, x        ; load data from address (sprites +  x)
-   40  00:C047  9D 00 02    STA $0200, x          ; store into RAM address ($0200 + x)
-   41  00:C04A  E8          INX                   ; X = X + 1
-   42  00:C04B  E0 05       CPX #$05              ; Compare X to hex $10, decimal 16
-   43  00:C04D  D0 F5       BNE LoadSpritesLoop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero
-   44                                             ; if compare was equal to 16, keep going down   
-   45                     
-   46  00:C04F  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
-   47  00:C051  8D 00 20    STA $2000
-   48                     
-   49  00:C054  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
-   50  00:C056  8D 01 20    STA $2001
-   51                       
-   52                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   53                     ;;     Main Program         ;;
-   54                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   55                     
-   56  00:C059            Forever:
-   57                     
-   58  00:C059  EE 04 00    INC sleeping
-   59                     
-   60  00:C05C            .loop
-   61  00:C05C  AD 04 00    LDA sleeping
-   62  00:C05F  D0 FB       BNE .loop
-   63                     
-   64  00:C061  20 70 C0    JSR Dynamic_Jump
-   65  00:C064  20 83 C0    JSR CallDynamicSubroutine
-   66                     
-   67  00:C067  4C 59 C0    JMP Forever     ;jump back to Forever, infinite loop
-   68                       
-   69                     ;; dynamic jump table
-   70                     
-   71  00:C06A            JumpTable:
-   72                     
-   73  00:C06A  86 C0       .word UpdateTitle
-   74  00:C06C  91 C0       .word UpdateGame
-   75  00:C06E  99 C0       .word UpdateGameOver
-   76                       
-   77  00:C070            Dynamic_Jump:
-   78                     
-   79                       ;;load up the label from the table above
-   80  00:C070  AD 05 00    LDA game_mode
-   81  00:C073  0A          ASL A
-   82  00:C074  A8          TAY
-   83  00:C075  BE 6A C0    LDX (JumpTable), y
-   84  00:C078  C8          INY
-   85  00:C079  B9 6A C0    LDA (JumpTable), y
-   86  00:C07C  8E 09 00    STX jump_address
-   87  00:C07F  8D 0A 00    STA jump_address+1
-   88  00:C082  60          RTS
-   89                       
-   90  00:C083            CallDynamicSubroutine:
-   91  00:C083  6C 09 00    JMP [jump_address]
-   92                       ;;RTS is called in the subroutine
-   93                     
-   94                       
+   33                     
+   34  00:C03D  A9 00       LDA #TITLE_IDX
+   35  00:C03F  20 35 C1    JSR ChangeGameMode
+   36                     
+   37  00:C042            LoadSprites:
+   38  00:C042  A2 00       LDX #$00              ; start at 0
+   39  00:C044            LoadSpritesLoop:
+   40  00:C044  BD 4C EC    LDA Pointer, x        ; load data from address (sprites +  x)
+   41  00:C047  9D 00 02    STA SPRITE_DATA, x          ; store into RAM address ($0200 + x)
+   42  00:C04A  E8          INX                   ; X = X + 1
+   43  00:C04B  E0 05       CPX #$05              ; Compare X to hex $10, decimal 16
+   44  00:C04D  D0 F5       BNE LoadSpritesLoop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero
+   45                                             ; if compare was equal to 16, keep going down   
+   46                     
+   47  00:C04F  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+   48  00:C051  8D 00 20    STA $2000
+   49                     
+   50  00:C054  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
+   51  00:C056  8D 01 20    STA $2001
+   52                       
+   53                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   54                     ;;     Main Program         ;;
+   55                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   56                     
+   57  00:C059            Forever:
+   58                     
+   59  00:C059  EE 04 00    INC sleeping
+   60                     
+   61  00:C05C            .loop
+   62  00:C05C  AD 04 00    LDA sleeping
+   63  00:C05F  D0 FB       BNE .loop
+   64                     
+   65  00:C061  20 70 C0    JSR Dynamic_Jump
+   66  00:C064  20 83 C0    JSR CallDynamicSubroutine
+   67                     
+   68  00:C067  4C 59 C0    JMP Forever     ;jump back to Forever, infinite loop
+   69                       
+   70                     ;; dynamic jump table
+   71                     
+   72  00:C06A            JumpTable:
+   73                     
+   74  00:C06A  86 C0       .word UpdateTitle
+   75  00:C06C  91 C0       .word UpdateGame
+   76  00:C06E  EF C0       .word UpdateGameOver
+   77                       
+   78  00:C070            Dynamic_Jump:
+   79                     
+   80                       ;;load up the label from the table above
+   81  00:C070  AD 05 00    LDA game_mode
+   82  00:C073  0A          ASL A
+   83  00:C074  A8          TAY
+   84  00:C075  BE 6A C0    LDX (JumpTable), y
+   85  00:C078  C8          INY
+   86  00:C079  B9 6A C0    LDA (JumpTable), y
+   87  00:C07C  8E 09 00    STX jump_address
+   88  00:C07F  8D 0A 00    STA jump_address+1
+   89  00:C082  60          RTS
+   90                       
+   91  00:C083            CallDynamicSubroutine:
+   92  00:C083  6C 09 00    JMP [jump_address]
+   93                       ;;RTS is called in the subroutine
+   94                     
+   95                       
 #[2]   States/UpdateTitle.asm
-   95                       .include "States/UpdateTitle.asm"
+   96                       .include "States/UpdateTitle.asm"
     1  00:C086            UpdateTitle:
     2                     
     3  00:C086  AD 0B 00    LDA gamepad
     4  00:C089  F0 05       BEQ noInputDetected
     5                       
     6  00:C08B  A9 01         LDA #GAME_IDX
-    7  00:C08D  20 DF C0          JSR ChangeGameMode
+    7  00:C08D  20 35 C1          JSR ChangeGameMode
     8                      
     9  00:C090             noInputDetected:
    10                      
    11  00:C090  60          RTS
 #[1]   Kyudojo.asm
 #[2]   States/UpdateGame.asm
-   96                       .include "States/UpdateGame.asm"
+   97                       .include "States/UpdateGame.asm"
     1  00:C091            UpdateGame:
     2                       ;;move the mouse cursor around
     3                     
     4  00:C091  AD 0D 00          LDA mouseData+1
     5  00:C094  29 70             AND #$70
-    6  00:C096  D0 00             BNE .leaveEarly
-    7                             
-    8                       
-    9  00:C098            .leaveEarly:
-   10                     
-   11  00:C098  60          RTS
+    6                             ;;BNE .leaveEarly
+    7  00:C096  F0 08             BEQ .hasController
+    8                             
+    9  00:C098  A9 00             LDA #$00
+   10  00:C09A  8D 0E 00          STA mouseData+2
+   11  00:C09D  8D 0F 00          STA mouseData+3
+   12                             
+   13  00:C0A0            .hasController:
+   14                             ;;the first byte has only one of two options- 8x or FF. so if it's 8, we know the mouse is
+   15                             ;;plugged in
+   16                             
+   17                             ;;now, use the top nibble of the next two bytes for the Y and X speed respectively
+   18                             
+   19  00:C0A0  AD 0E 00          LDA mouseData+2
+   20  00:C0A3  29 0F             AND #$0F
+   21  00:C0A5  8D 10 00          STA mouseVelocity
+   22                             
+   23  00:C0A8  AD 0F 00          LDA mouseData+3
+   24  00:C0AB  29 0F             AND #$0F
+   25  00:C0AD  8D 11 00          STA mouseVelocity+1
+   26                             
+   27  00:C0B0  AD 0E 00          LDA mouseData+2
+   28  00:C0B3  29 80             AND #$80
+   29  00:C0B5  F0 0C             BEQ .addVert
+   30  00:C0B7  A2 00             LDX #SPRITE_YPOS
+   31  00:C0B9  BD 00 02          LDA SPRITE_DATA, x
+   32  00:C0BC  38                SEC
+   33  00:C0BD  ED 10 00          SBC mouseVelocity
+   34  00:C0C0  4C CC C0          JMP .completeVertMove
+   35                             
+   36  00:C0C3            .addVert:
+   37  00:C0C3  A2 00             LDX #SPRITE_YPOS
+   38  00:C0C5  BD 00 02          LDA SPRITE_DATA, x
+   39  00:C0C8  18                CLC
+   40  00:C0C9  6D 10 00          ADC mouseVelocity
+   41                             
+   42  00:C0CC            .completeVertMove:
+   43  00:C0CC  9D 00 02          STA SPRITE_DATA, x
+   44                     
+   45  00:C0CF  AD 0F 00          LDA mouseData+3
+   46  00:C0D2  29 80             AND #$80
+   47  00:C0D4  F0 0C             BEQ .addHori
+   48  00:C0D6  A2 03             LDX #SPRITE_XPOS
+   49  00:C0D8  BD 00 02          LDA SPRITE_DATA, x
+   50  00:C0DB  38                SEC
+   51  00:C0DC  ED 11 00          SBC mouseVelocity+1
+   52  00:C0DF  4C EB C0          JMP .completeHoriMove
+   53                             
+   54  00:C0E2            .addHori:
+   55  00:C0E2  A2 03             LDX #SPRITE_XPOS
+   56  00:C0E4  BD 00 02          LDA SPRITE_DATA, x
+   57  00:C0E7  18                CLC
+   58  00:C0E8  6D 11 00          ADC mouseVelocity+1
+   59  00:C0EB            .completeHoriMove:
+   60  00:C0EB  9D 00 02          STA SPRITE_DATA, x
+   61                       
+   62                     ;;.leaveEarly:
+   63                     
+   64                     
+   65  00:C0EE  60          RTS
 #[1]   Kyudojo.asm
 #[2]   States/UpdateGameOver.asm
-   97                       .include "States/UpdateGameOver.asm"
-    1  00:C099            UpdateGameOver:
-    2  00:C099  60          RTS
+   98                       .include "States/UpdateGameOver.asm"
+    1  00:C0EF            UpdateGameOver:
+    2  00:C0EF  60          RTS
 #[1]   Kyudojo.asm
-   98                       
-   99                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  100                     ;;     Routines             ;;
-  101                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  102                     
-  103                       
+   99                       
+  100                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  101                     ;;     Routines             ;;
+  102                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  103                     
+  104                       
 #[2]   Routines/BackgroundUtil.asm
-  104                       .include "Routines/BackgroundUtil.asm"
+  105                       .include "Routines/BackgroundUtil.asm"
     1                     ;;macro to load all pallets in 1 go
     2                     ;; table_address should be set in the preceding macro
     3                     ;; y is clobbered
-    4  00:C09A            loadAllPal_impl:
-    5  00:C09A  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
-    6  00:C09D  A9 3F       LDA #$3F
-    7  00:C09F  8D 06 20    STA $2006             ; write the high byte of $3F00 address
-    8  00:C0A2  A9 00       LDA #$00
-    9  00:C0A4  8D 06 20    STA $2006             ; write the low byte of $3F00 address
-   10  00:C0A7  A0 00       LDY #$00              ; start out at 0
-   11  00:C0A9            loadPalettesLoop:
-   12  00:C0A9  B1 07       LDA [table_address], y        ; load data from address (palette + the value in x)
-   13  00:C0AB  8D 07 20    STA $2007             ; write to PPU
-   14  00:C0AE  C8          INY                   ; X = X + 1
-   15  00:C0AF  C0 20       CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites
-   16  00:C0B1  D0 F6       BNE loadPalettesLoop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
-   17  00:C0B3  60          RTS
+    4  00:C0F0            loadAllPal_impl:
+    5  00:C0F0  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
+    6  00:C0F3  A9 3F       LDA #$3F
+    7  00:C0F5  8D 06 20    STA $2006             ; write the high byte of $3F00 address
+    8  00:C0F8  A9 00       LDA #$00
+    9  00:C0FA  8D 06 20    STA $2006             ; write the low byte of $3F00 address
+   10  00:C0FD  A0 00       LDY #$00              ; start out at 0
+   11  00:C0FF            loadPalettesLoop:
+   12  00:C0FF  B1 07       LDA [table_address], y        ; load data from address (palette + the value in x)
+   13  00:C101  8D 07 20    STA $2007             ; write to PPU
+   14  00:C104  C8          INY                   ; X = X + 1
+   15  00:C105  C0 20       CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites
+   16  00:C107  D0 F6       BNE loadPalettesLoop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
+   17  00:C109  60          RTS
    18                     
-   19  00:C0B4            loadFullBackground_impl:
+   19  00:C10A            loadFullBackground_impl:
    20                     
-   21  00:C0B4  AD 02 20          LDA $2002             ; read PPU status to reset the high/low latch
-   22  00:C0B7  A9 20             LDA #$20
-   23  00:C0B9  8D 06 20          STA $2006             ; write the high byte of $2000 address
-   24  00:C0BC  A9 00             LDA #$00
-   25  00:C0BE  8D 06 20          STA $2006             ; write the low byte of $2000 address
+   21  00:C10A  AD 02 20          LDA $2002             ; read PPU status to reset the high/low latch
+   22  00:C10D  A9 20             LDA #$20
+   23  00:C10F  8D 06 20          STA $2006             ; write the high byte of $2000 address
+   24  00:C112  A9 00             LDA #$00
+   25  00:C114  8D 06 20          STA $2006             ; write the low byte of $2000 address
    26                             
    27                             ;;set pointer
    28                             ;; set counters
-   29  00:C0C1  A0 00             LDY #$00
-   30  00:C0C3  A2 00             LDX #$00
+   29  00:C117  A0 00             LDY #$00
+   30  00:C119  A2 00             LDX #$00
    31                             
    32                             ;;start loop
    33                     
-   34  00:C0C5            .outerloop:
+   34  00:C11B            .outerloop:
    35                     
-   36  00:C0C5            .innerloop:
+   36  00:C11B            .innerloop:
    37                     
-   38  00:C0C5  B1 07             LDA [table_address], y
-   39  00:C0C7  8D 07 20          STA $2007
-   40  00:C0CA  C8                INY
-   41  00:C0CB  C0 00             CPY #$00
-   42  00:C0CD  D0 F6             BNE .innerloop
+   38  00:C11B  B1 07             LDA [table_address], y
+   39  00:C11D  8D 07 20          STA $2007
+   40  00:C120  C8                INY
+   41  00:C121  C0 00             CPY #$00
+   42  00:C123  D0 F6             BNE .innerloop
    43                     
-   44  00:C0CF  EE 08 00          INC table_address+1
+   44  00:C125  EE 08 00          INC table_address+1
    45                             
-   46  00:C0D2  E8                INX
-   47  00:C0D3  E0 04             CPX #$04
-   48  00:C0D5  D0 EE             BNE .outerloop
-   49  00:C0D7  60                RTS
+   46  00:C128  E8                INX
+   47  00:C129  E0 04             CPX #$04
+   48  00:C12B  D0 EE             BNE .outerloop
+   49  00:C12D  60                RTS
    50                             
-   51  00:C0D8            SetTableAddress:
+   51  00:C12E            SetTableAddress:
    52                             
    53                             ;;A is low, X is high
-   54  00:C0D8  8D 07 00          STA table_address
-   55  00:C0DB  8E 08 00          STX table_address+1
-   56  00:C0DE  60                RTS
+   54  00:C12E  8D 07 00          STA table_address
+   55  00:C131  8E 08 00          STX table_address+1
+   56  00:C134  60                RTS
    57                             
-   58  00:C0DF            ChangeGameMode:
+   58  00:C135            ChangeGameMode:
    59                     
-   60  00:C0DF  8D 05 00    STA game_mode
-   61  00:C0E2  8D 06 00    STA game_mode_switching
-   62  00:C0E5  A9 00       LDA #$00
-   63  00:C0E7  8D 01 20    STA $2001    ; disable rendering- reenable on NMI when not updating
-   64  00:C0EA  20 F3 C0    JSR LoadGameModeBackground
-   65  00:C0ED  A9 00       LDA #$00
-   66  00:C0EF  8D 06 00    STA game_mode_switching
-   67  00:C0F2  60          RTS
+   60  00:C135  8D 05 00    STA game_mode
+   61  00:C138  8D 06 00    STA game_mode_switching
+   62  00:C13B  A9 00       LDA #$00
+   63  00:C13D  8D 01 20    STA $2001    ; disable rendering- reenable on NMI when not updating
+   64  00:C140  20 49 C1    JSR LoadGameModeBackground
+   65  00:C143  A9 00       LDA #$00
+   66  00:C145  8D 06 00    STA game_mode_switching
+   67  00:C148  60          RTS
    68                             
    69                             
-   70  00:C0F3            LoadGameModeBackground:
+   70  00:C149            LoadGameModeBackground:
    71                     
    72                             MACROLoadAllPal game_mode
                           
-       00:C0F3  AC 05 00          LDY game_mode
-       00:C0F6  98                TYA
-       00:C0F7  0A                ASL A
-       00:C0F8  A8                TAY
-       00:C0F9  B9 10 E0          LDA (Palettes), y
-       00:C0FC  C8                INY
-       00:C0FD  BE 10 E0          LDX (Palettes), y
-       00:C100  20 D8 C0          JSR SetTableAddress
-       00:C103  20 9A C0          JSR loadAllPal_impl
+       00:C149  AC 05 00          LDY game_mode
+       00:C14C  98                TYA
+       00:C14D  0A                ASL A
+       00:C14E  A8                TAY
+       00:C14F  B9 10 E0          LDA (Palettes), y
+       00:C152  C8                INY
+       00:C153  BE 10 E0          LDX (Palettes), y
+       00:C156  20 2E C1          JSR SetTableAddress
+       00:C159  20 F0 C0          JSR loadAllPal_impl
                                   
    73                             MACROLoadFullBackground game_mode
                           
-       00:C106  AC 05 00          LDY game_mode
-       00:C109  98                TYA
-       00:C10A  0A                ASL A
-       00:C10B  A8                TAY
-       00:C10C  B9 16 E0          LDA (NameTables), y
-       00:C10F  C8                INY
-       00:C110  BE 16 E0          LDX (NameTables), y
-       00:C113  20 D8 C0          JSR SetTableAddress
-       00:C116  20 B4 C0          JSR loadFullBackground_impl
+       00:C15C  AC 05 00          LDY game_mode
+       00:C15F  98                TYA
+       00:C160  0A                ASL A
+       00:C161  A8                TAY
+       00:C162  B9 16 E0          LDA (NameTables), y
+       00:C165  C8                INY
+       00:C166  BE 16 E0          LDX (NameTables), y
+       00:C169  20 2E C1          JSR SetTableAddress
+       00:C16C  20 0A C1          JSR loadFullBackground_impl
                             
-   74  00:C119  60                RTS
+   74  00:C16F  60                RTS
    75                             
    76                       
 #[1]   Kyudojo.asm
-  105                       
   106                       
-  107                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  108                     ;;     NMI                  ;;
-  109                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  110                     
+  107                       
+  108                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  109                     ;;     NMI                  ;;
+  110                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  111                     
 #[2]   Routines/NMI.asm
-  111                       .include "Routines/NMI.asm"
+  112                       .include "Routines/NMI.asm"
     1                      
-    2  00:C11A            NMI:
+    2  00:C170            NMI:
     3                     
-    4  00:C11A  48          PHA                              ;protect the registers
-    5  00:C11B  8A          TXA
-    6  00:C11C  48          PHA
-    7  00:C11D  98          TYA
-    8  00:C11E  48          PHA
+    4  00:C170  48          PHA                              ;protect the registers
+    5  00:C171  8A          TXA
+    6  00:C172  48          PHA
+    7  00:C173  98          TYA
+    8  00:C174  48          PHA
     9                       
-   10  00:C11F            nmi_started:
-   11  00:C11F  A9 00       LDA #$00
-   12  00:C121  8D 03 20    STA $2003       ; set the low byte (00) of the RAM address
-   13  00:C124  A9 02       LDA #$02
-   14  00:C126  8D 14 40    STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+   10  00:C175            nmi_started:
+   11  00:C175  A9 00       LDA #$00
+   12  00:C177  8D 03 20    STA $2003       ; set the low byte (00) of the RAM address
+   13  00:C17A  A9 02       LDA #$02
+   14  00:C17C  8D 14 40    STA $4014       ; set the high byte (02) of the RAM address, start the transfer
    15                       
    16                       
    17                       
    18                       
-   19  00:C129  AD 06 00    LDA game_mode_switching
-   20  00:C12C  F0 03       BEQ update_controllers
-   21  00:C12E  4C A8 C1    JMP WakeUp
+   19  00:C17F  AD 06 00    LDA game_mode_switching
+   20  00:C182  F0 03       BEQ update_controllers
+   21  00:C184  4C FE C1    JMP WakeUp
    22                     
-   23  00:C131            update_controllers:
+   23  00:C187            update_controllers:
    24                     
 #[3]   Routines/ReadControllers.asm
    25                       .include "Routines/ReadControllers.asm"
     1                     
-    2  00:C131  8A            TXA
-    3  00:C132  48                PHA
-    4  00:C133  98                TYA
-    5  00:C134  48                PHA
+    2  00:C187  8A            TXA
+    3  00:C188  48                PHA
+    4  00:C189  98                TYA
+    5  00:C18A  48                PHA
     6                     
-    7  00:C135  A2 00             LDX #$00
+    7  00:C18B  A2 00             LDX #$00
     8                     
-    9  00:C137            GamePadCheck:
-   10  00:C137  A9 01             LDA #$01        ;load 1
-   11  00:C139  8D 16 40          STA $4016       ; turn latch on
+    9  00:C18D            GamePadCheck:
+   10  00:C18D  A9 01             LDA #$01        ;load 1
+   11  00:C18F  8D 16 40          STA $4016       ; turn latch on
    12                             ;STA gamepad2
-   13  00:C13C  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
-   14  00:C13D  8D 16 40          STA $4016       ;turn latch off
+   13  00:C192  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
+   14  00:C193  8D 16 40          STA $4016       ;turn latch off
    15                             
    16                             ;do a ring counter technique- load %10000000 into both
-   17  00:C140  A9 80             LDA #$80
-   18  00:C142  8D 0B 00          STA gamepad
+   17  00:C196  A9 80             LDA #$80
+   18  00:C198  8D 0B 00          STA gamepad
    19                     
-   20  00:C145            ReadControllerABytesLoop:
-   21  00:C145  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
-   22  00:C148  29 03             AND #%00000011  ;acc: %00000001 c: 0
-   23  00:C14A  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
+   20  00:C19B            ReadControllerABytesLoop:
+   21  00:C19B  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
+   22  00:C19E  29 03             AND #%00000011  ;acc: %00000001 c: 0
+   23  00:C1A0  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
    24                             ;ror shifts everything right one position: carry->bit 7, bit 0-> carry
-   25  00:C14C  6E 0B 00          ROR gamepad             ;gamepad: %11000000
+   25  00:C1A2  6E 0B 00          ROR gamepad             ;gamepad: %11000000
    26                             ;eventually, the ROR sends out the 1 instead of all the leading 0s, BCC (branch carry clear) gets the 1 and does not loop
-   27  00:C14F  90 F4             BCC ReadControllerABytesLoop
+   27  00:C1A5  90 F4             BCC ReadControllerABytesLoop
    28                             
-   29                     ;gotta do this 4 times
+   29                     ;gotta do this 4 times, and we need to ROL not ROR
    30                     ;first byte is junk
    31                     ;2nd byte: RLSS0001
    32                     ;3rd byte: yYYYYYYY
    33                     ;4th byte: xXXXXXXX
-   34  00:C151            SetMouseRing:
-   35  00:C151  A9 80             LDA #$80        
-   36  00:C153  9D 0C 00          STA mouseData, X
-   37  00:C156            ReadMouseBytesLoop:
-   38  00:C156  AD 17 40          LDA $4017
-   39  00:C159  29 03             AND #%00000011
-   40  00:C15B  C9 01             CMP #%00000001
-   41  00:C15D  7E 0C 00          ROR mouseData, X
-   42  00:C160  90 F4             BCC ReadMouseBytesLoop
+   34  00:C1A7            SetMouseRing:
+   35  00:C1A7  A9 01             LDA #$01        
+   36  00:C1A9  9D 0C 00          STA mouseData, X
+   37  00:C1AC            ReadMouseBytesLoop:
+   38  00:C1AC  AD 17 40          LDA $4017
+   39  00:C1AF  29 03             AND #%00000011
+   40  00:C1B1  C9 01             CMP #%00000001
+   41  00:C1B3  3E 0C 00          ROL mouseData, X
+   42  00:C1B6  90 F4             BCC ReadMouseBytesLoop
    43                             
-   44  00:C162  E8                INX ; increment X
-   45  00:C163  E0 04             CPX #$04
-   46  00:C165  D0 EA             BNE SetMouseRing
+   44  00:C1B8  E8                INX ; increment X
+   45  00:C1B9  E0 04             CPX #$04
+   46  00:C1BB  D0 EA             BNE SetMouseRing
    47                             
    48                     ;return x and y... before resetting them all over again- always good to make sure we're clean
-   49  00:C167  68                PLA
-   50  00:C168  A8                TAY
-   51  00:C169  68                PLA
-   52  00:C16A  AA                TAX     
+   49  00:C1BD  68                PLA
+   50  00:C1BE  A8                TAY
+   51  00:C1BF  68                PLA
+   52  00:C1C0  AA                TAX     
    53                             
    54                             
 #[2]   Routines/NMI.asm
@@ -408,66 +474,66 @@
    27                       
    28                       
    29                       ;;draw a debug tile at the top right corner
-   30  00:C16B  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
-   31  00:C16E  A9 20       LDA #$20
-   32  00:C170  8D 06 20    STA $2006             ; write the high byte of $2000 address
-   33  00:C173  A9 42       LDA #$42
-   34  00:C175  8D 06 20    STA $2006             ; write the low byte of $2000 address
+   30  00:C1C1  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
+   31  00:C1C4  A9 20       LDA #$20
+   32  00:C1C6  8D 06 20    STA $2006             ; write the high byte of $2000 address
+   33  00:C1C9  A9 42       LDA #$42
+   34  00:C1CB  8D 06 20    STA $2006             ; write the low byte of $2000 address
    35                       
-   36  00:C178  A2 00       LDX #$00
+   36  00:C1CE  A2 00       LDX #$00
    37                     
-   38  00:C17A            drawDebugMouseData:
-   39  00:C17A  BD 0D 00    LDA mouseData+1, x
-   40  00:C17D  4A          LSR A
-   41  00:C17E  4A          LSR A
-   42  00:C17F  4A          LSR A
-   43  00:C180  4A          LSR A
-   44  00:C181  8D 07 20    STA $2007
-   45  00:C184  BD 0D 00    LDA mouseData+1, x
-   46  00:C187  29 0F       AND #$0F
-   47  00:C189  8D 07 20    STA $2007
-   48  00:C18C  A9 24       LDA #$24
-   49  00:C18E  8D 07 20    STA $2007
-   50  00:C191  E8          INX
-   51  00:C192  E0 04       CPX #$04
-   52  00:C194  D0 E4       BNE drawDebugMouseData
+   38  00:C1D0            drawDebugMouseData:
+   39  00:C1D0  BD 0D 00    LDA mouseData+1, x
+   40  00:C1D3  4A          LSR A
+   41  00:C1D4  4A          LSR A
+   42  00:C1D5  4A          LSR A
+   43  00:C1D6  4A          LSR A
+   44  00:C1D7  8D 07 20    STA $2007
+   45  00:C1DA  BD 0D 00    LDA mouseData+1, x
+   46  00:C1DD  29 0F       AND #$0F
+   47  00:C1DF  8D 07 20    STA $2007
+   48  00:C1E2  A9 24       LDA #$24
+   49  00:C1E4  8D 07 20    STA $2007
+   50  00:C1E7  E8          INX
+   51  00:C1E8  E0 04       CPX #$04
+   52  00:C1EA  D0 E4       BNE drawDebugMouseData
    53                       
    54                       
    55                       ;;This is the PPU clean up section, so rendering the next frame starts properly.
-   56  00:C196  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
-   57  00:C198  8D 00 20    STA $2000
-   58  00:C19B  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
-   59  00:C19D  8D 01 20    STA $2001
-   60  00:C1A0  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
-   61  00:C1A2  8D 05 20    STA $2005
-   62  00:C1A5  8D 05 20    STA $2005
+   56  00:C1EC  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+   57  00:C1EE  8D 00 20    STA $2000
+   58  00:C1F1  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
+   59  00:C1F3  8D 01 20    STA $2001
+   60  00:C1F6  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
+   61  00:C1F8  8D 05 20    STA $2005
+   62  00:C1FB  8D 05 20    STA $2005
    63                       
-   64  00:C1A8            WakeUp:
-   65  00:C1A8  A9 00       LDA #$00
-   66  00:C1AA  8D 04 00    STA sleeping
+   64  00:C1FE            WakeUp:
+   65  00:C1FE  A9 00       LDA #$00
+   66  00:C200  8D 04 00    STA sleeping
    67                       
-   68  00:C1AD            skip_graphics_updates:
+   68  00:C203            skip_graphics_updates:
    69                     
-   70  00:C1AD  68          PLA                              ;restore the registers
-   71  00:C1AE  A8          TAY 
-   72  00:C1AF  68          PLA
-   73  00:C1B0  AA          TAX
-   74  00:C1B1  68          PLA
+   70  00:C203  68          PLA                              ;restore the registers
+   71  00:C204  A8          TAY 
+   72  00:C205  68          PLA
+   73  00:C206  AA          TAX
+   74  00:C207  68          PLA
    75                     
-   76  00:C1B2  40          RTI             ; return from interrupt
+   76  00:C208  40          RTI             ; return from interrupt
 #[1]   Kyudojo.asm
-  112                       
-  113                     ;;**************************;;
-  114                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  115                     ;;       PRG ROM DATA       ;;
-  116                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  117                     ;;**************************;; 
-  118                       
-  119           0001        .bank 1
-  120           E000        .org $E000
-  121                     
+  113                       
+  114                     ;;**************************;;
+  115                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  116                     ;;       PRG ROM DATA       ;;
+  117                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  118                     ;;**************************;; 
+  119                       
+  120           0001        .bank 1
+  121           E000        .org $E000
+  122                     
 #[2]   NameTables/Tables.asm
-  122                       .include "NameTables/Tables.asm"
+  123                       .include "NameTables/Tables.asm"
     1  01:E000            sprites:
     2                          ;vert tile attr horiz
     3  01:E000  80 32 00    .db $80, $32, $00, $80   ;sprite 0
@@ -479,55 +545,49 @@
     6  01:E00C  88 35 00    .db $88, $35, $00, $88   ;sprite 3
        01:E00F  88        
     7                     
-    8                     
-    9           0000      TITLE_IDX = $00
-   10           0001      GAME_IDX = $01
-   11           0002      GAMEOVER_IDX = $02
-   12                     
-   13                     
-   14  01:E010            Palettes:
-   15                     
-   16  01:E010  1C E0       .word Title_Palette, Game_Palette, GameOver_Palette
+    8  01:E010            Palettes:
+    9                     
+   10  01:E010  1C E0       .word Title_Palette, Game_Palette, GameOver_Palette
        01:E012  2C E0     
        01:E014  3C E0     
-   17                     
-   18  01:E016            NameTables:
-   19                     
-   20  01:E016  4C E0       .word Title_Screen, Game_Screen, GameOver_Screen
+   11                     
+   12  01:E016            NameTables:
+   13                     
+   14  01:E016  4C E0       .word Title_Screen, Game_Screen, GameOver_Screen
        01:E018  4C E4     
        01:E01A  4C E8     
+   15                     
+   16  01:E01C            Title_Palette:
+   17                     
+   18  01:E01C              .incbin "NameTables/Title_PAL.pal"
+   19                       
+   20  01:E02C            Game_Palette:
    21                     
-   22  01:E01C            Title_Palette:
-   23                     
-   24  01:E01C              .incbin "NameTables/Title_PAL.pal"
-   25                       
-   26  01:E02C            Game_Palette:
-   27                     
-   28  01:E02C              .incbin "NameTables/Game_PAL.pal"
-   29                       
-   30  01:E03C            GameOver_Palette:
-   31                     
-   32  01:E03C              .incbin "NameTables/GameOver_PAL.pal"
-   33                       
-   34  01:E04C            Title_Screen:
-   35                     
-   36  01:E04C              .incbin "NameTables/Title_NT.nam"
-   37                       
-   38  01:E44C            Game_Screen: 
-   39                     
-   40  01:E44C              .incbin "NameTables/Game_NT.nam"
+   22  01:E02C              .incbin "NameTables/Game_PAL.pal"
+   23                       
+   24  01:E03C            GameOver_Palette:
+   25                     
+   26  01:E03C              .incbin "NameTables/GameOver_PAL.pal"
+   27                       
+   28  01:E04C            Title_Screen:
+   29                     
+   30  01:E04C              .incbin "NameTables/Title_NT.nam"
+   31                       
+   32  01:E44C            Game_Screen: 
+   33                     
+   34  01:E44C              .incbin "NameTables/Game_NT.nam"
+   35                       
+   36  01:E84C            GameOver_Screen:
+   37                     
+   38  01:E84C              .incbin "NameTables/Game_NT.nam"
+   39                       
+   40                     
    41                       
-   42  01:E84C            GameOver_Screen:
-   43                     
-   44  01:E84C              .incbin "NameTables/Game_NT.nam"
-   45                       
-   46                     
-   47                       
-   48                      
-   49                             
+   42                      
+   43                             
 #[1]   Kyudojo.asm
 #[2]   Sprites/Sprites.asm
-  123                       .include "Sprites/Sprites.asm"
+  124                       .include "Sprites/Sprites.asm"
     1                     
     2                     ;;Byte0
     3                     ;;Y position of top of sprite
@@ -569,20 +629,20 @@
    39  01:EC4C  90 06 00          .db $90,$06,$00,$90
        01:EC4F  90        
 #[1]   Kyudojo.asm
-  124                     
-  125           FFFA        .org $FFFA     ;first of the three vectors starts here
-  126  01:FFFA  1A C1       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
-  127                                        ;processor will jump to the label NMI:
-  128  01:FFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
-  129                                        ;to the label RESET:
-  130  01:FFFE  00 00       .dw 0          ;external interrupt IRQ is not used in this tutorial
-  131                       
-  132                     ;;**************************;;
-  133                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  134                     ;;      CHR ROM DATA        ;;
-  135                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  136                     ;;**************************;; 
-  137                       
-  138           0002        .bank 2
-  139           0000        .org $0000
-  140  02:0000              .incbin "CHRROM/Kyudojo.chr"   ;includes 8KB graphics file from SMB1
+  125                     
+  126           FFFA        .org $FFFA     ;first of the three vectors starts here
+  127  01:FFFA  70 C1       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+  128                                        ;processor will jump to the label NMI:
+  129  01:FFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
+  130                                        ;to the label RESET:
+  131  01:FFFE  00 00       .dw 0          ;external interrupt IRQ is not used in this tutorial
+  132                       
+  133                     ;;**************************;;
+  134                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  135                     ;;      CHR ROM DATA        ;;
+  136                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  137                     ;;**************************;; 
+  138                       
+  139           0002        .bank 2
+  140           0000        .org $0000
+  141  02:0000              .incbin "CHRROM/Kyudojo.chr"   ;includes 8KB graphics file from SMB1

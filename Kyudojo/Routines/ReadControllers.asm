@@ -26,19 +26,19 @@ ReadControllerABytesLoop:
 	;eventually, the ROR sends out the 1 instead of all the leading 0s, BCC (branch carry clear) gets the 1 and does not loop
 	BCC ReadControllerABytesLoop
 	
-;gotta do this 4 times
+;gotta do this 4 times, and we need to ROL not ROR
 ;first byte is junk
 ;2nd byte: RLSS0001
 ;3rd byte: yYYYYYYY
 ;4th byte: xXXXXXXX
 SetMouseRing:
-	LDA #$80	
+	LDA #$01	
 	STA mouseData, X
 ReadMouseBytesLoop:
 	LDA $4017
 	AND #%00000011
 	CMP #%00000001
-	ROR mouseData, X
+	ROL mouseData, X
 	BCC ReadMouseBytesLoop
 	
 	INX ; increment X
