@@ -26,6 +26,16 @@ ReadControllerABytesLoop:
 	;eventually, the ROR sends out the 1 instead of all the leading 0s, BCC (branch carry clear) gets the 1 and does not loop
 	BCC ReadControllerABytesLoop
 	
+	;;comapre last to current, find the pressed buttons this frame
+	LDA gamepadLast
+	EOR #$FF
+	AND gamepad
+	STA gamepadPressed
+	
+	
+	LDA gamepad
+	STA gamepadLast
+	
 	;return x and y... before resetting them all over again- always good to make sure we're clean
 	PLA
 	TAY

@@ -17,8 +17,10 @@
    11           0009      jump_address  .rs 2
    12           000B      mapper_address .rs 2
    13           000D      gamepad .rs 1
-   14           000E      currentCHRBank .rs 1
-   15           000F      currentPRGBank .rs 1
+   14           000E      gamepadLast .rs 1
+   15           000F      gamepadPressed .rs 1
+   16           0010      currentCHRBank .rs 1
+   17           0011      currentPRGBank .rs 1
 #[1]   MMC1.asm
 #[2]   Macros/Macros.asm
    15                       .include "Macros/Macros.asm"
@@ -125,9 +127,9 @@
    28  00:C035  E8          INX
    29  00:C036  D0 E1       BNE clrmem
    30                        
-   31  00:C038  20 28 C1    JSR ResetMapper
+   31  00:C038  20 29 C1    JSR ResetMapper
    32  00:C03B  A9 0E       LDA #$0E ; vertical mirroring, fixed $C000, 8 KB CHR pages
-   33  00:C03D  20 2C C1    JSR SetMapperControls
+   33  00:C03D  20 2D C1    JSR SetMapperControls
    34                       
    35  00:C040            vblankwait2:      ; Second wait for vblank, PPU is ready after this
    36  00:C040  2C 02 20    BIT $2002
@@ -136,7 +138,7 @@
    47                     
    48                     
    49  00:C045  A9 00       LDA #TITLE_IDX
-   50  00:C047  20 ED C0    JSR ChangeGameMode
+   50  00:C047  20 EE C0    JSR ChangeGameMode
    51                     
    52                     ;LoadSprites:
    53                     ;  LDX #$00              ; start at 0
@@ -177,7 +179,7 @@
    88                     
    89  00:C065  81 C0       .word UpdateTitle
    90  00:C067  8C C0       .word UpdateGame
-   91  00:C069  A7 C0       .word UpdateGameOver
+   91  00:C069  A8 C0       .word UpdateGameOver
    92                       
    93  00:C06B            Dynamic_Jump:
    94                     
@@ -205,7 +207,7 @@
     4  00:C084  F0 05       BEQ .noInputDetected
     5                       
     6  00:C086  A9 01         LDA #GAME_IDX
-    7  00:C088  20 ED C0          JSR ChangeGameMode
+    7  00:C088  20 EE C0          JSR ChangeGameMode
     8                      
     9  00:C08B            .noInputDetected:
    10                      
@@ -215,29 +217,30 @@
   112                       .include "States/UpdateGame.asm"
     1  00:C08C            UpdateGame:
     2                     
-    3  00:C08C  AD 0D 00    LDA gamepad
-    4  00:C08F  F0 15       BEQ .noInputDetected
+    3  00:C08C  AD 0F 00    LDA gamepadPressed
+    4  00:C08F  F0 16       BEQ .noInputDetected
     5                       
-    6  00:C091  20 28 C1          JSR ResetMapper
-    7  00:C094  EE 0E 00          INC currentCHRBank
-    8  00:C097  AD 0E 00          LDA currentCHRBank
+    6  00:C091  20 29 C1          JSR ResetMapper
+    7  00:C094  EE 10 00          INC currentCHRBank
+    8  00:C097  AD 10 00          LDA currentCHRBank
     9  00:C09A  C9 03             CMP #$03
    10  00:C09C  D0 02             BNE .dontMod
    11                             
    12  00:C09E  A9 00             LDA #$00
    13                             
    14  00:C0A0            .dontMod:
-   15  00:C0A0  8D 0E 00          STA currentCHRBank 
-   16  00:C0A3  20 42 C1          JSR LoadCHRBankA
-   17                      
-   18  00:C0A6            .noInputDetected:
-   19                      
-   20  00:C0A6  60          RTS
+   15  00:C0A0  8D 10 00          STA currentCHRBank 
+   16  00:C0A3  0A                ASL A
+   17  00:C0A4  20 43 C1          JSR LoadCHRBankA
+   18                      
+   19  00:C0A7            .noInputDetected:
+   20                      
+   21  00:C0A7  60          RTS
 #[1]   MMC1.asm
 #[2]   States/UpdateGameOver.asm
   113                       .include "States/UpdateGameOver.asm"
-    1  00:C0A7            UpdateGameOver:
-    2  00:C0A7  60          RTS
+    1  00:C0A8            UpdateGameOver:
+    2  00:C0A8  60          RTS
 #[1]   MMC1.asm
   114                       
   115                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -250,99 +253,99 @@
     1                     ;;macro to load all pallets in 1 go
     2                     ;; table_address should be set in the preceding macro
     3                     ;; y is clobbered
-    4  00:C0A8            loadAllPal_impl:
-    5  00:C0A8  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
-    6  00:C0AB  A9 3F       LDA #$3F
-    7  00:C0AD  8D 06 20    STA $2006             ; write the high byte of $3F00 address
-    8  00:C0B0  A9 00       LDA #$00
-    9  00:C0B2  8D 06 20    STA $2006             ; write the low byte of $3F00 address
-   10  00:C0B5  A0 00       LDY #$00              ; start out at 0
-   11  00:C0B7            loadPalettesLoop:
-   12  00:C0B7  B1 07       LDA [table_address], y        ; load data from address (palette + the value in x)
-   13  00:C0B9  8D 07 20    STA $2007             ; write to PPU
-   14  00:C0BC  C8          INY                   ; X = X + 1
-   15  00:C0BD  C0 20       CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites
-   16  00:C0BF  D0 F6       BNE loadPalettesLoop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
-   17  00:C0C1  60          RTS
+    4  00:C0A9            loadAllPal_impl:
+    5  00:C0A9  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
+    6  00:C0AC  A9 3F       LDA #$3F
+    7  00:C0AE  8D 06 20    STA $2006             ; write the high byte of $3F00 address
+    8  00:C0B1  A9 00       LDA #$00
+    9  00:C0B3  8D 06 20    STA $2006             ; write the low byte of $3F00 address
+   10  00:C0B6  A0 00       LDY #$00              ; start out at 0
+   11  00:C0B8            loadPalettesLoop:
+   12  00:C0B8  B1 07       LDA [table_address], y        ; load data from address (palette + the value in x)
+   13  00:C0BA  8D 07 20    STA $2007             ; write to PPU
+   14  00:C0BD  C8          INY                   ; X = X + 1
+   15  00:C0BE  C0 20       CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites
+   16  00:C0C0  D0 F6       BNE loadPalettesLoop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
+   17  00:C0C2  60          RTS
    18                     
-   19  00:C0C2            loadFullBackground_impl:
+   19  00:C0C3            loadFullBackground_impl:
    20                     
-   21  00:C0C2  AD 02 20          LDA $2002             ; read PPU status to reset the high/low latch
-   22  00:C0C5  A9 20             LDA #$20
-   23  00:C0C7  8D 06 20          STA $2006             ; write the high byte of $2000 address
-   24  00:C0CA  A9 00             LDA #$00
-   25  00:C0CC  8D 06 20          STA $2006             ; write the low byte of $2000 address
+   21  00:C0C3  AD 02 20          LDA $2002             ; read PPU status to reset the high/low latch
+   22  00:C0C6  A9 20             LDA #$20
+   23  00:C0C8  8D 06 20          STA $2006             ; write the high byte of $2000 address
+   24  00:C0CB  A9 00             LDA #$00
+   25  00:C0CD  8D 06 20          STA $2006             ; write the low byte of $2000 address
    26                             
    27                             ;;set pointer
    28                             ;; set counters
-   29  00:C0CF  A0 00             LDY #$00
-   30  00:C0D1  A2 00             LDX #$00
+   29  00:C0D0  A0 00             LDY #$00
+   30  00:C0D2  A2 00             LDX #$00
    31                             
    32                             ;;start loop
    33                     
-   34  00:C0D3            .outerloop:
+   34  00:C0D4            .outerloop:
    35                     
-   36  00:C0D3            .innerloop:
+   36  00:C0D4            .innerloop:
    37                     
-   38  00:C0D3  B1 07             LDA [table_address], y
-   39  00:C0D5  8D 07 20          STA $2007
-   40  00:C0D8  C8                INY
-   41  00:C0D9  C0 00             CPY #$00
-   42  00:C0DB  D0 F6             BNE .innerloop
+   38  00:C0D4  B1 07             LDA [table_address], y
+   39  00:C0D6  8D 07 20          STA $2007
+   40  00:C0D9  C8                INY
+   41  00:C0DA  C0 00             CPY #$00
+   42  00:C0DC  D0 F6             BNE .innerloop
    43                     
-   44  00:C0DD  EE 08 00          INC table_address+1
+   44  00:C0DE  EE 08 00          INC table_address+1
    45                             
-   46  00:C0E0  E8                INX
-   47  00:C0E1  E0 04             CPX #$04
-   48  00:C0E3  D0 EE             BNE .outerloop
-   49  00:C0E5  60                RTS
+   46  00:C0E1  E8                INX
+   47  00:C0E2  E0 04             CPX #$04
+   48  00:C0E4  D0 EE             BNE .outerloop
+   49  00:C0E6  60                RTS
    50                             
-   51  00:C0E6            SetTableAddress:
+   51  00:C0E7            SetTableAddress:
    52                             
    53                             ;;A is low, X is high
-   54  00:C0E6  8D 07 00          STA table_address
-   55  00:C0E9  8E 08 00          STX table_address+1
-   56  00:C0EC  60                RTS
+   54  00:C0E7  8D 07 00          STA table_address
+   55  00:C0EA  8E 08 00          STX table_address+1
+   56  00:C0ED  60                RTS
    57                             
-   58  00:C0ED            ChangeGameMode:
+   58  00:C0EE            ChangeGameMode:
    59                     
-   60  00:C0ED  8D 05 00    STA game_mode
-   61  00:C0F0  8D 06 00    STA game_mode_switching
-   62  00:C0F3  A9 00       LDA #$00
-   63  00:C0F5  8D 01 20    STA $2001    ; disable rendering- reenable on NMI when not updating
-   64  00:C0F8  20 01 C1    JSR LoadGameModeBackground
-   65  00:C0FB  A9 00       LDA #$00
-   66  00:C0FD  8D 06 00    STA game_mode_switching
-   67  00:C100  60          RTS
+   60  00:C0EE  8D 05 00    STA game_mode
+   61  00:C0F1  8D 06 00    STA game_mode_switching
+   62  00:C0F4  A9 00       LDA #$00
+   63  00:C0F6  8D 01 20    STA $2001    ; disable rendering- reenable on NMI when not updating
+   64  00:C0F9  20 02 C1    JSR LoadGameModeBackground
+   65  00:C0FC  A9 00       LDA #$00
+   66  00:C0FE  8D 06 00    STA game_mode_switching
+   67  00:C101  60          RTS
    68                             
    69                             
-   70  00:C101            LoadGameModeBackground:
+   70  00:C102            LoadGameModeBackground:
    71                     
    72                             MACROLoadAllPal game_mode
                           
-       00:C101  AC 05 00          LDY game_mode
-       00:C104  98                TYA
-       00:C105  0A                ASL A
-       00:C106  A8                TAY
-       00:C107  B9 10 E0          LDA (Palettes), y
-       00:C10A  C8                INY
-       00:C10B  BE 10 E0          LDX (Palettes), y
-       00:C10E  20 E6 C0          JSR SetTableAddress
-       00:C111  20 A8 C0          JSR loadAllPal_impl
+       00:C102  AC 05 00          LDY game_mode
+       00:C105  98                TYA
+       00:C106  0A                ASL A
+       00:C107  A8                TAY
+       00:C108  B9 10 E0          LDA (Palettes), y
+       00:C10B  C8                INY
+       00:C10C  BE 10 E0          LDX (Palettes), y
+       00:C10F  20 E7 C0          JSR SetTableAddress
+       00:C112  20 A9 C0          JSR loadAllPal_impl
                                   
    73                             MACROLoadFullBackground game_mode
                           
-       00:C114  AC 05 00          LDY game_mode
-       00:C117  98                TYA
-       00:C118  0A                ASL A
-       00:C119  A8                TAY
-       00:C11A  B9 16 E0          LDA (NameTables), y
-       00:C11D  C8                INY
-       00:C11E  BE 16 E0          LDX (NameTables), y
-       00:C121  20 E6 C0          JSR SetTableAddress
-       00:C124  20 C2 C0          JSR loadFullBackground_impl
+       00:C115  AC 05 00          LDY game_mode
+       00:C118  98                TYA
+       00:C119  0A                ASL A
+       00:C11A  A8                TAY
+       00:C11B  B9 16 E0          LDA (NameTables), y
+       00:C11E  C8                INY
+       00:C11F  BE 16 E0          LDX (NameTables), y
+       00:C122  20 E7 C0          JSR SetTableAddress
+       00:C125  20 C3 C0          JSR loadFullBackground_impl
                             
-   74  00:C127  60                RTS
+   74  00:C128  60                RTS
    75                             
    76                       
 #[1]   MMC1.asm
@@ -353,9 +356,9 @@
     3           00C0      CHRBANK2 = $C0
     4           00E0      PRGBANK = $E0
     5                     
-    6  00:C128            ResetMapper:
-    7  00:C128  EE 28 C1    inc ResetMapper
-    8  00:C12B  60          RTS
+    6  00:C129            ResetMapper:
+    7  00:C129  EE 29 C1    inc ResetMapper
+    8  00:C12C  60          RTS
     9                       
    10                     ;;now, set up the controls for the mapper
    11                     ;;4bit0
@@ -369,58 +372,58 @@
    19                     ;;|                         3: fix last bank at $C000 and switch 16 KB bank at $8000)
    20                     ;;+----- CHR ROM bank mode (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
    21                        
-   22  00:C12C            SetMapperControls:
+   22  00:C12D            SetMapperControls:
    23                       ;;A = controls
-   24  00:C12C  AA          TAX
-   25  00:C12D  A9 80       LDA #MAPPERCONTROL
-   26  00:C12F  8D 0C 00    STA mapper_address+1
-   27  00:C132  8A          TXA
-   28  00:C133  20 58 C1    JSR SendMapperCommand
-   29  00:C136  60          RTS
+   24  00:C12D  AA          TAX
+   25  00:C12E  A9 80       LDA #MAPPERCONTROL
+   26  00:C130  8D 0C 00    STA mapper_address+1
+   27  00:C133  8A          TXA
+   28  00:C134  20 59 C1    JSR SendMapperCommand
+   29  00:C137  60          RTS
    30                     
-   31  00:C137            LoadPRGBank:
+   31  00:C138            LoadPRGBank:
    32                     
    33                             ;;A is the desired PRG number
-   34  00:C137  AA                TAX
-   35  00:C138  A9 E0             LDA #PRGBANK
-   36  00:C13A  8D 0C 00          STA mapper_address+1
-   37  00:C13D  8A                TXA
-   38  00:C13E  20 58 C1          JSR SendMapperCommand
-   39  00:C141  60                RTS
+   34  00:C138  AA                TAX
+   35  00:C139  A9 E0             LDA #PRGBANK
+   36  00:C13B  8D 0C 00          STA mapper_address+1
+   37  00:C13E  8A                TXA
+   38  00:C13F  20 59 C1          JSR SendMapperCommand
+   39  00:C142  60                RTS
    40                             
-   41  00:C142            LoadCHRBankA:
+   41  00:C143            LoadCHRBankA:
    42                             ;;A is the desired CHR bank
-   43  00:C142  AA                TAX
-   44  00:C143  A9 A0             LDA #CHRBANK1
-   45  00:C145  8D 0C 00          STA mapper_address+1
-   46  00:C148  8A                TXA
-   47  00:C149  20 58 C1          JSR SendMapperCommand
-   48  00:C14C  60                RTS
+   43  00:C143  AA                TAX
+   44  00:C144  A9 A0             LDA #CHRBANK1
+   45  00:C146  8D 0C 00          STA mapper_address+1
+   46  00:C149  8A                TXA
+   47  00:C14A  20 59 C1          JSR SendMapperCommand
+   48  00:C14D  60                RTS
    49                             
-   50  00:C14D            LoadCHRBankB:
+   50  00:C14E            LoadCHRBankB:
    51                             ;;A is the desired CHR bank
-   52  00:C14D  AA                TAX
-   53  00:C14E  A9 C0             LDA #CHRBANK2
-   54  00:C150  8D 0C 00          STA mapper_address+1
-   55  00:C153  8A                TXA
-   56  00:C154  20 58 C1          JSR SendMapperCommand
-   57  00:C157  60                RTS
+   52  00:C14E  AA                TAX
+   53  00:C14F  A9 C0             LDA #CHRBANK2
+   54  00:C151  8D 0C 00          STA mapper_address+1
+   55  00:C154  8A                TXA
+   56  00:C155  20 59 C1          JSR SendMapperCommand
+   57  00:C158  60                RTS
    58                             
-   59  00:C158            SendMapperCommand:
+   59  00:C159            SendMapperCommand:
    60                     
-   61  00:C158  A0 00             LDY #$00
+   61  00:C159  A0 00             LDY #$00
    62                             
-   63  00:C15A  91 0B             STA [mapper_address], y
-   64  00:C15C  4A                LSR A
-   65  00:C15D  91 0B             STA [mapper_address], y
-   66  00:C15F  4A                LSR A
-   67  00:C160  91 0B             STA [mapper_address], y
-   68  00:C162  4A                LSR A 
-   69  00:C163  91 0B             STA [mapper_address], y
-   70  00:C165  4A                LSR A
-   71  00:C166  91 0B             STA [mapper_address], y
+   63  00:C15B  91 0B             STA [mapper_address], y
+   64  00:C15D  4A                LSR A
+   65  00:C15E  91 0B             STA [mapper_address], y
+   66  00:C160  4A                LSR A
+   67  00:C161  91 0B             STA [mapper_address], y
+   68  00:C163  4A                LSR A 
+   69  00:C164  91 0B             STA [mapper_address], y
+   70  00:C166  4A                LSR A
+   71  00:C167  91 0B             STA [mapper_address], y
    72                             
-   73  00:C168  60                RTS
+   73  00:C169  60                RTS
    74                             
    75                       
 #[1]   MMC1.asm
@@ -433,83 +436,93 @@
 #[2]   Routines/NMI.asm
   128                       .include "Routines/NMI.asm"
     1                      
-    2  00:C169            NMI:
+    2  00:C16A            NMI:
     3                     
-    4  00:C169  48          PHA                              ;protect the registers
-    5  00:C16A  8A          TXA
-    6  00:C16B  48          PHA
-    7  00:C16C  98          TYA
-    8  00:C16D  48          PHA
+    4  00:C16A  48          PHA                              ;protect the registers
+    5  00:C16B  8A          TXA
+    6  00:C16C  48          PHA
+    7  00:C16D  98          TYA
+    8  00:C16E  48          PHA
     9                       
-   10  00:C16E            nmi_started:
-   11  00:C16E  A9 00       LDA #$00
-   12  00:C170  8D 03 20    STA $2003       ; set the low byte (00) of the RAM address
-   13  00:C173  A9 02       LDA #$02
-   14  00:C175  8D 14 40    STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+   10  00:C16F            nmi_started:
+   11  00:C16F  A9 00       LDA #$00
+   12  00:C171  8D 03 20    STA $2003       ; set the low byte (00) of the RAM address
+   13  00:C174  A9 02       LDA #$02
+   14  00:C176  8D 14 40    STA $4014       ; set the high byte (02) of the RAM address, start the transfer
    15                     
-   16  00:C178  AD 06 00    LDA game_mode_switching
-   17  00:C17B  F0 03       BEQ update_controllers
-   18  00:C17D  4C B6 C1    JMP WakeUp
+   16  00:C179  AD 06 00    LDA game_mode_switching
+   17  00:C17C  F0 03       BEQ update_controllers
+   18  00:C17E  4C C8 C1    JMP WakeUp
    19                     
-   20  00:C180            update_controllers:
+   20  00:C181            update_controllers:
    21                     
 #[3]   Routines/ReadControllers.asm
    22                       .include "Routines/ReadControllers.asm"
     1                     
-    2  00:C180  8A            TXA
-    3  00:C181  48                PHA
-    4  00:C182  98                TYA
-    5  00:C183  48                PHA
+    2  00:C181  8A            TXA
+    3  00:C182  48                PHA
+    4  00:C183  98                TYA
+    5  00:C184  48                PHA
     6                     
-    7  00:C184  A2 00             LDX #$00
+    7  00:C185  A2 00             LDX #$00
     8                     
-    9  00:C186            GamePadCheck:
-   10  00:C186  A9 01             LDA #$01        ;load 1
-   11  00:C188  8D 16 40          STA $4016       ; turn latch on
+    9  00:C187            GamePadCheck:
+   10  00:C187  A9 01             LDA #$01        ;load 1
+   11  00:C189  8D 16 40          STA $4016       ; turn latch on
    12                             ;STA gamepad2
-   13  00:C18B  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
-   14  00:C18C  8D 16 40          STA $4016       ;turn latch off
+   13  00:C18C  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
+   14  00:C18D  8D 16 40          STA $4016       ;turn latch off
    15                             
    16                             ;do a ring counter technique- load %10000000 into both
-   17  00:C18F  A9 80             LDA #$80
-   18  00:C191  8D 0D 00          STA gamepad
+   17  00:C190  A9 80             LDA #$80
+   18  00:C192  8D 0D 00          STA gamepad
    19                     
-   20  00:C194            ReadControllerABytesLoop:
-   21  00:C194  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
-   22  00:C197  29 03             AND #%00000011  ;acc: %00000001 c: 0
-   23  00:C199  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
+   20  00:C195            ReadControllerABytesLoop:
+   21  00:C195  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
+   22  00:C198  29 03             AND #%00000011  ;acc: %00000001 c: 0
+   23  00:C19A  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
    24                             ;ror shifts everything right one position: carry->bit 7, bit 0-> carry
-   25  00:C19B  6E 0D 00          ROR gamepad             ;gamepad: %11000000
+   25  00:C19C  6E 0D 00          ROR gamepad             ;gamepad: %11000000
    26                             ;eventually, the ROR sends out the 1 instead of all the leading 0s, BCC (branch carry clear) gets the 1 and does not loop
-   27  00:C19E  90 F4             BCC ReadControllerABytesLoop
+   27  00:C19F  90 F4             BCC ReadControllerABytesLoop
    28                             
-   29                             ;return x and y... before resetting them all over again- always good to make sure we're clean
-   30  00:C1A0  68                PLA
-   31  00:C1A1  A8                TAY
-   32  00:C1A2  68                PLA
-   33  00:C1A3  AA                TAX     
+   29                             ;;comapre last to current, find the pressed buttons this frame
+   30  00:C1A1  AD 0E 00          LDA gamepadLast
+   31  00:C1A4  49 FF             EOR #$FF
+   32  00:C1A6  2D 0D 00          AND gamepad
+   33  00:C1A9  8D 0F 00          STA gamepadPressed
+   34                             
+   35                             
+   36  00:C1AC  AD 0D 00          LDA gamepad
+   37  00:C1AF  8D 0E 00          STA gamepadLast
+   38                             
+   39                             ;return x and y... before resetting them all over again- always good to make sure we're clean
+   40  00:C1B2  68                PLA
+   41  00:C1B3  A8                TAY
+   42  00:C1B4  68                PLA
+   43  00:C1B5  AA                TAX     
 #[2]   Routines/NMI.asm
    23                       
    24                         ;;This is the PPU clean up section, so rendering the next frame starts properly.
-   25  00:C1A4  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
-   26  00:C1A6  8D 00 20    STA $2000
-   27  00:C1A9  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
-   28  00:C1AB  8D 01 20    STA $2001
-   29  00:C1AE  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
-   30  00:C1B0  8D 05 20    STA $2005
-   31  00:C1B3  8D 05 20    STA $2005
+   25  00:C1B6  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+   26  00:C1B8  8D 00 20    STA $2000
+   27  00:C1BB  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
+   28  00:C1BD  8D 01 20    STA $2001
+   29  00:C1C0  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
+   30  00:C1C2  8D 05 20    STA $2005
+   31  00:C1C5  8D 05 20    STA $2005
    32                       
-   33  00:C1B6            WakeUp:
-   34  00:C1B6  A9 00       LDA #$00
-   35  00:C1B8  8D 04 00    STA sleeping
+   33  00:C1C8            WakeUp:
+   34  00:C1C8  A9 00       LDA #$00
+   35  00:C1CA  8D 04 00    STA sleeping
    36                       
-   37  00:C1BB  68          PLA                              ;restore the registers
-   38  00:C1BC  A8          TAY 
-   39  00:C1BD  68          PLA
-   40  00:C1BE  AA          TAX
-   41  00:C1BF  68          PLA
+   37  00:C1CD  68          PLA                              ;restore the registers
+   38  00:C1CE  A8          TAY 
+   39  00:C1CF  68          PLA
+   40  00:C1D0  AA          TAX
+   41  00:C1D1  68          PLA
    42                     
-   43  00:C1C0  40          RTI             ; return from interrupt
+   43  00:C1D2  40          RTI             ; return from interrupt
 #[1]   MMC1.asm
   129                       
   130                     ;;**************************;;
@@ -584,7 +597,7 @@
 #[1]   MMC1.asm
   141                     
   142           FFFA        .org $FFFA     ;first of the three vectors starts here
-  143  01:FFFA  69 C1       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+  143  01:FFFA  6A C1       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
   144                                        ;processor will jump to the label NMI:
   145  01:FFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
   146                                        ;to the label RESET:

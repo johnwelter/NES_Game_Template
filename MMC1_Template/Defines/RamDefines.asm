@@ -11,5 +11,7 @@ table_address  .rs 2
 jump_address  .rs 2
 mapper_address .rs 2
 gamepad .rs 1
+gamepadLast .rs 1
+gamepadPressed .rs 1
 currentCHRBank .rs 1
 currentPRGBank .rs 1
