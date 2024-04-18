@@ -29,7 +29,7 @@ clrmem:
   BNE clrmem
    
   JSR ResetMapper
-  LDA #$06 ; vertical mirroring, fixed $C000, 4 KB CHR pages
+  LDA #$0E ; vertical mirroring, fixed $C000, 8 KB CHR pages
   JSR SetMapperControls
   
 vblankwait2:      ; Second wait for vblank, PPU is ready after this

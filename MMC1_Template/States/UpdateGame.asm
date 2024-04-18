@@ -3,6 +3,7 @@ UpdateGame:
   LDA gamepad
   BEQ .noInputDetected
   
+  	JSR ResetMapper
 	INC currentCHRBank
 	LDA currentCHRBank
 	CMP #$03
@@ -12,7 +13,7 @@ UpdateGame:
 	
 .dontMod:
 	STA currentCHRBank 
-	JSR LoadCHRBankB
+	JSR LoadCHRBankA
  
 .noInputDetected:
  
