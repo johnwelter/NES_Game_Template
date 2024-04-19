@@ -72,4 +72,18 @@ SendMapperCommand:
 	
 	RTS
 	
+ResetBanks:
+
+	JSR ResetMapper
+	LDA #$00
+	JSR LoadPRGBank
+  
+	;;as a test, load up the initial CHR banks
+	JSR ResetMapper
+	LDA #$00
+	JSR LoadCHRBankA
+	LDA #$01
+	JSR LoadCHRBankB
+	RTS
+	
   

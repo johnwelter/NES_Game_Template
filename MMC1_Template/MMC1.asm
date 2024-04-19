@@ -20,23 +20,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;**************************;; 
 
-  ;;.bank 0
-  ;;.org $8000
-  ;;NOP
+  .include "Banks/Bank0.asm"
+  .include "Banks/Bank1.asm"
+  .include "Banks/Bank2.asm"
 
-  ;;.bank 1
-  ;;.org $A000
-  ;;NOP
-
-  ;;.bank 2
-  ;;.org $8000
-  ;;NOP
-  
-  ;;.bank 3
-  ;;.org $A000
-  ;;NOP
-
-  .bank 0
+  .bank 6
   .org $C000 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -134,7 +122,7 @@ CallDynamicSubroutine:
 ;;**************************;; 
   
   
-  .bank 1
+  .bank 7
   .org $E000
 
   .include "NameTables/Tables.asm"
@@ -152,15 +140,18 @@ CallDynamicSubroutine:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;**************************;; 
   
-  .bank 2
+  .bank 8
   .org $0000
   .incbin "CHRROM/Bank1.chr"   ;includes 8KB graphics file from SMB1
   
-  .bank 3
+  .bank 9
   .org $0000
   .incbin "CHRROM/Bank2.chr"
   
-  .bank 4
+  .bank 10
   .org $0000
   .incbin "CHRROM/Bank3.chr"
   
+  .bank 11
+  .org $0000
+  .incbin "CHRROM/Bank4.chr"
