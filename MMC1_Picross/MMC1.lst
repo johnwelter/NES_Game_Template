@@ -690,16 +690,16 @@
   142                       
   143           0008        .bank 8
   144           0000        .org $0000
-  145  08:0000              .incbin "CHRROM/Bank1.chr"   ;includes 8KB graphics file from SMB1
+  145  08:0000              .incbin "CHRROM/Bank0.chr"   ;includes 8KB graphics file from SMB1
   146                       
   147           0009        .bank 9
   148           0000        .org $0000
-  149  09:0000              .incbin "CHRROM/Bank2.chr"
+  149  09:0000              .incbin "CHRROM/Bank1.chr"
   150                       
   151           000A        .bank 10
   152           0000        .org $0000
-  153  0A:0000              .incbin "CHRROM/Bank3.chr"
+  153  0A:0000              .incbin "CHRROM/Bank2.chr"
   154                       
   155           000B        .bank 11
   156           0000        .org $0000
-  157  0B:0000              .incbin "CHRROM/Bank4.chr"
+  157  0B:0000              .incbin "CHRROM/Bank3.chr"
