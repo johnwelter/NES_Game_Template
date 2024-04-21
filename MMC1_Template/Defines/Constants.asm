@@ -1,0 +1,8 @@
+	;; define constants here
+	
+TITLE_IDX = $00
+GAME_IDX = $01
+GAMEOVER_IDX = $02
+SPRITE_YPOS = $00
+SPRITE_XPOS = $03
+SPRITE_DATA = $0200

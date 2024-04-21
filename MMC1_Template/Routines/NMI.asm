@@ -21,15 +21,47 @@ update_controllers:
 
   .include "Routines/ReadControllers.asm"
   
-    ;;This is the PPU clean up section, so rendering the next frame starts properly.
-  LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
-  STA $2000
-  LDA #%00011110   ; enable sprites, enable background, no clipping on left side
-  STA $2001
+  
   LDA #$00        ;;tell the ppu there is no background scrolling
   STA $2005
   STA $2005
   
+  LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+  STA $2000
+  LDA #%00011110   ; enable sprites, enable background, no clipping on left side
+  STA $2001
+
+  LDA game_mode
+  CMP #TITLE_IDX
+  BNE NotTitle
+	;;load bank 0 for BG tiles
+  JSR ResetMapper
+  LDA #$01
+  JSR LoadCHRBankB
+		
+WaitNotSprite0:
+  lda $2002
+  and #%01000000
+  bne WaitNotSprite0   ; wait until sprite 0 not hit
+
+WaitSprite0:
+  lda $2002
+  and #%01000000
+  beq WaitSprite0      ; wait until sprite 0 is hit
+
+  ldx #$05				;do a scanline wait
+WaitScanline:
+  dex
+  bne WaitScanline
+
+  JSR ResetMapper
+  LDA #$03
+  JSR LoadCHRBankB
+		
+
+NotTitle:
+
+
 WakeUp:
   LDA #$00
   STA sleeping
