@@ -12,6 +12,18 @@
     6           0000      SPRITE_YPOS = $00
     7           0003      SPRITE_XPOS = $03
     8           0200      SPRITE_DATA = $0200
+    9                     
+   10           2000      PPU_CTRL = $2000
+   11           2001      PPU_MASK = $2001
+   12           2002      PPU_STATUS = $2002
+   13           2003      OAM_LO = $2003
+   14           2004      OAM_DATA = $2004
+   15           2005      PPU_SCROLL = $2005
+   16           2006      PPU_ADDR = $2006
+   17           2007      PPU_DATA = $2007
+   18           4014      OAM_HI = $4014
+   19                     
+   20           0040      SPRITE_0_MASK = %01000000
 #[1]   MMC1.asm
 #[2]   Defines/RamDefines.asm
    15                       .include "Defines/RamDefines.asm"
@@ -200,7 +212,7 @@
    41  06:C04D            LoadSprites:
    42  06:C04D  A2 00       LDX #$00              ; start at 0
    43  06:C04F            LoadSpritesLoop:
-   44  06:C04F  BD 3C EC    LDA Pointer, x        ; load data from address (sprites +  x)
+   44  06:C04F  BD 6C EC    LDA Pointer, x        ; load data from address (sprites +  x)
    45  06:C052  9D 00 02    STA SPRITE_DATA, x          ; store into RAM address ($0200 + x)
    46  06:C055  E8          INX                   ; X = X + 1
    47  06:C056  E0 05       CPX #$05              ; Compare X to hex $10, decimal 16
@@ -331,15 +343,15 @@
     2                     ;; table_address should be set in the preceding macro
     3                     ;; y is clobbered
     4  06:C0DA            loadAllPal_impl:
-    5  06:C0DA  AD 02 20    LDA $2002             ; read PPU status to reset the high/low latch
+    5  06:C0DA  AD 02 20    LDA PPU_STATUS            ; read PPU status to reset the high/low latch
     6  06:C0DD  A9 3F       LDA #$3F
-    7  06:C0DF  8D 06 20    STA $2006             ; write the high byte of $3F00 address
+    7  06:C0DF  8D 06 20    STA PPU_ADDR            ; write the high byte of $3F00 address
     8  06:C0E2  A9 00       LDA #$00
-    9  06:C0E4  8D 06 20    STA $2006             ; write the low byte of $3F00 address
+    9  06:C0E4  8D 06 20    STA PPU_ADDR             ; write the low byte of $3F00 address
    10  06:C0E7  A0 00       LDY #$00              ; start out at 0
    11  06:C0E9            loadPalettesLoop:
    12  06:C0E9  B1 07       LDA [table_address], y        ; load data from address (palette + the value in x)
-   13  06:C0EB  8D 07 20    STA $2007             ; write to PPU
+   13  06:C0EB  8D 07 20    STA PPU_DATA            ; write to PPU
    14  06:C0EE  C8          INY                   ; X = X + 1
    15  06:C0EF  C0 20       CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites
    16  06:C0F1  D0 F6       BNE loadPalettesLoop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
@@ -347,11 +359,11 @@
    18                     
    19  06:C0F4            loadFullBackground_impl:
    20                     
-   21  06:C0F4  AD 02 20          LDA $2002             ; read PPU status to reset the high/low latch
+   21  06:C0F4  AD 02 20          LDA PPU_STATUS             ; read PPU status to reset the high/low latch
    22  06:C0F7  A9 20             LDA #$20
-   23  06:C0F9  8D 06 20          STA $2006             ; write the high byte of $2000 address
+   23  06:C0F9  8D 06 20          STA PPU_ADDR            ; write the high byte of $2000 address
    24  06:C0FC  A9 00             LDA #$00
-   25  06:C0FE  8D 06 20          STA $2006             ; write the low byte of $2000 address
+   25  06:C0FE  8D 06 20          STA PPU_ADDR           ; write the low byte of $2000 address
    26                             
    27                             ;;set pointer
    28                             ;; set counters
@@ -365,7 +377,7 @@
    36  06:C105            .innerloop:
    37                     
    38  06:C105  B1 07             LDA [table_address], y
-   39  06:C107  8D 07 20          STA $2007
+   39  06:C107  8D 07 20          STA PPU_DATA
    40  06:C10A  C8                INY
    41  06:C10B  C0 00             CPY #$00
    42  06:C10D  D0 F6             BNE .innerloop
@@ -389,7 +401,7 @@
    60  06:C11F  8D 05 00    STA game_mode
    61  06:C122  8D 06 00    STA game_mode_switching
    62  06:C125  A9 00       LDA #$00
-   63  06:C127  8D 01 20    STA $2001    ; disable rendering- reenable on NMI when not updating
+   63  06:C127  8D 01 20    STA PPU_MASK    ; disable rendering- reenable on NMI when not updating
    64  06:C12A  20 33 C1    JSR LoadGameModeBackground
    65  06:C12D  A9 00       LDA #$00
    66  06:C12F  8D 06 00    STA game_mode_switching
@@ -537,9 +549,9 @@
     9                       
    10  06:C1B6            nmi_started:
    11  06:C1B6  A9 00       LDA #$00
-   12  06:C1B8  8D 03 20    STA $2003       ; set the low byte (00) of the RAM address
+   12  06:C1B8  8D 03 20    STA OAM_LO      ; set the low byte (00) of the RAM address
    13  06:C1BB  A9 02       LDA #$02
-   14  06:C1BD  8D 14 40    STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+   14  06:C1BD  8D 14 40    STA OAM_HI       ; set the high byte (02) of the RAM address, start the transfer
    15                     
    16  06:C1C0  AD 06 00    LDA game_mode_switching
    17  06:C1C3  F0 03       BEQ update_controllers
@@ -596,13 +608,13 @@
    23                       
    24                       
    25  06:C1FD  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
-   26  06:C1FF  8D 05 20    STA $2005
-   27  06:C202  8D 05 20    STA $2005
+   26  06:C1FF  8D 05 20    STA PPU_SCROLL
+   27  06:C202  8D 05 20    STA PPU_SCROLL
    28                       
    29  06:C205  A9 90       LDA #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
-   30  06:C207  8D 00 20    STA $2000
+   30  06:C207  8D 00 20    STA PPU_CTRL
    31  06:C20A  A9 1E       LDA #%00011110   ; enable sprites, enable background, no clipping on left side
-   32  06:C20C  8D 01 20    STA $2001
+   32  06:C20C  8D 01 20    STA PPU_MASK
    33                     
    34  06:C20F  AD 05 00    LDA game_mode
    35  06:C212  C9 00       CMP #TITLE_IDX
@@ -613,13 +625,13 @@
    40  06:C21B  20 7F C1    JSR LoadCHRBankB
    41                                     
    42  06:C21E            WaitNotSprite0:
-   43  06:C21E  AD 02 20    lda $2002
-   44  06:C221  29 40       and #%01000000
+   43  06:C21E  AD 02 20    lda PPU_STATUS
+   44  06:C221  29 40       and #SPRITE_0_MASK
    45  06:C223  D0 F9       bne WaitNotSprite0   ; wait until sprite 0 not hit
    46                     
    47  06:C225            WaitSprite0:
    48  06:C225  AD 02 20    lda $2002
-   49  06:C228  29 40       and #%01000000
+   49  06:C228  29 40       and #SPRITE_0_MASK
    50  06:C22A  F0 F9       beq WaitSprite0      ; wait until sprite 0 is hit
    51                     
    52  06:C22C  A2 05       ldx #$05                              ;do a scanline wait
@@ -663,43 +675,46 @@
     1  07:E000            Palettes:
     2                     
     3  07:E000  0C E0       .word Title_Palette, Game_Palette, GameOver_Palette
-       07:E002  1C E0     
-       07:E004  2C E0     
+       07:E002  2C E0     
+       07:E004  4C E0     
     4                     
     5  07:E006            NameTables:
     6                     
-    7  07:E006  3C E0       .word Title_Screen, Game_Screen, GameOver_Screen
-       07:E008  3C E4     
-       07:E00A  3C E8     
+    7  07:E006  6C E0       .word Title_Screen, Game_Screen, GameOver_Screen
+       07:E008  6C E4     
+       07:E00A  6C E8     
     8                     
     9  07:E00C            Title_Palette:
    10                     
    11  07:E00C              .incbin "NameTables/Title_PAL.pal"
-   12                       
-   13  07:E01C            Game_Palette:
-   14                     
-   15  07:E01C              .incbin "NameTables/Game_PAL.pal"
-   16                       
-   17  07:E02C            GameOver_Palette:
-   18                     
-   19  07:E02C              .incbin "NameTables/GameOver_PAL.pal"
-   20                       
-   21  07:E03C            Title_Screen:
-   22                     
-   23  07:E03C              .incbin "NameTables/Title_NT.nam"
-   24                       
-   25  07:E43C            Game_Screen: 
-   26                     
-   27  07:E43C              .incbin "NameTables/Game_NT.nam"
-   28                       
-   29  07:E83C            GameOver_Screen:
-   30                     
-   31  07:E83C              .incbin "NameTables/Game_NT.nam"
-   32                       
+   12  07:E01C              .incbin "NameTables/Title_PAL.pal"
+   13                       
+   14  07:E02C            Game_Palette:
+   15                     
+   16  07:E02C              .incbin "NameTables/Game_PAL.pal"
+   17  07:E03C              .incbin "NameTables/Game_PAL.pal"
+   18                       
+   19  07:E04C            GameOver_Palette:
+   20                     
+   21  07:E04C              .incbin "NameTables/GameOver_PAL.pal"
+   22  07:E05C              .incbin "NameTables/GameOver_PAL.pal"
+   23                       
+   24  07:E06C            Title_Screen:
+   25                     
+   26  07:E06C              .incbin "NameTables/Title_NT.nam"
+   27                       
+   28  07:E46C            Game_Screen: 
+   29                     
+   30  07:E46C              .incbin "NameTables/Game_NT.nam"
+   31                       
+   32  07:E86C            GameOver_Screen:
    33                     
-   34                       
-   35                      
-   36                             
+   34  07:E86C              .incbin "NameTables/Game_NT.nam"
+   35                       
+   36                     
+   37                       
+   38                      
+   39                             
 #[1]   MMC1.asm
 #[2]   Sprites/Sprites.asm
   131                       .include "Sprites/Sprites.asm"
@@ -740,9 +755,9 @@
    35                     ;;It is not possible to have a sprite partially visible on the left edge. 
    36                     ;;Instead, left-clipping through PPUMASK ($2001) can be used to simulate this effect.
    37                     
-   38  07:EC3C            Pointer:
-   39  07:EC3C  91 00 00          .db $91,$00,$00,$E8
-       07:EC3F  E8        
+   38  07:EC6C            Pointer:
+   39  07:EC6C  90 00 00          .db $90,$00,$00,$E8
+       07:EC6F  E8        
 #[1]   MMC1.asm
   132                     
   133           FFFA        .org $FFFA     ;first of the three vectors starts here

@@ -36,4 +36,4 @@
 ;;Instead, left-clipping through PPUMASK ($2001) can be used to simulate this effect.
 
 Pointer:
-	.db $91,$00,$00,$E8
+	.db $90,$00,$00,$E8

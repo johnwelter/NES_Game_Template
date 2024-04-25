@@ -9,13 +9,16 @@ NameTables:
 Title_Palette:
 
   .incbin "NameTables/Title_PAL.pal"
+  .incbin "NameTables/Title_PAL.pal"
   
 Game_Palette:
 
   .incbin "NameTables/Game_PAL.pal"
+  .incbin "NameTables/Game_PAL.pal"
   
 GameOver_Palette:
 
+  .incbin "NameTables/GameOver_PAL.pal"
   .incbin "NameTables/GameOver_PAL.pal"
   
 Title_Screen:
