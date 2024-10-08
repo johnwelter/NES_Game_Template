@@ -64,6 +64,18 @@ ChangeGameMode:
   JSR LoadGameModeBackground
   LDA #$00
   STA game_mode_switching
+  
+  ;; load the CHR bank for this mode
+  JSR ResetMapper
+  ;;remember, we're loading the SECOND set in each chr bank
+  ;;so we'll take the index from the game mode chr table and add one mult 2
+  LDX game_mode
+  LDA gameModeInitCHRROM, x
+  ASL A
+  CLC 
+  ADC #$01
+  JSR LoadCHRBankB
+  
   RTS
 	
 	
@@ -74,3 +86,5 @@ LoadGameModeBackground:
 	RTS
 	
   
+gameModeInitCHRROM:
+	.db $00, $02, $02

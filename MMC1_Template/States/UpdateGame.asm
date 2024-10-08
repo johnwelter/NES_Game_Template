@@ -28,12 +28,12 @@ UpdateGame:
 	LDA #$00
 	
 .dontModPRG:
-	STA currentPRGBank
-	JSR LoadPRGBank
+	 STA currentPRGBank
+	 JSR LoadPRGBank
  
-	JSR TestBankA
-	LDA mapperDebugVar
-	STA $6000
+	 JSR TestBankA
+	 LDA mapperDebugVar
+	 STA $6000
  
 .noInputDetected:
  
