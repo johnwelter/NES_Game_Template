@@ -7,6 +7,10 @@ GAMEPAD_B = $02
 GAMEPAD_SELECT = $04
 GAMEPAD_START = $08
 
+GAMEPAD_HORI = $C0
+GAMEBAD_VERT = $30
+GAMEPAD_MOVE = $F0
+
 gamepad 		.rs 1
 gamepadLast 	.rs 1
 gamepadPressed 	.rs 1

@@ -8,4 +8,5 @@ clueDrawOffset		.rs 2
 clueDrawAdd		  	.rs 1
 clueDrawDecSize		.rs 1
 clueParity 			.rs 1
+mouseLocation		.rs 2
 

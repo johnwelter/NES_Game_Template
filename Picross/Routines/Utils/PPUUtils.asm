@@ -16,6 +16,7 @@ LoadFullPaletteFromTable:
 LoadFullBackgroundFromTable:
 
 	MACROSetPPUAddress $2000
+	MACROGetLabelPointer Screen_Copy, pointer_address
 	
 	;;set pointer
 	;; set counters
@@ -30,10 +31,12 @@ LoadFullBackgroundFromTable:
 
 	LDA [table_address], y
 	STA PPU_DATA
+	STA [pointer_address],y
 	INY
 	CPY #$00
 	BNE .innerloop
 
+	INC pointer_address+1
 	INC table_address+1
 	
 	INX
@@ -166,9 +169,6 @@ ClearPPUString:
 	STA PPU_String
 	STA PPU_PendingWrite
 	RTS
-
-
-	
 
 DetectSprite0:
 WaitNotSprite0:

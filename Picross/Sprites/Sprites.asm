@@ -40,6 +40,6 @@ Sprites:
 Title_Sprites:
 	.db $90,$00,$00,$E8
 Game_Sprites:
-	.db $00,$00,$00,$00
+	.db $62,$00,$03,$72
 GameOver_Sprites:
 	.db $00,$00,$00,$00
