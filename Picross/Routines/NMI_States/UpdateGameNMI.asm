@@ -1,0 +1,2 @@
+UpdateGameNMI:
+  RTS

@@ -1,5 +1,4 @@
-  .inesprg 1   ; 1x 16KB PRG code
-  .ineschr 1   ; 1x  8KB CHR data
-  .inesmap 0   ; mapper 0 = NROM, no bank swapping
-  .inesmir 1   ; background mirroring
-     
+  .inesprg 4	; 1x 16KB PRG code
+  .ineschr 4	; 1x  8KB CHR data
+  .inesmap 1	; mapper 1 = MMC1
+  .inesmir 2	; set up SRAM

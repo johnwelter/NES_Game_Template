@@ -1,0 +1,2 @@
+UpdateGameOverNMI:
+  RTS

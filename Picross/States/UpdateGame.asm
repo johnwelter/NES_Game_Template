@@ -1,2 +1,0 @@
-UpdateGame:
-  RTS
