@@ -44,6 +44,7 @@ UpdateGameInit:
   MACROGetDoubleIndex #$00
   JSR GetTableAtIndex
   MACROGetPointer table_address, puzzle_address
+  MACROGetLabelPointer MOUSE_START, mouse_location
   
   ;;for clues, we need to get past the header- for a 15x15 puzzle, that's 34 bytes ahead
   LDA puzzle_address
@@ -147,15 +148,32 @@ UpdateGamePlay:
   
   ;;A pressed, get target tile
   
-  ;LDY #$00
-  ;LDA [pointer_address], y
+  LDY #$00
+  LDA [mouse_location], y
   
-  LDA pointer_address+1
+  CMP #$7C	;check if this is a marked tile
+  BCS .getClearTile
+  ;;cleared tile- store off marked tile to paint with instead
+  AND #$0F
+  ORA #$70
+  JMP .setTile
+
+.getClearTile:
+  
+  AND #$0F
+  ORA #$60
+  
+.setTile:
+
+  STA [mouse_location], y
+  STA temp1
+  
+  LDA mouse_location+1
   AND #$3F
-  STA pointer_address+1
+  STA temp2
   
-  MACROAddPPUStringEntryRawData pointer_address+1, pointer_address, DRAW_HORIZONTAL, #$01
-  LDA #$32
+  MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
+  LDA temp1
   JSR WriteToPPUString
   
   
@@ -247,9 +265,9 @@ UpdateMouseScreenPos:
   LDA temp1			 ;		;  0000 00yy
   ORA #$60			 ; 		;  0110 00yy
   
-  STA pointer_address+1
+  STA mouse_location+1
   LDA temp2
-  STA pointer_address
+  STA mouse_location
   
 .leave:
   RTS
