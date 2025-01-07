@@ -64,7 +64,6 @@ UpdateGameInit:
   STA clueDrawAdd
    
   MACROGetLabelPointer VERT_CLUES, clue_start_address
-  MACROGetLabelPointer MOUSE_START, mouseLocation
   JSR ResetClueDrawAddress
     
   INC mode_state
@@ -105,8 +104,6 @@ UpdateDrawHoriClues:
   RTS
   
 UpdateGamePlay:
-
-  MACROAddPPUStringEntryRawData #$20, #$65, #DRAW_HORIZONTAL, #$01
     
   LDA #$00
   STA temp1
@@ -146,11 +143,13 @@ UpdateGamePlay:
 
   LDA gamepadPressed
   AND #GAMEPAD_A
-  BNE .leave
+  BEQ .leave
   
-  ;;A pressed, get tile
+  ;;A pressed, get target tile
   
+  ;LDY #$00
   ;LDA [pointer_address], y
+  
   LDA pointer_address+1
   AND #$3F
   STA pointer_address+1
@@ -226,42 +225,32 @@ MoveMouse:
 	
 UpdateMouseScreenPos:
 
-  LDA temp3
-  BEQ .leave
-  DEC temp3
-
   LDX #$00
-  LDA SPRITE_DATA, x	;ypos
-  LSR A
-  LSR A
-  LSR A
+  LDA SPRITE_DATA, x;ypos	;yyyy y...
+  LSR A						;0yyy yy..
+  LSR A						;00yy yyy.
+  LSR A						;000y yyyy
   STA temp1
   INX
   INX
-  INX
-  LDA SPRITE_DATA, x ;xpos
-  AND #$F8
-  ASL A
-  ROL temp3
-  ASL A
-  ROL temp3
-  STA temp2
+  INX	
+  LDA SPRITE_DATA, x ;xpos  ;  xxxx x...
+  AND #$F8			 ;		;  xxxx x000
+  STA temp2			 ;      ;  
+  LSR temp1			 ;		;  0000 yyyy y
+  ROR temp2			 ;      ;  yxxx xx00
+  LSR temp1			 ;		;  0000 0yyy y
+  ROR temp2			 ;		;  yyxx xxx0
+  LSR temp1 		 ;		;  0000 00yy y
+  ROR temp2			 ;		;  yyyx xxxx
   
-  LDA mouseLocation
-  CLC
-  ADC temp1
-  STA pointer_address
-  LDA mouseLocation+1
-  ADC #$00
+  LDA temp1			 ;		;  0000 00yy
+  ORA #$60			 ; 		;  0110 00yy
+  
   STA pointer_address+1
-
-  LDA pointer_address
-  CLC
-  ADC temp2
+  LDA temp2
   STA pointer_address
-  LDA pointer_address+1
-  ADC temp3
-  STA pointer_address+1
+  
 .leave:
   RTS
 
