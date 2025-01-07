@@ -9,4 +9,5 @@ clueDrawAdd		  	.rs 1
 clueDrawDecSize		.rs 1
 clueParity 			.rs 1
 mouse_location		.rs 2
+currentPaintTile	.rs 1
 

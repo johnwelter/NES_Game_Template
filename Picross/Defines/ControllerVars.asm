@@ -11,6 +11,8 @@ GAMEPAD_HORI = $C0
 GAMEBAD_VERT = $30
 GAMEPAD_MOVE = $F0
 
+GAMEPAD_AB = $03
+
 gamepad 		.rs 1
 gamepadLast 	.rs 1
 gamepadPressed 	.rs 1

@@ -113,7 +113,10 @@ UpdateGamePlay:
 
   
   LDA gamepadPressed
-  BEQ .leave
+  BEQ .updatePaint  
+  
+.parseInputs:
+
   AND #GAMEPAD_MOVE
   BEQ .checkPaintPress
   ASL A
@@ -143,28 +146,75 @@ UpdateGamePlay:
 .checkPaintPress:
 
   LDA gamepadPressed
-  AND #GAMEPAD_A
-  BEQ .leave
+  AND #GAMEPAD_AB
+  BEQ .updatePaint
+  ;;A or B pressed, get current tile
   
-  ;;A pressed, get target tile
+  STA temp1
   
   LDY #$00
   LDA [mouse_location], y
+  STA temp2
   
+    ;;A treats X and Clear as clear
+	;;B treats mark and clear as clear
+	;;clear->mark->x
+	
+
   CMP #$7C	;check if this is a marked tile
   BCS .getClearTile
   ;;cleared tile- store off marked tile to paint with instead
-  AND #$0F
-  ORA #$70
-  JMP .setTile
+  ;;not a clear tile- a mark or an x - check A or B  
+  LSR temp1
+  BCS .getMarkTile
+  
+.getXTile:
+  LDA #$80
+  JMP .finishGetTile
+  
+.getMarkTile:
+  LDA #$70
+  JMP .finishGetTile
 
 .getClearTile:
   
-  AND #$0F
-  ORA #$60
+  LSR temp1
+  BCC .checkB
+  LDA temp2
+  CMP #$8C			;; check if in X tiles - will be if >=
+  BCC .clearTile
+  JMP .getMarkTile
+  
+.checkB:
+  
+ LDA temp2
+ CMP #$8C
+ BCS .clearTile
+ JMP .getXTile
+  
+.clearTile:
+  LDA #$60
+  JMP .finishGetTile
+  
+.finishGetTile:
+  STA currentPaintTile
+  JMP .setTile
+
+;;we'll keep a copy of the puzzle tiles in memory, since we can't easily access tiles in the PPU
+;;might be best to just keep an entire copy of the nametable instead of trying to index it and deal with 16 bit math
+;;we can load the nametable into memory as we draw it
+
+.updatePaint:
+
+  LDA gamepad
+  AND #GAMEPAD_AB
+  BEQ .leave  
   
 .setTile:
 
+  LDA [mouse_location], y
+  AND #$0F
+  ORA currentPaintTile
   STA [mouse_location], y
   STA temp1
   
@@ -175,19 +225,9 @@ UpdateGamePlay:
   MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
   LDA temp1
   JSR WriteToPPUString
-  
-  
-;;we'll keep a copy of the puzzle tiles in memory, since we can't easily access tiles in the PPU
-;;might be best to just keep an entire copy of the nametable instead of trying to index it and deal with 16 bit math
-;;we can load the nametable into memory as we draw it
-
-
-.updatePaint:
-
-.checkMarkPress:
-    
   JMP .leave
-
+  
+  ;;update the painting
 .changeModeState:
 
   INC mode_state
