@@ -44,6 +44,7 @@ UpdateGameInit:
   MACROGetDoubleIndex #$00
   JSR GetTableAtIndex
   MACROGetPointer table_address, puzzle_address
+  MACROGetLabelPointer MOUSE_START, mouse_location
   
   ;;for clues, we need to get past the header- for a 15x15 puzzle, that's 34 bytes ahead
   LDA puzzle_address
@@ -64,7 +65,6 @@ UpdateGameInit:
   STA clueDrawAdd
    
   MACROGetLabelPointer VERT_CLUES, clue_start_address
-  MACROGetLabelPointer MOUSE_START, mouseLocation
   JSR ResetClueDrawAddress
     
   INC mode_state
@@ -105,8 +105,6 @@ UpdateDrawHoriClues:
   RTS
   
 UpdateGamePlay:
-
-  MACROAddPPUStringEntryRawData #$20, #$65, #DRAW_HORIZONTAL, #$01
     
   LDA #$00
   STA temp1
@@ -115,7 +113,10 @@ UpdateGamePlay:
 
   
   LDA gamepadPressed
-  BEQ .leave
+  BEQ .updatePaint  
+  
+.parseInputs:
+
   AND #GAMEPAD_MOVE
   BEQ .checkPaintPress
   ASL A
@@ -145,32 +146,88 @@ UpdateGamePlay:
 .checkPaintPress:
 
   LDA gamepadPressed
-  AND #GAMEPAD_A
-  BNE .leave
+  AND #GAMEPAD_AB
+  BEQ .updatePaint
+  ;;A or B pressed, get current tile
   
-  ;;A pressed, get tile
+  STA temp1
   
-  ;LDA [pointer_address], y
-  LDA pointer_address+1
-  AND #$3F
-  STA pointer_address+1
+  LDY #$00
+  LDA [mouse_location], y
+  STA temp2
   
-  MACROAddPPUStringEntryRawData pointer_address+1, pointer_address, DRAW_HORIZONTAL, #$01
-  LDA #$32
-  JSR WriteToPPUString
+    ;;A treats X and Clear as clear
+	;;B treats mark and clear as clear
+	;;clear->mark->x
+	
+
+  CMP #$7C	;check if this is a marked tile
+  BCS .getClearTile
+  ;;cleared tile- store off marked tile to paint with instead
+  ;;not a clear tile- a mark or an x - check A or B  
+  LSR temp1
+  BCS .getMarkTile
   
+.getXTile:
+  LDA #$80
+  JMP .finishGetTile
   
+.getMarkTile:
+  LDA #$70
+  JMP .finishGetTile
+
+.getClearTile:
+  
+  LSR temp1
+  BCC .checkB
+  LDA temp2
+  CMP #$8C			;; check if in X tiles - will be if >=
+  BCC .clearTile
+  JMP .getMarkTile
+  
+.checkB:
+  
+ LDA temp2
+ CMP #$8C
+ BCS .clearTile
+ JMP .getXTile
+  
+.clearTile:
+  LDA #$60
+  JMP .finishGetTile
+  
+.finishGetTile:
+  STA currentPaintTile
+  JMP .setTile
+
 ;;we'll keep a copy of the puzzle tiles in memory, since we can't easily access tiles in the PPU
 ;;might be best to just keep an entire copy of the nametable instead of trying to index it and deal with 16 bit math
 ;;we can load the nametable into memory as we draw it
 
-
 .updatePaint:
 
-.checkMarkPress:
-    
-  JMP .leave
+  LDA gamepad
+  AND #GAMEPAD_AB
+  BEQ .leave  
+  
+.setTile:
 
+  LDA [mouse_location], y
+  AND #$0F
+  ORA currentPaintTile
+  STA [mouse_location], y
+  STA temp1
+  
+  LDA mouse_location+1
+  AND #$3F
+  STA temp2
+  
+  MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
+  LDA temp1
+  JSR WriteToPPUString
+  JMP .leave
+  
+  ;;update the painting
 .changeModeState:
 
   INC mode_state
@@ -226,42 +283,32 @@ MoveMouse:
 	
 UpdateMouseScreenPos:
 
-  LDA temp3
-  BEQ .leave
-  DEC temp3
-
   LDX #$00
-  LDA SPRITE_DATA, x	;ypos
-  LSR A
-  LSR A
-  LSR A
+  LDA SPRITE_DATA, x;ypos	;yyyy y...
+  LSR A						;0yyy yy..
+  LSR A						;00yy yyy.
+  LSR A						;000y yyyy
   STA temp1
   INX
   INX
-  INX
-  LDA SPRITE_DATA, x ;xpos
-  AND #$F8
-  ASL A
-  ROL temp3
-  ASL A
-  ROL temp3
-  STA temp2
+  INX	
+  LDA SPRITE_DATA, x ;xpos  ;  xxxx x...
+  AND #$F8			 ;		;  xxxx x000
+  STA temp2			 ;      ;  
+  LSR temp1			 ;		;  0000 yyyy y
+  ROR temp2			 ;      ;  yxxx xx00
+  LSR temp1			 ;		;  0000 0yyy y
+  ROR temp2			 ;		;  yyxx xxx0
+  LSR temp1 		 ;		;  0000 00yy y
+  ROR temp2			 ;		;  yyyx xxxx
   
-  LDA mouseLocation
-  CLC
-  ADC temp1
-  STA pointer_address
-  LDA mouseLocation+1
-  ADC #$00
-  STA pointer_address+1
-
-  LDA pointer_address
-  CLC
-  ADC temp2
-  STA pointer_address
-  LDA pointer_address+1
-  ADC temp3
-  STA pointer_address+1
+  LDA temp1			 ;		;  0000 00yy
+  ORA #$60			 ; 		;  0110 00yy
+  
+  STA mouse_location+1
+  LDA temp2
+  STA mouse_location
+  
 .leave:
   RTS
 
