@@ -5,9 +5,9 @@ VERT_CLUES = $214E
 HORI_CLUES = $218C
 
 ;;this will change with puzzle sizes
-VERT_MIN = $5A
+VERT_MIN = $5A ;12 - 1
 VERT_MAX = $DA
-HORI_MIN = $6A
+HORI_MIN = $6A ;14 - 1
 HORI_MAX = $EA
 
 MOUSE_START = $618E
@@ -50,10 +50,10 @@ UpdateGameInit:
   LDA puzzle_address
   CLC
   ADC #34
-  STA puzzle_address
+  STA clues_address
   LDA #$00
   ADC puzzle_address+1
-  STA puzzle_address+1
+  STA clues_address+1
 
   LDA #$00
   STA clueTableIndex
@@ -138,9 +138,6 @@ UpdateGamePlay:
 .move:
  
   JSR MoveMouse
-  
-.updateMousePos:
-
   JSR UpdateMouseScreenPos
   
 .checkPaintPress:
@@ -208,20 +205,104 @@ UpdateGamePlay:
 
   LDA gamepad
   AND #GAMEPAD_AB
-  BEQ .leave  
+  BNE .setTile
+  RTS  
   
 .setTile:
 
+  ;;take Y position, mult by 2 to get starting index in puzzle solution
+  LDA mouse_index+1
+  ASL A
+  CLC
+  ADC #$04 ;; add to get past header
+  STA temp1
+  
+  ;;div X position by 8 to get the byte index
+  LDA mouse_index
+  LSR A
+  LSR A
+  LSR A
+  BEQ .getMask
+  
+  INC temp1
+  
+.getMask:
+  
+  LDA mouse_index
+  AND #$07
+  TAX
+  LDA #$80
+  CPX #$00
+  BEQ .storeMask
+
+.maskLoop:
+  LSR A
+  DEX
+  BNE .maskLoop
+.storeMask:
+  STA temp2
+
+  LDY temp1
+  LDA [puzzle_address], y
+  AND temp2
+  STA temp1	;get the 0/non zero solution flag 
+
+  LDY #$00
   LDA [mouse_location], y
+  STA temp3
+  AND #$F0
+  CMP currentPaintTile
+  BEQ .leave
+  
+  ;;tiles are different- check if the current tile is marked as a solution tile
+  CMP #$70
+  BNE .checkNewMark
+  ;;if erasing a mark, check if the tile was part of the solution
+  LDA temp1
+  BNE .antiMark
+  DEC nonSolutionCount
+  JMP .checkSolution
+  
+.checkNewMark:
+
+  LDA currentPaintTile
+  CMP #$70
+  BNE .overwriteTile
+  
+  LDA temp1
+  BNE .proMark
+  INC nonSolutionCount 
+  JMP .checkSolution  
+  
+.antiMark:
+  DEC solutionCount
+  JMP .overwriteTile
+.proMark:   
+  
+  INC solutionCount
+
+.checkSolution: 
+
+  LDY #$01
+  LDA [puzzle_address], y
+  CMP solutionCount
+  BNE .overwriteTile
+  LDA nonSolutionCount
+  BEQ .changeModeState
+  
+.overwriteTile:
+  ;;overwrite tile
+  LDA temp3
   AND #$0F
   ORA currentPaintTile
+  LDY #$00
   STA [mouse_location], y
   STA temp1
   
   LDA mouse_location+1
   AND #$3F
   STA temp2
-  
+    
   MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
   LDA temp1
   JSR WriteToPPUString
@@ -289,6 +370,7 @@ UpdateMouseScreenPos:
   LSR A						;00yy yyy.
   LSR A						;000y yyyy
   STA temp1
+  STA mouse_index+1
   INX
   INX
   INX	
@@ -301,6 +383,21 @@ UpdateMouseScreenPos:
   ROR temp2			 ;		;  yyxx xxx0
   LSR temp1 		 ;		;  0000 00yy y
   ROR temp2			 ;		;  yyyx xxxx
+  LDA temp2
+  AND #$1F
+  STA mouse_index
+  
+  LDA mouse_index
+  SEC 
+  SBC #$0E
+  STA mouse_index
+  
+  LDA mouse_index+1
+  SEC 
+  SBC #$0C
+  STA mouse_index+1
+  
+  ;subtract starting offsets for mouse index
   
   LDA temp1			 ;		;  0000 00yy
   ORA #$60			 ; 		;  0110 00yy

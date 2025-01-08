@@ -31,7 +31,7 @@ Game_Screen:
   
 GameOver_Screen:
 
-  .incbin "NameTables/Game_NT.nam"
+  .incbin "NameTables/GameOver_NT.nam"
   
 
   

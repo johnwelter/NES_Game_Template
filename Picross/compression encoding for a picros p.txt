@@ -24,6 +24,10 @@ compression encoding for a picros puzzle
 	row byte = 03 * 01 = 03
 	column byte = 03 >> >> >> 00
 	column mask = %10000000 >> by col (3) && 7 = %00010000
+	
+	;;find staring column byte - take the row and mult by 2. 
+	;;get the column byte, add that or don't
+	;;bit mask and check if we're adding or subtracting a correct mark
 
 	access game map:
 	[3, 4]

@@ -2,7 +2,7 @@ PopulateClues:
 
 .getByte:
   LDY clueTableIndex
-  LDA [puzzle_address], y
+  LDA [clues_address], y
   BNE .checkNewLine
   INC clueTableIndex
   LDA #$00
