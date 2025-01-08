@@ -1,0 +1,278 @@
+compression encoding for a picros puzzle
+- would be good to encode both coloumn/row info as well as actual grid
+- seperate them, don't decode row/column numbers at run time
+- use bit masks?
+
+-store in SRAM
+-we can store the puzzle itself in a bitmask, but the puzzle itself needs to be bigger to hold the other possible states
+
+- there's an inherent waste in keeping the row count consistent, but helps keep the conversions down and not needing to do (many) mults
+- 5x5 map:
+
+	stored: 1 bit per square, 5 bits per row, 5 rows - ceil(5/8) * 5 = 5 bytes, 1 byte per row
+	game: 2 bits per quare, 10 bits per row, 5 rows -  ceil(10/8) * 5 = 10 bytes, 2 bytes per row
+	PPU: 5x5 - 25 bytes, stored in PPU
+
+	00,00,00,00 00,00,00,00  |  00000000  |  00 01 02 03 04
+	00,00,00,00 00,00,00,00  |  00000000  |  05 06 07 08 09
+	00,00,00,00 00,00,00,00  |  00000000  |  0a 0b 0c 0d 0e
+	00,00,00,00 00,00,00,00  |  00000000  |  0f 10 11 12 13
+	00,00,00,00 00,00,00,00  |  00000000  |  14 15 16 17 18
+
+	access map storage:
+	[3, 3]
+	row byte = 03 * 01 = 03
+	column byte = 03 >> >> >> 00
+	column mask = %10000000 >> by col (3) && 7 = %00010000
+
+	access game map:
+	[3, 4]
+	row byte = 03 * 02 = 06
+	column byte = 04 >> >> 01
+	column mask = %11000000 >> by col (4<<) && 7 = %11000000
+	[3, 3]
+	row byte = 03 * 02 = 06
+	column byte = 03 >> >> 00
+	column mask = %11000000 >> by col (3<<) && 7 = %00000011
+	
+	
+
+- 10x10:
+	stored: 1 bit per square, 10 bits per row, 10 rows - ceil(10/8) * 10 = 20 bytes, 2 bytes per row
+	game: 2 bits per quare, 20 bits per row, 10 rows- ceil(20/8) * 10 = 30 bytes, 3 bytes per row
+	PPU: 10x10 - 100, stored in PPU 
+- 15x15:
+	stored: 1 bit per square, 15 bits per row, 15 rows - ceil(15/8) * 15 = 30 bytes, 2 bytes per row
+	game: 2 bits per quare, 30 bits per row, 15 rows - ceil(30/8) * 15 = 60 bytes, 4 bytes per row
+	PPU: 15x15 - 225 stored in PPU
+- 20x20:
+	stored: 1 bit per square, 20 bits per row, 20 rows- ceil(20/8) * 20 = 60 bytes, 4 bytes per row
+	game: 2 bits per quare, 40 bits per row, 20 rows - ceil(40/8) * 20 = 100 bytes, 5 bytes per row
+	PPU: 20x20 - 400 stored in PPU
+
+[19, 19] is the farthest one- there's 60 bytes, so I shouldn't hit a problem where I mult and need 2 bytes- 
+row byte = 13  * 05 = 5F
+col byte = 13 >> >> 0100 = 04
+col mask = %11000000 >> by col (13<<) && 7 = 6 = %00000011
+
+
+how do you check when a map is completed?
+every select, check the storage map- if we got one, inc a counter,
+check against the amount of marks for the map. will probably need two bytes for this to cover 20x20
+
+
+SRAM usage (worst case)
+		
+6000 - header (bank idx + 2b puzzle address + 2b current mark count)
+6100 - game map (up to 100 bytes)
+6200 - +vv
+6300 - we COULD mirror the PPU map here for a faster load on reload (up to 400 bytes)
+
+stored map will look something like:
+
+;;a 5x5 map, 20 correct tiles
+;;column and row numbers are in flux, so we'll put them at the end- harder to 
+bank0map0:
+
+if we know the map size we know some of the other info- so we can store count sizes and such in an indexed list using
+the map size 
+
+0 = 5
+1 = 10
+2 = 15
+3 = 20 
+;;header
+.db $00, $03, $00 ;; map size index,  count of correct marks (2b)
+;; actual map
+.db $10, $00,..... up to 10 bytes for a 5x5
+;; col numbers 
+.db $01, $03, $FE, $01, $03, $FE ... $FF
+;; row numbers
+.db $01, $03, $FE, $01, $03, $FE ... $FF
+
+when loading game after turning back on, we can use the bank idx to load the prg bank and the puzzle address to get access to puzzle info. 
+the game map is already in SRAM
+
+we also need to get the col/row numbers. 
+can take it slow- just parse line by line etc
+we can maybe make both sets as we go!
+do rows first
+
+00110
+01100
+11000
+10001
+00011
+
+List<String> header
+List<String> rowNumberLists
+List<String> colNumberLists
+int correctMarks
+
+for (int i = 0; i < mapSize; i++)
+{ 
+  list<int> rowNumbers = new List<int>();
+  val runVal = 0;
+  for(int j = 0; j < mapSize; j++)
+  {
+	//doing rows first
+	val = map[i, j];
+	if(val == 1)
+	{
+	  correctMarks++;
+	  if(runVal = -1)
+	  {
+	    runVal = 1;
+	  }
+	  else
+	  {
+	    runVal++;
+	  }  
+	}
+	else if(val == 0 && runVal >= 1)
+	{
+	  rowNumbers.Add(runVal);
+	  runVal = -1;
+  	}
+  }
+	
+  String rowString = ".db";
+
+  foreach(int number in rowNumbers)
+  {
+    //convert number to hex val, somehow- check the text tool 
+
+    rowString += " " + number.toHexVal() + ",";
+  }  
+
+  if(runVal == 0)
+  {
+    //we wouldn't have added anything if runVal was 0, so we need to add a zero instead
+    rowString += " $00, $FE";
+  }
+  else
+  {
+    rowStgring += " $FE";
+  }
+}
+rowString += " $FF";
+	
+for (int j = 0; i < mapSize; i++)
+{ 
+  list<int> colNumbers = new List<int>();
+  val runVal = 0;
+  for(int i = 0; i < mapSize; j++)
+  {
+	//doing rows first
+	val = map[i, j];
+	if(val == 1)
+	{
+	  correctMarks++;
+	  if(runVal = -1)
+	  {
+	    runVal = 1;
+	  }
+	  else
+	  {
+	    runVal++;
+	  }  
+	}
+	else if(val == 0 && runVal >= 1)
+	{
+	  colNumbers.Add(runVal);
+	  runVal = -1;
+  	}
+  }
+
+  String rowString = ".db";
+
+  foreach(int number in colNumbers)
+  {
+    //convert number to hex val, somehow- check the text tool 
+
+    colString += " " + number.toHexVal() + ",";
+  }  
+
+  if(runVal == 0)
+  {
+    //we wouldn't have added anything if runVal was 0, so we need to add a zero instead
+    colString += " $00, $FE";
+  }
+  else
+  {
+    col Stgring += " $FE";
+  }
+
+}
+
+test map:
+01110
+10101
+10101
+11011
+01110
+
+row expectation:
+3
+111
+111
+22
+3
+col expectation:
+3
+12
+31
+12
+3
+
+
+if we can, we can condense the row/column clues considerably, into nibble pairs
+
+so instead of 
+
+myGlyph:
+  .db $00, $10, $00
+  .db $70, $A8, $A8, $D8, $70
+  .db $03, $FF, $02, $01, $FF, $01, $03, $FF, $02, $01, $FF, $03, $FF
+  .db $03, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $02, $02, $FF, $03, $FF
+
+we could have
+
+myGlyph:
+  .db $00, $10, $00
+  .db $70, $A8, $A8, $D8, $70
+  .db $03, $F0, $12, $F0, $31, $F0, $12, $F0, $03, $F0
+  .db $03, $F0, $11, $01, $F0, $11, $01, $F0, $22, $F0, $03, $F0
+
+and instead of 
+
+myGlyph:
+  .db $00, $0C, $00
+  .db $50, $A8, $50, $A8, $50
+  .db $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $FF
+  .db $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $FF
+
+we could have
+
+myGlyph:
+  .db $00, $0C, $00
+  .db $50, $A8, $50, $A8, $50
+  .db $11, $F0, $11, $01, $F0, $11, $F0, $11, $01, $F0, $11, $F0
+  .db $11, $F0, $11, $01, $F0, $11, $F0, $11, $01, $F0, $11, $F0
+
+
+and lastly, instead of
+
+myGlyph:
+  .db $01, $32, $00
+  .db $55, $40, $AA, $80, $55, $40, $AA, $80, $55, $40, $AA, $80, $55, $40, $AA, $80, $55, $40, $AA, $80
+  .db $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF
+  .db $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF, $01, $01, $01, $01, $01, $FF
+
+we can have 
+
+myGlyph:
+  .db $01, $32, $00
+  .db $55, $40, $AA, $80, $55, $40, $AA, $80, $55, $40, $AA, $80, $55, $40, $AA, $80, $55, $40, $AA, $80
+  .db $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF, $11, $11, $01, $FF
+  .db $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF, $01, $01, $01, $FF
