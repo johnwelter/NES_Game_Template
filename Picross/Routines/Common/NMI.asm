@@ -30,7 +30,7 @@ update_controllers:
   
   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
   ; enable sprites, enable background, no clipping on left side	
-  MACROSetPPUControl %10010000, %00011110 
+  JSR UpdatePPUControl
 
 NMIUpdate:
 

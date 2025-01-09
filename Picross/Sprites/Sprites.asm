@@ -38,7 +38,7 @@ Sprites:
 	.word Title_Sprites, Game_Sprites, GameOver_Sprites
 
 Title_Sprites:
-	.db $90,$00,$00,$E8
+	.db $85,$00,$00,$E8
 Game_Sprites:
 	.db $62,$00,$03,$72
 GameOver_Sprites:

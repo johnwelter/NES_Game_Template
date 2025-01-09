@@ -35,10 +35,8 @@
 
   LDA #TITLE_IDX
   JSR ChangeGameMode
+  JSR InitPPUControl
   
-  ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
-  ; enable sprites, enable background, no clipping on left side
-  MACROSetPPUControl %10010000, %00011110
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;     Main Program         ;;

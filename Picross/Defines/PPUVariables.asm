@@ -1,3 +1,10 @@
+PPU_Control			.rs 1
+PPU_Mask			.rs 1
+PPU_ScrollX			.rs 1
+PPU_ScrollY			.rs 1
+PPU_ScrollNT		.rs 1	;first two bits
+PPU_NT				.rs 1
+
 PPU_PendingWrite	.rs 1
 PPU_StringIdx 		.rs 1
 PPU_String 			.rs 32

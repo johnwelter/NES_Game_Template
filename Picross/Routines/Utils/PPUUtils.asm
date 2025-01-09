@@ -15,11 +15,21 @@ LoadFullPaletteFromTable:
 
 LoadFullBackgroundFromTable:
 
-	MACROSetPPUAddress $2000
+    ;;use A as an index for which nametable to write to
+	JSR SetNametableFromIndex
+	TXA
+	LSR A
+	AND #$01
+	BNE .copyScreenB
 	MACROGetLabelPointer Screen_Copy, pointer_address
+	JMP .setCounters
+	
+.copyScreenB:
+	MACROGetLabelPointer ScreenB_Copy, pointer_address
 	
 	;;set pointer
 	;; set counters
+.setCounters:
 	LDY #$00
 	LDX #$00
 	
@@ -187,8 +197,46 @@ WaitScanline:
   bne WaitScanline
   RTS
 
+
+SetNametableFromIndex:
+
+  PHA
+  LDA PPU_STATUS
+  PLA
+  ASL A
+  TAX
+  LDA NameTableMemList+1, x
+  STA PPU_ADDR
+  LDA NameTableMemList, x
+  STA PPU_ADDR
+  RTS
+  
+UpdatePPUControl:
+
+  LDA PPU_Control
+  AND #$FC
+  ORA PPU_NT
+  STA PPU_CTRL
+  LDA PPU_Mask
+  STA PPU_MASK
+  RTS
+  
+InitPPUControl:
+  
+  ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+  ; enable sprites, enable background, no clipping on left side
+  LDA #%10010000
+  STA PPU_CTRL
+  STA PPU_Control
+  LDA #%00011110
+  STA PPU_MASK
+  STA PPU_Mask
+  RTS
+
 NameTableMemList:
   .word $2000, $2400, $2800, $2C00
 PalettesMemList:
   .word $3F00, $3F04, $3F08, $3F0C
   .word $3F10, $3F14, $3F18, $3F1C  
+  
+BLANK_TILE = $24

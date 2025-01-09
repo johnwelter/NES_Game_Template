@@ -20,7 +20,7 @@ MACROSetPPUAddress .macro
   STA PPU_ADDR           ; write the low byte of $2000 address
   
   .endm
-  
+    
 
 MACROAddPPUStringEntryRawData .macro
 

@@ -5,6 +5,10 @@ Palettes:
 NameTables:
 
   .word Title_Screen, Game_Screen, GameOver_Screen
+  
+NameTables2:
+
+  .word Title_Second, Blank_Screen, Blank_Screen
 
 Title_Palette:
 
@@ -25,6 +29,10 @@ Title_Screen:
 
   .incbin "NameTables/Title_NT.nam"
   
+Title_Second:
+
+  .incbin "NameTables/Title_PuzzMen_NT.nam"
+  
 Game_Screen: 
 
   .incbin "NameTables/Game_NT.nam"
@@ -32,6 +40,11 @@ Game_Screen:
 GameOver_Screen:
 
   .incbin "NameTables/GameOver_NT.nam"
+  
+Blank_Screen:
+
+  .incbin "NameTables/Blank_NT.nam"
+
   
 
   
