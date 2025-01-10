@@ -38,8 +38,12 @@ Sprites:
 	.word Title_Sprites, Game_Sprites, GameOver_Sprites
 
 Title_Sprites:
+    .db $02
 	.db $85,$00,$00,$E8
+	.db $A0,$01,$00,$60
 Game_Sprites:
+    .db $01
 	.db $62,$00,$03,$72
 GameOver_Sprites:
+	.db $01
 	.db $00,$00,$00,$00

@@ -71,6 +71,9 @@ LoadGameModeSprites:
   MACROGetDoubleIndex game_mode  
   MACROGetLabelPointer Sprites, table_address
   JSR GetTableAtIndex
+  LDY #$00
+  LDA [table_address],y
+  INC table_address
   JSR LoadSprites_impl
   
   RTS

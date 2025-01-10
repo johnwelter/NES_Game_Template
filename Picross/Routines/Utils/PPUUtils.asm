@@ -148,13 +148,18 @@ WriteToPPUFromTable:
 	RTS
   
 LoadSprites_impl:
+  ;;A will be the amount of sprites to load
+  STA DATA_LEN
+  ASL DATA_LEN
+  ASL DATA_LEN
+  
   LDY #$00              ; start at 0
   
 .loop:
   LDA [table_address], y; load data from address (sprites +  x)
   STA SPRITE_DATA, y    ; store into RAM address ($0200 + x)
   INY                   ; X = X + 1
-  CPY #$05              ; Compare X to hex $10, decimal 16
+  CPY DATA_LEN             ; Compare X to hex $10, decimal 16
   BNE .loop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero
                         ; if compare was equal to 16, keep going down   
   RTS
@@ -211,6 +216,20 @@ SetNametableFromIndex:
   STA PPU_ADDR
   RTS
   
+TurnOnSprites:
+ 
+  LDA PPU_Mask
+  ORA #%00010000
+  STA PPU_Mask
+  RTS
+  
+TurnOffSprites:
+  
+  LDA PPU_Mask
+  AND #%11101111
+  STA PPU_Mask
+  RTS
+
 UpdatePPUControl:
 
   LDA PPU_Control

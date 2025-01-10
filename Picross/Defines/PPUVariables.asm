@@ -12,6 +12,7 @@ PPU_String 			.rs 32
 PPU_STRINGMAX = $20 ;up to size of a full nametable, I think
 
 SPRITE_YPOS = $00
+SPRITE_ID   = $01
 SPRITE_XPOS = $03
 SPRITE_DATA = $0200
 

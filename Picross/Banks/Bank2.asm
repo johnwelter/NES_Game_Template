@@ -1,14 +1,11 @@
   .bank 4
   .org $8000
   
-TestBankC:
-	LDA #$03
-	STA mapperDebugVar
-	RTS
+  .include "Puzzles/cat.asm"
 
   .bank 5
   .org $A000
-  LDA $03
+  .word cat
 
   .org $BFFA     ;first of the three vectors starts here
   .dw NMI        ;when an NMI happens (once per frame if enabled) the 

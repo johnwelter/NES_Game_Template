@@ -1,13 +1,12 @@
   .bank 0
   .org $8000
   
-  .include "Puzzles/cat.asm"
-
+  .include "Puzzles/house.asm" 
 
   .bank 1
   .org $A000
   
-  .word cat
+  .word house
   
   .org $BFFA     ;first of the three vectors starts here
   .dw NMI        ;when an NMI happens (once per frame if enabled) the 

@@ -5,6 +5,7 @@
   .include "Defines/ControllerVars.asm"
   .include "Defines/PPUVariables.asm"
   .include "Defines/MapperVars.asm"
+  .include "Defines/TitleVariables.asm"
   .include "Defines/GameVariables.asm"
 ;; 0100 is the stack
 ;; 0200 is sprite ram

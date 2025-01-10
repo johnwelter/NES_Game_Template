@@ -7,17 +7,7 @@ UpdateTitle:
   
 .unlocked:
 
-  JSR DoUpdateTitle
-  
-  LDA gamepadPressed
-  AND #GAMEPAD_START
-  BNE .loadGame
-  RTS
-  
-.loadGame:
-  LDA #GAME_IDX
-  JSR ChangeGameMode
-  
+  JSR DoUpdateTitle  
   RTS
   
 DoUpdateTitle:
@@ -32,6 +22,7 @@ UpdateTitleJumpTable:
   .word UpdateScroll
   .word UpdatePuzzleSelection
   .word UpdateScrollBack
+  .word UpdateTitleExit
 
   
 ;;title should have two steps- the bank selection and the puzzle selection
@@ -41,6 +32,12 @@ UpdateTitleJumpTable:
 ;;select one, then scroll over to the right, with numbers for puzzles 
 
 UpdateTitleInit:
+
+  LDA #$00
+  STA mouse_index
+  LDA #$00
+  STA mouse_index+1
+
 .changeModeState:
 
   INC mode_state
@@ -49,11 +46,19 @@ UpdateTitleInit:
   
 UpdateBankSelection:
 
+  JSR UpdateBankPointer
+  
   LDA gamepadPressed
+  AND #GAMEPAD_A
   BEQ .leave
   
 .changeModeState:
 
+  LDA mouse_index
+  STA bank_index
+  LDA #$FF
+  JSR SetPointerSprite
+  
   INC mode_state
 .leave:
   RTS
@@ -69,17 +74,37 @@ UpdateScroll:
   STA PPU_ScrollNT
   
 .changeModeState:
-
+  LDA #$01
+  JSR SetPointerSprite
+  JSR InitPuzzlePointer
   INC mode_state
 .leave:
   RTS
   
 UpdatePuzzleSelection:
 
+  JSR UpdatePuzzlePointer
+  
   LDA gamepadPressed
+  AND #GAMEPAD_B
+  BNE .changeToScrollBack
+  LDA gamepadPressed
+  AND #GAMEPAD_CONFIRM
   BEQ .leave
   
-.changeModeState:
+  ;on start, get the 2D mouse index into a 1D index- then store in puzzle_index
+  ;for now, we only have one puzzle each, just store 0
+  LDA #$00
+  STA puzzle_index
+  INC mode_state
+  INC mode_state
+  JMP .leave
+  
+.changeToScrollBack:
+ 
+  LDA #$FF
+  JSR SetPointerSprite
+  JSR InitBankPointer
   
   LDA #$FC
   STA PPU_ScrollX
@@ -93,7 +118,6 @@ UpdatePuzzleSelection:
   
 UpdateScrollBack:
 
-
   DEC PPU_ScrollX
   DEC PPU_ScrollX
   DEC PPU_ScrollX
@@ -102,9 +126,233 @@ UpdateScrollBack:
   
 .changeModeState:
 
+  LDA #$01
+  JSR SetPointerSprite
   DEC mode_state
   DEC mode_state
   DEC mode_state
   
 .leave:
+  RTS
+  
+UpdateTitleExit:
+
+  ;;reset screen scroll
+  LDA #$00
+  STA PPU_ScrollX
+  STA PPU_ScrollNT
+  
+  ;;load bank
+
+  JSR ResetMapper
+  LDA bank_index
+  STA currentPRGBank
+  JSR LoadPRGBank
+  
+  LDA #GAME_IDX
+  JSR ChangeGameMode
+  
+.leave
+  RTS
+  
+InitBankPointer:
+
+  LDX #$A0
+  LDA #$60
+  JSR InitPointer
+  
+  RTS  
+  
+InitPuzzlePointer:
+  
+  LDX #$AE
+  LDA #$10
+  JSR InitPointer
+  
+  RTS
+
+ResetMouseIndex:
+
+  LDA #$00
+  STA mouse_index
+  LDA #$00
+  STA mouse_index+1
+  RTS
+
+InitPointer:
+
+  JSR SetPointerPosition
+  JSR ResetMouseIndex
+  RTS  
+  
+SetPointerPosition:
+
+  PHA
+  TXA
+  JSR SetPointerYPosition
+  PLA
+  JSR SetPointerXPosition
+ 
+  RTS
+  
+SetPointerYPosition:
+  
+  PHA
+  LDA #SPRITE_YPOS
+  JSR GetPointerDataIndexInX
+  PLA
+  STA SPRITE_DATA, x
+  RTS
+  
+SetPointerXPosition:  
+  
+  PHA
+  LDA #SPRITE_XPOS
+  JSR GetPointerDataIndexInX
+  PLA
+  STA SPRITE_DATA, x 
+  RTS
+
+SetPointerSprite:
+
+;; A has aprite we want
+  PHA
+  LDA #SPRITE_ID
+  JSR GetPointerDataIndexInX
+  PLA
+  STA SPRITE_DATA, x
+  RTS
+  
+GetPointerDataIndexInX:
+
+  STA temp3
+  LDA #$01
+  ASL A
+  ASL A
+  CLC
+  ADC temp3
+  TAX
+  
+  RTS
+  
+  
+UpdateBankPointer:
+ 
+  ;;bank pointer is 1D, will loop between 0->3
+  LDA gamepadPressed
+  BEQ .leave 
+  
+  LDA #$00
+  STA temp1
+  
+.parseInputs:
+  LDA gamepadPressed
+  AND #GAMEPAD_VERT
+  BEQ .leave
+  ASL A
+  ASL A
+.checkDown:
+  ASL A
+  BCC .checkUp
+  INC temp1
+.checkUp:
+  ASL A
+  BCC .move
+  DEC temp1
+.move:
+  
+  LDA mouse_index
+  CLC
+  ADC temp1
+  CMP #$02
+  BEQ .skipMod
+  BCC .skipMod
+  LDA #$00
+.skipMod:
+  STA mouse_index
+  ;; mult mouse_index by 16
+  ASL A
+  ASL A
+  ASL A
+  ASL A
+  CLC
+  ADC #$A0
+  JSR SetPointerYPosition
+
+.leave:
+  
+  RTS
+  
+UpdatePuzzlePointer:
+
+  ;;puzzle pointer is 2D, will loop between 0-9 and 0-2
+  LDA gamepadPressed
+  BEQ .leave 
+  
+  LDA #$00
+  STA temp1
+  STA temp2
+  
+.parseInputs:
+  LDA gamepadPressed
+  AND #GAMEPAD_MOVE
+  BEQ .leave
+  ASL A
+  BCC .checkLeft
+  INC temp1
+.checkLeft:
+  ASL A
+  BCC .checkDown
+  DEC temp1
+.checkDown:
+  ASL A
+  BCC .checkUp
+  INC temp2
+.checkUp:
+  ASL A
+  BCC .move
+  DEC temp2
+  
+.move:
+
+  LDA mouse_index
+  CLC
+  ADC temp2
+  CMP #$02
+  BEQ .skipYMod
+  BCC .skipYMod
+  LDA #$00
+.skipYMod:
+  STA mouse_index
+  ;; mult mouse_index by 16
+  ASL A
+  ASL A
+  ASL A
+  ASL A
+  CLC
+  ADC #$AE
+  JSR SetPointerYPosition
+  
+  LDA mouse_index+1
+  CLC
+  ADC temp1
+  CMP #$08
+  BEQ .skipXMod
+  BCC .skipXMod
+  LDA #$00
+.skipXMod:
+  STA mouse_index+1
+  ;; we need to move 3 tiles each- so index * 3 * 8,
+  CLC
+  ADC mouse_index+1
+  ADC mouse_index+1
+  ASL A
+  ASL A
+  ASL A
+  CLC
+  ADC #$10
+  JSR SetPointerXPosition
+  
+.leave:
+  
   RTS
