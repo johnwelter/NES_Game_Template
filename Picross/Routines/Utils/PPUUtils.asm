@@ -61,7 +61,10 @@ WRITE_SETTINGS = temp2
 ProcessPPUString:
 
 	LDA PPU_PendingWrite
-	BEQ .leave
+	BNE .continueProcess
+	RTS
+	
+.continueProcess:
 	LDY #$00
 	
 	LDA #LOW(PPU_String)
@@ -86,15 +89,36 @@ ProcessPPUString:
 	AND #$FB
 	STA PPU_CTRL
 	
-	LDA WRITE_SETTINGS
+	LDA WRITE_SETTINGS	;check horizontal or vertical write
 	AND #%10000000
-	BEQ .checkTable
+	BEQ .checkRepeat
 	ORA PPU_CTRL 
 	STA PPU_CTRL 
 	
+	
+.checkRepeat:
+  LDA WRITE_SETTINGS
+  AND #%01000000
+  BEQ .checkTable
+  
+  LDA WRITE_SETTINGS
+  AND #$3F
+  STA DATA_LEN
+  ;;the usual data length byte is now the repeatable byte
+  LDX #$00
+  
+.repeatLoop:
+  LDA [pointer_address], y
+  STA PPU_DATA
+  INX 
+  CPX DATA_LEN
+  BNE .repeatLoop
+  INY
+  JMP .outerloop
+	
 .checkTable:
 	LDA WRITE_SETTINGS
-	AND #%01000000
+	AND #%00100000
 	BEQ .rawData
 	
 	LDA [pointer_address], y
@@ -109,7 +133,7 @@ ProcessPPUString:
 	PLA
 	TAY
 	JMP .outerloop
-
+	
 .rawData:
 
 	LDA [pointer_address], y
@@ -173,6 +197,9 @@ WriteToPPUString:
 	
 	STA PPU_String, x
 	INC PPU_StringIdx
+	INX
+	LDA #$00
+	STA PPU_String, x
 		
 .finish:
 	RTS

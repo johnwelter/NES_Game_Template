@@ -32,7 +32,24 @@ MACROAddPPUStringEntryRawData .macro
   JSR WriteToPPUString
   LDA \3
   JSR WriteToPPUString
-  LDA \4
+  LDA \4 
+  JSR WriteToPPUString
+  
+  .endm
+
+MACROAddPPUStringEntryRepeat .macro
+
+  LDA #$01
+  STA PPU_PendingWrite
+  LDA \1
+  JSR WriteToPPUString
+  LDA \2
+  JSR WriteToPPUString
+  LDA #$40
+  ORA \3
+  ORA \4
+  JSR WriteToPPUString
+  LDA \5
   JSR WriteToPPUString
   
   .endm
@@ -45,7 +62,7 @@ MACROAddPPUStringEntryTable .macro
   JSR WriteToPPUString
   LDA \2
   JSR WriteToPPUString
-  LDA #$40
+  LDA #$20
   ORA \3
   JSR WriteToPPUString
   LDA #LOW(\4)

@@ -35,6 +35,17 @@ update_controllers:
 NMIUpdate:
 
   JSR StateNMIUpdate
+  
+  LDA PPU_Control
+  AND #$FC
+  ORA PPU_ScrollNT
+  STA PPU_CTRL
+  
+  LDA PPU_ScrollX     ;;tell the ppu there is no background scrolling
+  STA PPU_SCROLL
+  LDA PPU_ScrollY
+  STA PPU_SCROLL
+
   JMP WakeUp
 
 StateNMIUpdate:

@@ -14,4 +14,3 @@ mouse_index			.rs 2
 currentPaintTile	.rs 1
 solutionCount		.rs 1
 nonSolutionCount	.rs 1
-

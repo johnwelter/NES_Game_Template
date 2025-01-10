@@ -1,5 +1,7 @@
 UpdateGameOver:
 
+  JSR TurnOnSprites
+  
   LDA NMI_locks
   BNE .noInputDetected
 

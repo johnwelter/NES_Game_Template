@@ -12,15 +12,6 @@ UpdateTitleNMI:
   ;LDA #$03
   ;JSR LoadCHRBankB
   
-  LDA PPU_Control
-  AND #$FC
-  ORA PPU_ScrollNT
-  STA PPU_CTRL
-  
-  LDA PPU_ScrollX     ;;tell the ppu there is no background scrolling
-  STA PPU_SCROLL
-  LDA #$00
-  STA PPU_SCROLL
 
    
   RTS

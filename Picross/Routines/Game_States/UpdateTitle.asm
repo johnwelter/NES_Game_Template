@@ -33,6 +33,8 @@ UpdateTitleJumpTable:
 
 UpdateTitleInit:
 
+  JSR TurnOnSprites
+  
   LDA #$00
   STA mouse_index
   LDA #$00
@@ -106,6 +108,8 @@ UpdatePuzzleSelection:
   JSR SetPointerSprite
   JSR InitBankPointer
   
+  LDA #$00
+  STA PPU_ScrollY
   LDA #$FC
   STA PPU_ScrollX
   LDA PPU_ScrollNT
@@ -148,7 +152,9 @@ UpdateTitleExit:
   LDA bank_index
   STA currentPRGBank
   JSR LoadPRGBank
-  
+    
+  JSR TurnOffSprites
+	
   LDA #GAME_IDX
   JSR ChangeGameMode
   

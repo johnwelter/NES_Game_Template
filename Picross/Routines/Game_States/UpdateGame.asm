@@ -35,6 +35,10 @@ UpdateGameJumpTable:
   .word UpdateDrawVertClues
   .word UpdateDrawHoriClues
   .word UpdateGamePlay
+  .word UpdateClearPuzzle
+  .word UpdateMoveScreen
+  .word UpdateDrawImage
+  .word UpdateWaitInput
   .word UpdateGameExit
 
 UpdateGameInit:
@@ -60,6 +64,10 @@ UpdateGameInit:
   STA clueLineIndex
   STA clueParity
   STA clueOffsetShift
+  STA mouse_index
+  STA mouse_index+1
+  STA solutionCount
+  STA nonSolutionCount
   
   LDA #$20
   STA clueDrawAdd
@@ -99,7 +107,7 @@ UpdateDrawHoriClues:
   BCC .leave
 
 .changeModeState:
-
+  JSR TurnOnSprites
   INC mode_state
 .leave:
   RTS
@@ -252,8 +260,10 @@ UpdateGamePlay:
   STA temp3
   AND #$F0
   CMP currentPaintTile
-  BEQ .leave
+  BNE .diffTiles
+  RTS
   
+.diffTiles:
   ;;tiles are different- check if the current tile is marked as a solution tile
   CMP #$70
   BNE .checkNewMark
@@ -261,7 +271,7 @@ UpdateGamePlay:
   LDA temp1
   BNE .antiMark
   DEC nonSolutionCount
-  JMP .checkSolution
+  JMP .overwriteTile
   
 .checkNewMark:
 
@@ -272,7 +282,7 @@ UpdateGamePlay:
   LDA temp1
   BNE .proMark
   INC nonSolutionCount 
-  JMP .checkSolution  
+  JMP .overwriteTile  
   
 .antiMark:
   DEC solutionCount
@@ -280,15 +290,6 @@ UpdateGamePlay:
 .proMark:   
   
   INC solutionCount
-
-.checkSolution: 
-
-  LDY #$01
-  LDA [puzzle_address], y
-  CMP solutionCount
-  BNE .overwriteTile
-  LDA nonSolutionCount
-  BEQ .changeModeState
   
 .overwriteTile:
   ;;overwrite tile
@@ -306,9 +307,180 @@ UpdateGamePlay:
   MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
   LDA temp1
   JSR WriteToPPUString
+  
+.checkSolution: 
+
+  LDY #$01
+  LDA [puzzle_address], y
+  CMP solutionCount
+  BNE .leave
+  LDA nonSolutionCount
+  BEQ .changeModeState
+  
   JMP .leave
   
   ;;update the painting
+.changeModeState:
+ 
+  JSR TurnOffSprites
+   
+  LDA #$00
+  STA clue_draw_address
+  STA clueLineIndex
+  LDA #$20
+  STA clue_draw_address+1
+  
+  INC mode_state
+
+.leave:
+ 
+  RTS
+  
+UpdateClearPuzzle:
+
+  JSR ClearPuzzle
+  LDA clueLineIndex
+  CMP #30
+  BNE .leave
+  
+.changeModeState:
+
+  LDA #$00
+  STA clueLineIndex ;using this as a scroller
+  INC mode_state
+
+.leave:
+ 
+  RTS
+UpdateMoveScreen:
+  
+  ;for 15x15, move 5 tiles left and 5 tiles up- let's do 1 at a time
+  ;we'll take the lower nibble of the clue line index as our scroll counter, and the higher nibble as the x/y flag
+  
+  LDA clueLineIndex
+  AND #$10
+  BNE .scrollY
+  
+  ;;scroll X over
+  LDA clueLineIndex
+  AND #$0F
+  ASL A
+  ASL A
+  ASL A	;mult by 8
+  STA PPU_ScrollX
+  
+  INC clueLineIndex
+  LDA clueLineIndex
+  CMP #$06
+  BNE .leave
+  LDA #$10
+  STA clueLineIndex
+  JMP .leave
+  
+.scrollY:
+
+  LDA clueLineIndex
+  AND #$0F
+  ASL A
+  ASL A
+  ASL A	;mult by 8
+  STA PPU_ScrollY
+
+  INC clueLineIndex
+  LDA clueLineIndex
+  AND #$0F
+  CMP #$05
+  BNE .leave
+  
+.changeModeState:
+
+  LDA #$8E
+  STA clue_draw_address
+  LDA #$21
+  STA clue_draw_address+1
+  
+  LDA clues_address
+  CLC
+  ADC clueTableIndex
+  STA clues_address
+  LDA clues_address+1
+  ADC #$00
+  STA clues_address+1
+  
+  LDA #$00
+  STA clueTableIndex
+  STA clueLineIndex
+  STA clueOffsetShift
+
+  INC mode_state
+
+.leave:
+ 
+  RTS
+UpdateDrawImage:
+  JSR DrawImage
+  LDA clueLineIndex
+  CMP #225
+  BNE .leave
+  
+.changeModeState:
+
+  ;;do a palette draw
+  ;;puzzle address + 03 has the desired palette offset
+
+  LDY #$03
+  LDA [puzzle_address],y
+  AND #$0F
+  TAX
+  
+  LDA [puzzle_address],y
+  AND #$10
+  BNE .storeBottomVals
+  
+  TXA
+  ORA #$10
+  STA temp1
+  TXA
+  ORA #$20
+  STA temp2
+  TXA
+  ORA #$30
+  STA temp3
+
+  JMP .loadPalToPPUStr
+  
+.storeBottomVals:
+
+  TXA
+  ORA #$00
+  STA temp1
+  TXA
+  ORA #$10
+  STA temp2
+  TXA
+  ORA #$20
+  STA temp3
+  
+.loadPalToPPUStr:
+  
+  MACROAddPPUStringEntryRawData #$3F, #$01, #DRAW_HORIZONTAL, #03
+  LDA temp1
+  JSR WriteToPPUString
+  LDA temp2
+  JSR WriteToPPUString
+  LDA temp3
+  JSR WriteToPPUString
+  
+  INC mode_state
+
+.leave:
+ 
+  RTS
+UpdateWaitInput:
+
+  LDA gamepadPressed
+  BEQ .leave
+  
 .changeModeState:
 
   INC mode_state
@@ -319,6 +491,11 @@ UpdateGamePlay:
   
 UpdateGameExit:
 
+  LDA #$00
+  STA PPU_ScrollX
+  STA PPU_ScrollY
+  STA PPU_ScrollNT
+  
   LDA #GAMEOVER_IDX
   JSR ChangeGameMode
   RTS
@@ -408,7 +585,7 @@ UpdateMouseScreenPos:
   
 .leave:
   RTS
-
+  
 ;;using the line index and a given count based on the direction, 
   
 ;; 	JSR ResetMapper
