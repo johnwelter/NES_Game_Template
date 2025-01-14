@@ -15,6 +15,7 @@
   .rsset $0600
   .rsset $0700
   .rsset $6000
-  .include "Defines/SaveVariables.asm"
   .include "Defines/ScreenStateVariables.asm"
+  .rsset $7000
+  .include "Defines/SaveVariables.asm"
 

@@ -49,9 +49,10 @@ Forever:
 .loop
   LDA sleeping
   BNE .loop
-  
+
+  INC time  
   JSR GameLoop
-  INC time
+
 
   JMP Forever     ;jump back to Forever, infinite loop
   

@@ -14,3 +14,5 @@ mouse_index			.rs 2
 currentPaintTile	.rs 1
 solutionCount		.rs 1
 nonSolutionCount	.rs 1
+holdTimer			.rs 1
+GameTime			.rs 4	;in order - second, ten second, minute, 10 minute - max out at 99 minutes

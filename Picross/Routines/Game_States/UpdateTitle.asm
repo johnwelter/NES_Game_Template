@@ -28,7 +28,7 @@ UpdateTitleJumpTable:
 ;;title should have two steps- the bank selection and the puzzle selection
 ;;top half of screen can be used as the title screen, and the bottom half will have the selectable options
 ;;
-;;starting options list: BANK 0, BANK 1, BANK 2, BANK3
+;;starting options list: BANK 0, BANK 1, BANK 2
 ;;select one, then scroll over to the right, with numbers for puzzles 
 
 UpdateTitleInit:
@@ -94,10 +94,6 @@ UpdatePuzzleSelection:
   AND #GAMEPAD_CONFIRM
   BEQ .leave
   
-  ;on start, get the 2D mouse index into a 1D index- then store in puzzle_index
-  ;for now, we only have one puzzle each, just store 0
-  LDA #$00
-  STA puzzle_index
   INC mode_state
   INC mode_state
   JMP .leave
@@ -152,9 +148,23 @@ UpdateTitleExit:
   LDA bank_index
   STA currentPRGBank
   JSR LoadPRGBank
-    
+
+  ;; we can also pick out the puzzle index
+  ;; we have the mouse indexes - one vert, one hori
+  ;; take vert, mult by 9- alternatively, mult by 8, add index 
+  ;; IE - ind = 1, mult 8 = 8, add 1 = 9
+  ;; add X index
+  LDA mouse_index
+  ASL A
+  ASL A
+  ASL A
+  CLC
+  ADC mouse_index
+  ADC mouse_index+1
+  STA puzzle_index
+
   JSR TurnOffSprites
-	
+
   LDA #GAME_IDX
   JSR ChangeGameMode
   

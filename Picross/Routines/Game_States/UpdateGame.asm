@@ -3,6 +3,8 @@
 
 VERT_CLUES = $214E
 HORI_CLUES = $218C
+BANK_LEVEL = $20A8
+TIMER_LOC = $20E5
 
 ;;this will change with puzzle sizes
 VERT_MIN = $5A ;12 - 1
@@ -11,6 +13,9 @@ HORI_MIN = $6A ;14 - 1
 HORI_MAX = $EA
 
 MOUSE_START = $618E
+
+HOLD_TIME = $10
+HOLD_FREQ = $04
 
 UpdateGame:
 
@@ -45,7 +50,7 @@ UpdateGameInit:
 
   ;; get the puzzle table in the puzzle address
   MACROGetLabelPointer $A000, table_address
-  MACROGetDoubleIndex #$00
+  MACROGetDoubleIndex puzzle_index
   JSR GetTableAtIndex
   MACROGetPointer table_address, puzzle_address
   MACROGetLabelPointer MOUSE_START, mouse_location
@@ -68,13 +73,23 @@ UpdateGameInit:
   STA mouse_index+1
   STA solutionCount
   STA nonSolutionCount
-  
+    
   LDA #$20
   STA clueDrawAdd
    
   MACROGetLabelPointer VERT_CLUES, clue_start_address
   JSR ResetClueDrawAddress
-    
+  
+  MACROAddPPUStringEntryRawData #HIGH(BANK_LEVEL), #LOW(BANK_LEVEL), #DRAW_HORIZONTAL, #$03
+  LDA bank_index
+  JSR WriteToPPUString
+  LDA #$60
+  JSR WriteToPPUString
+  LDX puzzle_index
+  INX
+  TXA 
+  JSR WriteToPPUString
+  
   INC mode_state
 
 UpdateDrawVertClues:
@@ -108,21 +123,61 @@ UpdateDrawHoriClues:
 
 .changeModeState:
   JSR TurnOnSprites
+  
+  ;;set the timer to 00
+  MACROAddPPUStringEntryRawData #HIGH(TIMER_LOC), #LOW(TIMER_LOC), #DRAW_HORIZONTAL, #$05
+  LDA #$00
+  JSR WriteToPPUString
+  LDA #$00
+  JSR WriteToPPUString
+  LDA #$61
+  JSR WriteToPPUString
+  LDA #$00
+  JSR WriteToPPUString
+  LDA #$00
+  JSR WriteToPPUString
+  
+  ;;reset time
+  LDA #$00
+  STA time
+  
   INC mode_state
 .leave:
   RTS
   
 UpdateGamePlay:
     
+  JSR UpdateTimeDisplay
+	
   LDA #$00
   STA temp1
   STA temp2
   STA temp3
+  
+.checkPressed:  
 
-  
   LDA gamepadPressed
-  BEQ .updatePaint  
+  AND #GAMEPAD_MOVE
+  BEQ .checkHeld
   
+  LDA #HOLD_TIME
+  STA holdTimer 
+  LDA gamepadPressed
+  JMP .parseInputs
+  
+.checkHeld:
+  
+  LDA gamepad
+  AND #GAMEPAD_MOVE
+  BEQ .checkPaintPress
+  
+  ;;decrement the hold timer
+  DEC holdTimer
+  BNE .checkPaintPress
+  LDA #HOLD_FREQ
+  STA holdTimer
+  LDA gamepad
+
 .parseInputs:
 
   AND #GAMEPAD_MOVE
@@ -586,6 +641,63 @@ UpdateMouseScreenPos:
 .leave:
   RTS
   
+UpdateTimeDisplay:
+
+  LDA time
+  CMP #60
+  BNE .leave
+  
+  LDA #$00
+  STA time
+  
+  INC GameTime
+  LDA GameTime
+  CMP #10
+  BNE .printTime
+  
+  LDA #$00
+  STA GameTime
+  INC GameTime+1
+  LDA GameTime+1
+  CMP #6
+  BNE .printTime
+  
+  LDA #$00
+  STA GameTime+1
+  INC GameTime+2
+  LDA GameTime+2
+  CMP #10
+  BNE .printTime
+  
+  LDA #$00
+  STA GameTime+2
+  INC GameTime+3
+  LDA GameTime+3
+  CMP #10
+  BNE .printTime
+  
+  LDA #$00
+  STA GameTime+3
+  
+.printTime:
+
+  MACROAddPPUStringEntryRawData #HIGH(TIMER_LOC), #LOW(TIMER_LOC), #DRAW_HORIZONTAL, #$05
+  LDA GameTime+3
+  JSR WriteToPPUString
+  LDA GameTime+2
+  JSR WriteToPPUString
+  LDA #$61
+  JSR WriteToPPUString
+  LDA GameTime+1
+  JSR WriteToPPUString
+  LDA GameTime
+  JSR WriteToPPUString
+  
+  
+  
+.leave: 
+  RTS  
+
 ;;using the line index and a given count based on the direction, 
   
 ;; 	JSR ResetMapper
