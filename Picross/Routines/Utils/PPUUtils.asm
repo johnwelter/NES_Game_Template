@@ -278,6 +278,68 @@ InitPPUControl:
   STA PPU_MASK
   STA PPU_Mask
   RTS
+  
+FadeOutPalettes:
+
+;;take the current values, and decrement the lower nibbles
+;;we can access from the palette copy 
+;;we'll make this fade out one level per call
+;;once all the palettes are blacked out we'll return true, so we'll keep the carry flag as a return result
+
+;;go through the palette copy, decrement, make a raw data PPU string and add all the bytes into it
+;;for any palette color already in the 0x range, change it to 0f to get black
+
+  MACROGetLabelPointer Palette_Copy, table_address
+;;palette copy address is now X accessable
+
+  LDY #$00
+  MACROAddPPUStringEntryRawData #$3F, #$00, #DRAW_HORIZONTAL, #$20  
+
+  LDA #$00
+  STA temp1
+  
+.loop:
+
+  LDA [table_address], y
+  CMP #$0F
+  BEQ .addToString
+  CMP #$10
+  BCC .setBlack
+  
+  LDA #$80
+  STA temp1
+  
+  LDA [table_address], y
+  SEC
+  SBC #$10
+  JMP .setColor
+
+.setBlack:
+
+  LDA #$0F
+
+.setColor:
+  STA [table_address], y
+
+.addToString:
+
+  JSR WriteToPPUString
+
+.incY:
+  
+  INY
+  CPY #$20
+  BNE .loop
+
+  ASL temp1	;get carry out, if we have one
+
+  RTS
+  
+FadeInPalettes:
+
+;;need to be able to store off a target palette first
+;;we can use the palette copy we make during the game mode change as the target
+  RTS
 
 NameTableMemList:
   .word $2000, $2400, $2800, $2C00

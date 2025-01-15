@@ -6,4 +6,4 @@ test:
 testImage:
  .db $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $1B, $00, $FF
 testName:
-  .db $1D, $0E, $1C, $1D, $FF
+  .db $04, $1D, $0E, $1C, $1D, $FF

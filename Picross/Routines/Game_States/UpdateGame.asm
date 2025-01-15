@@ -73,7 +73,11 @@ UpdateGameInit:
   STA mouse_index+1
   STA solutionCount
   STA nonSolutionCount
-    
+  STA GameTime
+  STA GameTime+1
+  STA GameTime+2
+  STA GameTime+3
+	
   LDA #$20
   STA clueDrawAdd
    
@@ -490,7 +494,7 @@ UpdateDrawImage:
   
   LDA [puzzle_address],y
   AND #$10
-  BNE .storeBottomVals
+  BEQ .storeBottomVals
   
   TXA
   ORA #$10
@@ -502,7 +506,7 @@ UpdateDrawImage:
   ORA #$30
   STA temp3
 
-  JMP .loadPalToPPUStr
+  JMP .checkKeepWhite
   
 .storeBottomVals:
 
@@ -515,6 +519,16 @@ UpdateDrawImage:
   TXA
   ORA #$20
   STA temp3
+  
+.checkKeepWhite:
+  
+  LDA [puzzle_address],y
+  AND #$20
+  BEQ .loadPalToPPUStr
+  
+  LDA #$30
+  STA temp3
+  
   
 .loadPalToPPUStr:
   

@@ -7,9 +7,9 @@ PPU_NT				.rs 1
 
 PPU_PendingWrite	.rs 1
 PPU_StringIdx 		.rs 1
-PPU_String 			.rs 32
+PPU_String 			.rs 128
 
-PPU_STRINGMAX = $20 ;up to size of a full nametable, I think
+PPU_STRINGMAX = $4F ;up to size of a full nametable, I think
 
 SPRITE_YPOS = $00
 SPRITE_ID   = $01

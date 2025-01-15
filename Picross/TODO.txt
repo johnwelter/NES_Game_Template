@@ -1,0 +1,19 @@
+things left to do
+
+- different puzzle sizes
+- quit puzzle/save progress
+ - pause to bring up exit menu
+ - save out screen in another screen save in th $6000 range
+ - when loading game, load that screen as is
+ - get game time from there, return pointer to top left
+- contuinue button
+ - pops up of there is a map to continue in the save data
+ - opens up level and sets up nametable from save data
+- save solved puzzles
+- mark clues off
+- view solved puzzles
+ 
+- draw 4 tiles at a time for solved image
+- draw image title, centered under image
+- better end screen 
+- music engine

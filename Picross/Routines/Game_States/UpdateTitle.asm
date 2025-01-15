@@ -103,6 +103,9 @@ UpdatePuzzleSelection:
   LDA #$FF
   JSR SetPointerSprite
   JSR InitBankPointer
+  LDA bank_index
+  STA mouse_index
+  JSR SetBankPointerFromIndex
   
   LDA #$00
   STA PPU_ScrollY
@@ -256,15 +259,18 @@ UpdateBankPointer:
  
   ;;bank pointer is 1D, will loop between 0->3
   LDA gamepadPressed
-  BEQ .leave 
+  BNE .continue
+.leaveEarly:
+  RTS
   
+.continue:
   LDA #$00
   STA temp1
   
 .parseInputs:
   LDA gamepadPressed
   AND #GAMEPAD_VERT
-  BEQ .leave
+  BEQ .leaveEarly
   ASL A
   ASL A
 .checkDown:
@@ -287,6 +293,8 @@ UpdateBankPointer:
 .skipMod:
   STA mouse_index
   ;; mult mouse_index by 16
+SetBankPointerFromIndex:
+
   ASL A
   ASL A
   ASL A
