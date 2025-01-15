@@ -13,7 +13,6 @@ things left to do
 - mark clues off
 - view solved puzzles?
  
-- draw 4 tiles at a time for solved image
 - draw image title, centered under image
 - better end screen 
 - music engine
