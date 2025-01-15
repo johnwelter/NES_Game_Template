@@ -506,13 +506,13 @@ UpdateDrawImage:
   
   TXA
   ORA #$10
-  STA temp1
-  TXA
-  ORA #$20
   STA temp2
   TXA
-  ORA #$30
+  ORA #$20
   STA temp3
+  TXA
+  ORA #$30
+  STA temp4
 
   JMP .checkKeepWhite
   
@@ -520,13 +520,13 @@ UpdateDrawImage:
 
   TXA
   ORA #$00
-  STA temp1
-  TXA
-  ORA #$10
   STA temp2
   TXA
-  ORA #$20
+  ORA #$10
   STA temp3
+  TXA
+  ORA #$20
+  STA temp4
   
 .checkKeepWhite:
   
@@ -535,18 +535,28 @@ UpdateDrawImage:
   BEQ .loadPalToPPUStr
   
   LDA #$30
-  STA temp3
+  STA temp4
   
   
 .loadPalToPPUStr:
   
   MACROAddPPUStringEntryRawData #$3F, #$01, #DRAW_HORIZONTAL, #03
-  LDA temp1
-  JSR WriteToPPUString
   LDA temp2
   JSR WriteToPPUString
   LDA temp3
   JSR WriteToPPUString
+  LDA temp4
+  JSR WriteToPPUString
+  
+  LDX #$01
+.copyLoop:
+  ;;also store in the copy 
+  LDA temp1, x
+  STA Palette_Copy, x
+  INX
+  CPX #$04
+  BNE .copyLoop
+  
   
   INC mode_state
 
