@@ -11,9 +11,11 @@ things left to do
  - opens up level and sets up nametable from save data
 - save solved puzzles
 - mark clues off
-- view solved puzzles
+- view solved puzzles?
  
 - draw 4 tiles at a time for solved image
 - draw image title, centered under image
 - better end screen 
 - music engine
+
+- toggle for mouse

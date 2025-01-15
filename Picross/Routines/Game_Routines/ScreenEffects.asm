@@ -179,68 +179,155 @@ DrawImage:
    
   LDA #$00
   STA temp1
-  
-  LDA clueLineIndex
-  AND #$03
   STA temp2
-
+  STA temp3
+  STA temp4
+  STA temp6
+  
+  LDA #$04
+  STA temp5
+  
   LDY clueTableIndex
   LDA [clues_address], y
 
+  ASL A
+  ROL temp1
+  ASL A
+  ROL temp1
+  ASL A
+  ROL temp2
+  ASL A
+  ROL temp2
+  ASL A
+  ROL temp3
+  ASL A
+  ROL temp3
+  ASL A
+  ROL temp4
+  ASL A
+  ROL temp4
+  
+
   LDX #$00
-.loop:
-  ASL A
-  ROL temp1
-  ASL A
-  ROL temp1
+.moveUpTiles:
+  LDA temp1, x
+  ORA #$24
+  STA temp1, x
   INX
-  CPX temp2
-  BCC .loop
-  BEQ .loop
+  CPX #$04
+  BNE .moveUpTiles
   
-  LDA temp1
-  AND #$03
+  
+  LDA clueOffsetShift
   CLC
-  ADC #$24
-  STA temp1
+  ADC #$04
+
+  STA clueOffsetShift
+  ;;clue offset shift + 4, check if we went over 15
+  SEC
+  SBC #15 ;;subtract 15
+  BCC .makeStrings
+  BEQ .makeStrings
   
-  MACROAddPPUStringEntryRawData clue_draw_address+1, clue_draw_address, #DRAW_HORIZONTAL, #$01
-  LDA temp1
+  STA clueOffsetShift ;loop offset over
+  STA temp6 ; length of second string
+  LDA temp5
+  SEC
+  SBC temp6 
+  STA temp5 ;length of first string 
+  
+.makeStrings:
+  
+  LDX #$00
+  
+  LDA temp5
+  BEQ .makeSecondString
+  TXA
+  PHA
+  MACROAddPPUStringEntryRawData clue_draw_address+1, clue_draw_address, #DRAW_HORIZONTAL, temp5
+  PLA
+  TAX
+  
+.firstStringLoop:
+  
+  TXA 
+  PHA
+  LDA temp1, x
   JSR WriteToPPUString
   
-  INC clueOffsetShift
   INC clueLineIndex
   LDA clueLineIndex
-  AND #$03
-  BNE .incDrawIndex
-  INC clueTableIndex
+  CMP #225
+  BNE .continueLoop
+  PLA 
+  JMP .leave
   
+.continueLoop:
+  PLA
+  TAX
+  INX
+  CPX temp5
+  BNE .firstStringLoop
   
-.incDrawIndex:  
-  LDA clueOffsetShift
-  CMP #$0F
-  BNE .incOnly
-  ;;add 32-15 = 17 to the draw address
   LDA clue_draw_address
   CLC
-  ADC #18
+  ADC temp5
   STA clue_draw_address
   LDA clue_draw_address+1
   ADC #$00
   STA clue_draw_address+1
   
-  LDA #$00
-  STA clueOffsetShift
+.makeSecondString:
+
+  LDA temp6
+  BEQ .leave
   
+  ;;loop draw address to next line
+  LDA clue_draw_address
+  CLC
+  ADC #17
+  STA clue_draw_address
+  LDA clue_draw_address+1
+  ADC #$00
+  STA clue_draw_address+1
+  TXA
+  PHA
+  MACROAddPPUStringEntryRawData clue_draw_address+1, clue_draw_address, #DRAW_HORIZONTAL, temp6
+  PLA 
+  TAX
+  
+.secondStringLoop:
+
+  TXA
+  PHA 
+  LDA temp1, x
+  JSR WriteToPPUString
+  
+  INC clueLineIndex
+  LDA clueLineIndex
+  CMP #225
+  BNE .continueSecondLoop
+  
+  PLA 
   JMP .leave
   
-.incOnly:
-
-  INC clue_draw_address
-  BNE .leave
-  INC clue_draw_address+1
+.continueSecondLoop:
+  PLA
+  TAX
+  INX
+  CPX #$04
+  BNE .secondStringLoop
+  
+  LDA clue_draw_address
+  CLC
+  ADC temp6
+  STA clue_draw_address
+  LDA clue_draw_address+1
+  ADC #$00
+  STA clue_draw_address+1
   
 .leave:
+  INC clueTableIndex
   RTS
 
 ClearLineDefTables:

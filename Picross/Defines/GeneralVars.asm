@@ -2,6 +2,8 @@ temp1  			.rs 1
 temp2  			.rs 1
 temp3  			.rs 1
 temp4  			.rs 1
+temp5			.rs 1
+temp6			.rs 1
 tempx 			.rs 1
 tempy 			.rs 1
 time 			.rs 1

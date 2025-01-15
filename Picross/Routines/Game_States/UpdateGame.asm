@@ -44,6 +44,7 @@ UpdateGameJumpTable:
   .word UpdateMoveScreen
   .word UpdateDrawImage
   .word UpdateWaitInput
+  .word UpdateGameFadeOut
   .word UpdateGameExit
 
 UpdateGameInit:
@@ -477,9 +478,16 @@ UpdateMoveScreen:
  
   RTS
 UpdateDrawImage:
+
+  ;run it twice for a faster draw
   JSR DrawImage
-  LDA clueLineIndex
-  CMP #225
+  LDA clueTableIndex
+  CMP #57
+  BEQ .changeModeState
+  
+  JSR DrawImage
+  LDA clueTableIndex
+  CMP #57
   BNE .leave
   
 .changeModeState:
@@ -545,20 +553,42 @@ UpdateDrawImage:
 .leave:
  
   RTS
+  
 UpdateWaitInput:
 
   LDA gamepadPressed
   BEQ .leave
   
 .changeModeState:
-
+  LDA #$00
+  STA time
   INC mode_state
 
 .leave:
  
   RTS
   
+UpdateGameFadeOut:
+
+  LDA time
+  AND #$07
+  BNE .leave
+  ;;every 8 frames, decrement the palettes
+  JSR FadeOutPalettes
+  BCS .leave
+
+.changeModeState:
+  LDA #$00
+  STA time
+  INC mode_state
+.leave:
+  RTS  
+
 UpdateGameExit:
+
+  LDA time
+  AND #$0F
+  BNE .leave
 
   LDA #$00
   STA PPU_ScrollX
@@ -567,6 +597,7 @@ UpdateGameExit:
   
   LDA #GAMEOVER_IDX
   JSR ChangeGameMode
+.leave:
   RTS
   
 MoveMouse:
