@@ -8,6 +8,7 @@ tempx 			.rs 1
 tempy 			.rs 1
 time 			.rs 1
 sleeping 		.rs 1
+mode_loadFlags  .rs 1
 game_mode  		.rs 1
 mode_state		.rs 1
 NMI_locks 		.rs 1

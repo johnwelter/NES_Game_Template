@@ -5,9 +5,45 @@
 
   .bank 3
   .org $A000
-
-  .word frog
-
+ 
+;puzzles
+  .word frog, frog, frog, frog, frog, frog, frog, frog, frog
+  .word frog, frog, frog, frog, frog, frog, frog, frog, frog
+  .word frog, frog, frog, frog, frog, frog, frog, frog, frog
+;puzzle names
+  .word frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName
+  .word frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName
+  .word frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName
+;puzzle sprites
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  
+  
   .org $BFFA     ;first of the three vectors starts here
   .dw NMI        ;when an NMI happens (once per frame if enabled) the 
                    ;processor will jump to the label NMI:

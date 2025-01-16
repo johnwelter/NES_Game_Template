@@ -67,6 +67,17 @@ WriteClueByteToPPUString:
   LDA temp1
   JSR WriteToPPUString
   
+  ;;also copy to ... copy
+  LDA clue_draw_address
+  STA copy_address
+  LDA clue_draw_address+1
+  AND #$0F
+  ORA #$60
+  STA copy_address+1
+  LDA temp1
+  LDY #$00
+  STA [copy_address],y
+  
   LDA clueDrawAdd
   JSR SubFromClueDrawAddress
     
@@ -172,6 +183,92 @@ ClearPuzzle:
   INC clueLineIndex
   RTS
   
+LoadPauseScreen:
+
+;;use clue indexes again
+;;we want to draw one line at a time
+;;we have control codes, but those don't matter since we have to build ou the strings before hand
+
+;load pause table
+;there are 6 lines of 13 tiles
+;one byte for the 6 lines, one byte to keep track of our index
+  ;STA clueLineIndex 
+  ;STA clueOffsetShift
+
+;;pause_address has the table we want
+;;pause_draw_address will be the draw location
+
+  MACROAddPPUStringEntryRawData pause_draw_address+1, pause_draw_address, #DRAW_HORIZONTAL, #13
+
+  LDX #$00
+  LDY clueLineIndex
+.loop:
+ 
+  TXA
+  PHA
+  LDA [pause_address],y
+  JSR WriteToPPUString
+  PLA
+  TAX
+  INY
+  INX 
+  CPX #13
+  BNE .loop
+  
+  STY clueLineIndex
+  
+  LDA pause_draw_address
+  CLC
+  ADC #$20
+  STA pause_draw_address
+  LDA pause_draw_address+1
+  ADC #$00
+  STA pause_draw_address+1
+  
+  INC clueOffsetShift
+  RTS
+  
+  
+
+
+ClearPauseScreen:  
+
+  MACROAddPPUStringEntryRawData pause_draw_address+1, pause_draw_address, #DRAW_HORIZONTAL, #13
+
+  LDX #$00
+  LDY #$00
+.loop:
+ 
+  TXA
+  PHA
+  LDA [pause_address],y
+  JSR WriteToPPUString
+  PLA
+  TAX
+  INY
+  INX 
+  CPX #13
+  BNE .loop
+  
+  
+  LDA pause_draw_address
+  CLC
+  ADC #$20
+  STA pause_draw_address
+  LDA pause_draw_address+1
+  ADC #$00
+  STA pause_draw_address+1
+  
+  LDA pause_address
+  CLC
+  ADC #$20
+  STA pause_address
+  LDA pause_address+1
+  ADC #$00
+  STA pause_address+1
+  
+  INC clueOffsetShift
+ RTS
 DrawImage:
 
   ;;we have clueTableIndex, which should be at the image bytes now

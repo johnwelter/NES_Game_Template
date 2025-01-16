@@ -1,5 +1,8 @@
 ChangeGameMode:
+  ;A - game mode index
+  ;X - high nibble: palette start flag, low nibble: screen index
   STA game_mode
+  STX mode_loadFlags
   LDA #$00
   STA mode_state
   JSR ClearPPUString
@@ -52,6 +55,11 @@ LoadGameModeBackground:
 	
   LDY temp1
   MACROGetLabelPointer NameTables, table_address
+  JSR GetTableAtIndex
+  LDA mode_loadFlags
+  AND #$0F
+  ASL A
+  TAY
   JSR GetTableAtIndex
 	
   LDA #$00

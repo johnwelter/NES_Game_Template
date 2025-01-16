@@ -64,6 +64,7 @@ UpdateGameOverExit:
   BNE .leave
 
   LDA #TITLE_IDX
+  LDX #$00
   JSR ChangeGameMode
   
 .leave:

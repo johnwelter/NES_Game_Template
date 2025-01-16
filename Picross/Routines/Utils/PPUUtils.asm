@@ -5,8 +5,20 @@ LoadFullPaletteFromTable:
   LDX #$00
 .loop:
   LDA [table_address], y        ; load data from address (palette + the value in x)
-  STA PPU_DATA            ; write to PPU
   STA Palette_Copy, x
+  PHA 
+  LDA mode_loadFlags
+  AND #$10
+  BNE .setBlack
+  PLA 
+  JMP .setPPUData
+.setBlack:
+
+  PLA 
+  LDA #$0F
+  
+.setPPUData:
+  STA PPU_DATA            ; write to PPU
   INY                   ; X = X + 1
   INX
   CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites

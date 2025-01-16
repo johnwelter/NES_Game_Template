@@ -169,6 +169,7 @@ UpdateTitleExit:
   JSR TurnOffSprites
 
   LDA #GAME_IDX
+  LDX #$02
   JSR ChangeGameMode
   
 .leave

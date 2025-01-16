@@ -5,7 +5,43 @@
 
   .bank 5
   .org $A000
-  .word cat
+  
+;puzzles
+  .word cat, cat, cat, cat, cat, cat, cat, cat, cat 
+  .word cat, cat, cat, cat, cat, cat, cat, cat, cat 
+  .word cat, cat, cat, cat, cat, cat, cat, cat, cat
+;puzzle names
+  .word catName, catName, catName, catName, catName, catName, catName, catName, catName 
+  .word catName, catName, catName, catName, catName, catName, catName, catName, catName 
+  .word catName, catName, catName, catName, catName, catName, catName, catName, catName
+;puzzle sprites
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
+  .db $00, $00, $00, $00
 
   .org $BFFA     ;first of the three vectors starts here
   .dw NMI        ;when an NMI happens (once per frame if enabled) the 

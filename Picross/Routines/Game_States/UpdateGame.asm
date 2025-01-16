@@ -50,7 +50,7 @@ UpdateGameJumpTable:
 UpdateGameInit:
 
   ;; get the puzzle table in the puzzle address
-  MACROGetLabelPointer $A000, table_address
+  MACROGetLabelPointer PUZZLE_TABLE, table_address
   MACROGetDoubleIndex puzzle_index
   JSR GetTableAtIndex
   MACROGetPointer table_address, puzzle_address
@@ -152,6 +152,31 @@ UpdateDrawHoriClues:
   
 UpdateGamePlay:
     
+  LDA pauseState
+  BEQ .checkPause
+  JSR UpdatePause
+  RTS
+  
+.checkPause:
+  
+  LDA gamepadPressed
+  AND #GAMEPAD_START
+  BEQ .updatePlay
+  LDA #$01
+  STA pauseState
+  LDA #$00
+  STA clueLineIndex 
+  STA clueOffsetShift		 
+
+  ;;we need the pause screen table loaded
+  MACROGetLabelPointer Pause_Menu, pause_address
+  MACROGetLabelPointer $210A, pause_draw_address
+  
+  
+  RTS
+
+.updatePlay:
+
   JSR UpdateTimeDisplay
 	
   LDA #$00
@@ -367,6 +392,17 @@ UpdateGamePlay:
   MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
   LDA temp1
   JSR WriteToPPUString
+  
+  ;;also copy to ... copy
+  LDA clue_draw_address
+  STA copy_address
+  LDA clue_draw_address+1
+  AND #$0F
+  ORA #$60
+  STA copy_address+1
+  LDA temp1
+  LDY #$00
+  STA [copy_address],y
   
 .checkSolution: 
 
@@ -606,6 +642,7 @@ UpdateGameExit:
   STA PPU_ScrollNT
   
   LDA #GAMEOVER_IDX
+  LDX #$00
   JSR ChangeGameMode
 .leave:
   RTS
@@ -752,6 +789,84 @@ UpdateTimeDisplay:
   
 .leave: 
   RTS  
+  
+UpdatePause:
+
+;;load screen
+;;update selection
+;; close - remove screen, then upause
+;; quit - jump to fade out
+  LDA pauseState
+  JSR Dynamic_Jump
+
+UpdatePauseJumpTable:  
+
+  .word ExitPause			;fail safe
+  .word UpdateLoadPauseScreen
+  .word UpdatePauseScreen
+  .word UpdateUnloadPauseScreen
+  
+UpdateLoadPauseScreen:
+  
+  JSR LoadPauseScreen
+  LDA clueOffsetShift
+  CMP #$06
+  BNE .leave
+  
+.changePauseState:
+  INC pauseState
+.leave:
+  RTS
+  
+UpdatePauseScreen:
+  
+  LDA gamepadPressed
+  CMP #GAMEPAD_START
+  BEQ .unPause
+  CMP #GAMEPAD_A
+  BEQ .quit
+  JMP .leave 
+
+.unPause:
+
+  LDA #$00
+  STA clueLineIndex
+  STA clueOffsetShift
+
+  MACROGetLabelPointer $610A, pause_address
+  MACROGetLabelPointer $210A, pause_draw_address
+  INC pauseState
+  JMP .leave
+  
+.quit:
+
+  LDA #$00
+  STA pauseState
+  LDA #$00
+  STA time
+  LDA #$08
+  STA mode_state
+  
+.leave:
+  RTS
+  
+UpdateUnloadPauseScreen:
+  
+  JSR ClearPauseScreen
+  LDA clueOffsetShift
+  CMP #$06
+  BNE .leave
+.changePauseState:
+  LDA #$00
+  STA pauseState
+.leave:
+  RTS
+  
+ExitPause:
+  RTS
+  
+  
+
 
 ;;using the line index and a given count based on the direction, 
   

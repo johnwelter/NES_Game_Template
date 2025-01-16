@@ -34,6 +34,7 @@
   .include "Routines/Common/Init.asm"
 
   LDA #TITLE_IDX
+  LDX #$00
   JSR ChangeGameMode
   JSR InitPPUControl
   
