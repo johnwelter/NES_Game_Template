@@ -42,8 +42,9 @@ Title_Sprites:
 	.db $85,$00,$00,$E8
 	.db $A0,$01,$00,$60
 Game_Sprites:
-    .db $01
-	.db $62,$00,$03,$72
+    .db $02
+	.db $62,$02,$03,$72
+	.db $5F,$FF,$00,$60
 GameOver_Sprites:
 	.db $01
 	.db $00,$00,$00,$00

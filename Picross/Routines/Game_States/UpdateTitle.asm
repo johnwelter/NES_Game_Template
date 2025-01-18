@@ -61,7 +61,8 @@ UpdateBankSelection:
   LDA mouse_index
   STA bank_index
   LDA #$FF
-  JSR SetPointerSprite
+  LDX #$01
+  JSR SetSpriteImage
    
   ;;load bank
   JSR ResetMapper
@@ -85,7 +86,8 @@ UpdateScroll:
   
 .changeModeState:
   LDA #$01
-  JSR SetPointerSprite
+  LDX #$01
+  JSR SetSpriteImage
   JSR InitPuzzlePointer
   INC mode_state
 .leave:
@@ -109,7 +111,8 @@ UpdatePuzzleSelection:
 .changeToScrollBack:
  
   LDA #$FF
-  JSR SetPointerSprite
+  LDX #$01
+  JSR SetSpriteImage
   JSR InitBankPointer
   LDA bank_index
   STA mouse_index
@@ -138,7 +141,8 @@ UpdateScrollBack:
 .changeModeState:
 
   LDA #$01
-  JSR SetPointerSprite
+  LDX #$01
+  JSR SetSpriteImage
   DEC mode_state
   DEC mode_state
   DEC mode_state
@@ -218,52 +222,63 @@ SetPointerPosition:
 
   PHA
   TXA
-  JSR SetPointerYPosition
+  LDX #$01
+  JSR SetSpriteYPosition
   PLA
-  JSR SetPointerXPosition
+  LDX #$01
+  JSR SetSpriteXPosition
  
   RTS
   
-SetPointerYPosition:
+SetSpriteYPosition:
   
   PHA
   LDA #SPRITE_YPOS
-  JSR GetPointerDataIndexInX
+  JSR GetSpriteDataIndexInX
   PLA
   STA SPRITE_DATA, x
   RTS
   
-SetPointerXPosition:  
+SetSpriteXPosition:  
   
   PHA
   LDA #SPRITE_XPOS
-  JSR GetPointerDataIndexInX
+  JSR GetSpriteDataIndexInX
   PLA
   STA SPRITE_DATA, x 
   RTS
 
-SetPointerSprite:
+SetSpriteImage:
 
-;; A has aprite we want
+;; A has sprite image index we want
+;; X has the sprite index
   PHA
   LDA #SPRITE_ID
-  JSR GetPointerDataIndexInX
+  JSR GetSpriteDataIndexInX
   PLA
   STA SPRITE_DATA, x
   RTS
   
-GetPointerDataIndexInX:
+GetSpriteDataIndexInX:
 
+  ;; A has data index we want to get
+  ;; X has sprite index
   STA temp3
-  LDA #$01
+  TXA
   ASL A
   ASL A
   CLC
   ADC temp3
   TAX
   
+  RTS  
+GetSpriteData:
+
+  ;;A is data we want
+  ;;X is Sprite
+  JSR GetSpriteDataIndexInX
+  LDA SPRITE_DATA, x
   RTS
-  
   
 UpdateBankPointer:
  
@@ -311,7 +326,8 @@ SetBankPointerFromIndex:
   ASL A
   CLC
   ADC #$A0
-  JSR SetPointerYPosition
+  LDX #$01
+  JSR SetSpriteYPosition
 
 .leave:
   
@@ -365,7 +381,8 @@ UpdatePuzzlePointer:
   ASL A
   CLC
   ADC #$AE
-  JSR SetPointerYPosition
+  LDX #$01
+  JSR SetSpriteYPosition
   
   LDA mouse_index+1
   CLC
@@ -385,7 +402,8 @@ UpdatePuzzlePointer:
   ASL A
   CLC
   ADC #$10
-  JSR SetPointerXPosition
+  LDX #$01
+  JSR SetSpriteXPosition
   
 .leave:
   

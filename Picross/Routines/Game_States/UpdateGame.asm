@@ -167,7 +167,11 @@ UpdateGamePlay:
   STA pauseState
   LDA #$00
   STA clueLineIndex 
-  STA clueOffsetShift		 
+  STA clueOffsetShift	
+
+  LDA #$FF
+  LDX #$00
+  JSR SetSpriteImage
 
   ;;we need the pause screen table loaded
   MACROGetLabelPointer Pause_Menu, pause_address
@@ -852,6 +856,14 @@ UpdateLoadPauseScreen:
   BNE .leave
   
 .changePauseState:
+
+  LDA #PAUSE_YES
+  LDX #$01
+  JSR SetSpriteXPosition  
+  LDA #$01
+  LDX #$01
+  JSR SetSpriteImage
+  
   INC pauseState
 .leave:
   RTS
@@ -861,8 +873,36 @@ UpdatePauseScreen:
   LDA gamepadPressed
   CMP #GAMEPAD_START
   BEQ .unPause
+  CMP #GAMEPAD_B
+  BEQ .unPause
   CMP #GAMEPAD_A
-  BEQ .quit
+  BEQ .checkA
+  
+  ;;update pointer
+  
+  LDA gamepadPressed
+  AND #GAMEPAD_HORI
+  ;;binary system- left and right don't really matter, we'll just toggle the position
+  BEQ .leave
+  
+  LDA #SPRITE_XPOS
+  LDX #$01
+  JSR GetSpriteData
+  
+  CMP #PAUSE_YES
+  BEQ .loadNo
+  
+  LDA #PAUSE_YES
+  JMP .setPosition
+  
+.loadNo:
+  LDA #PAUSE_NO
+
+.setPosition
+  
+  LDX #$01
+  JSR SetSpriteXPosition  
+
   JMP .leave 
 
 .unPause:
@@ -870,12 +910,25 @@ UpdatePauseScreen:
   LDA #$00
   STA clueLineIndex
   STA clueOffsetShift
+  
+  LDA #$FF
+  LDX #$01
+  JSR SetSpriteImage
 
   MACROGetLabelPointer $610A, pause_address
   MACROGetLabelPointer $210A, pause_draw_address
   INC pauseState
   JMP .leave
+ 
+.checkA:
   
+  LDA #SPRITE_XPOS
+  LDX #$01
+  JSR GetSpriteData
+  
+  CMP #PAUSE_NO
+  BEQ .unPause
+   
 .quit:
 
   LDA #$00
@@ -897,6 +950,11 @@ UpdateUnloadPauseScreen:
   CMP #$06
   BNE .leave
 .changePauseState:
+
+  LDA #$02
+  LDX #$00
+  JSR SetSpriteImage
+  
   LDA #$00
   STA pauseState
 .leave:
@@ -924,5 +982,7 @@ PuzzleHeaderSkips:
 
   .db $09, $18, $22
   
+PAUSE_YES = $60
+PAUSE_NO = $88
 
   
