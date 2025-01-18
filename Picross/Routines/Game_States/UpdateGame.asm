@@ -303,11 +303,22 @@ UpdateGamePlay:
 
   LDA gamepad
   AND #GAMEPAD_AB
-  BNE .setTile
+  BNE .checkInputLock
+  
+  LDA #$00
+  STA pauseInputLock
+  
+.leaveEarly:
   RTS  
+
+.checkInputLock:
+
+  ;;check if the input lock is on
+  AND pauseInputLock
+  BNE .leaveEarly
   
 .setTile:
-
+  
   ;;take Y position, mult by 2 to get starting index in puzzle solution
   LDA mouse_index+1
 ;;if the puzzle is a 5x5, we only have one byte per row, so no need to double this
@@ -917,6 +928,7 @@ UpdatePauseScreen:
 
   MACROGetLabelPointer $610A, pause_address
   MACROGetLabelPointer $210A, pause_draw_address
+    
   INC pauseState
   JMP .leave
  
@@ -954,6 +966,9 @@ UpdateUnloadPauseScreen:
   LDA #$02
   LDX #$00
   JSR SetSpriteImage
+  
+  LDA #GAMEPAD_AB
+  STA pauseInputLock 
   
   LDA #$00
   STA pauseState

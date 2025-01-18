@@ -141,9 +141,10 @@
    22           00C4      solutionCount           .rs 1
    23           00C5      nonSolutionCount        .rs 1
    24           00C6      pauseState                      .rs 1
-   25           00C7      holdTimer                       .rs 1
-   26           00C8      GameTime                        .rs 4   ;in order - second, ten second, minute, 10 minute - max out at 99 minutes
-   27           00CC      targetGameMode          .rs 1
+   25           00C7      pauseInputLock          .rs 1
+   26           00C8      holdTimer                       .rs 1
+   27           00C9      GameTime                        .rs 4   ;in order - second, ten second, minute, 10 minute - max out at 99 minutes
+   28           00CD      targetGameMode          .rs 1
 #[2]   Defines/Defines.asm
    10                     ;; 0100 is the stack
    11                     ;; 0200 is sprite ram
@@ -654,7 +655,7 @@
    49                       
    50                       
    51           BFFA        .org $BFFA     ;first of the three vectors starts here
-   52  01:BFFA  2E D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+   52  01:BFFA  3D D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
    53                                        ;processor will jump to the label NMI:
    54  01:BFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
    55                                        ;to the label RESET:
@@ -847,7 +848,7 @@
    45                       
    46                       
    47           BFFA        .org $BFFA     ;first of the three vectors starts here
-   48  03:BFFA  2E D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+   48  03:BFFA  3D D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
    49                                        ;processor will jump to the label NMI:
    50  03:BFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
    51                                        ;to the label RESET:
@@ -1039,7 +1040,7 @@
        05:A0D7  00        
    45                     
    46           BFFA        .org $BFFA     ;first of the three vectors starts here
-   47  05:BFFA  2E D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+   47  05:BFFA  3D D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
    48                                        ;processor will jump to the label NMI:
    49  05:BFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
    50                                        ;to the label RESET:
@@ -1085,11 +1086,11 @@
    28  06:C035  E8          INX
    29  06:C036  D0 E1       BNE clrmem
    30                        
-   31  06:C038  20 6B CC    JSR ResetMapper
+   31  06:C038  20 7A CC    JSR ResetMapper
    32  06:C03B  A9 1E       LDA #$1E ; vertical mirroring, fixed $C000, 8 KB CHR pages
-   33  06:C03D  20 6F CC    JSR SetMapperControls
+   33  06:C03D  20 7E CC    JSR SetMapperControls
    34                       
-   35  06:C040  20 AC CC    JSR ResetBanks
+   35  06:C040  20 BB CC    JSR ResetBanks
    36                       
    37  06:C043            vblankwait2:      ; Second wait for vblank, PPU is ready after this
    38  06:C043  2C 02 20    BIT $2002
@@ -1098,8 +1099,8 @@
    35                     
    36  06:C048  A9 00       LDA #TITLE_IDX
    37  06:C04A  A2 00       LDX #$00
-   38  06:C04C  20 66 C9    JSR ChangeGameMode
-   39  06:C04F  20 F0 CB    JSR InitPPUControl
+   38  06:C04C  20 75 C9    JSR ChangeGameMode
+   39  06:C04F  20 FF CB    JSR InitPPUControl
    40                       
    41                     
    42                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1131,7 +1132,7 @@
    68                       MACROCallDynamicJump game_mode
                           
        06:C06B  AD 0E 00    LDA game_mode
-       06:C06E  20 23 CA    JSR Dynamic_Jump
+       06:C06E  20 32 CA    JSR Dynamic_Jump
                                   
    69                       ;; we'll pop the return address here as the table index, so 
    70                       ;; the routine we pick will return us to whatever called Game Loop
@@ -1141,7 +1142,7 @@
    74                     
    75  06:C071  77 C0       .word UpdateTitle
    76  06:C073  A7 C2       .word UpdateGame
-   77  06:C075  15 C9       .word UpdateGameOver
+   77  06:C075  24 C9       .word UpdateGameOver
    78                       
    79                     
    80                       ;;RTS is called in the subroutine
@@ -1164,7 +1165,7 @@
    13  06:C081            DoUpdateTitle:
    14                     
    15  06:C081  AD 0F 00    LDA mode_state
-   16  06:C084  20 23 CA    JSR Dynamic_Jump
+   16  06:C084  20 32 CA    JSR Dynamic_Jump
    17                         
    18  06:C087            UpdateTitleJumpTable:
    19                     
@@ -1184,7 +1185,7 @@
    33                     
    34  06:C093            UpdateTitleInit:
    35                     
-   36  06:C093  20 CC CB    JSR TurnOnSprites
+   36  06:C093  20 DB CB    JSR TurnOnSprites
    37                       
    38  06:C096  A9 00       LDA #$00
    39  06:C098  8D C1 00    STA mouse_index
@@ -1216,10 +1217,10 @@
    65  06:C0B8  20 DB C1    JSR SetSpriteImage
    66                        
    67                       ;;load bank
-   68  06:C0BB  20 6B CC    JSR ResetMapper
+   68  06:C0BB  20 7A CC    JSR ResetMapper
    69  06:C0BE  AD 00 70    LDA bank_index
    70  06:C0C1  8D A7 00    STA currentPRGBank
-   71  06:C0C4  20 7A CC    JSR LoadPRGBank
+   71  06:C0C4  20 89 CC    JSR LoadPRGBank
    72                     
    73  06:C0C7  EE 0F 00    INC mode_state
    74  06:C0CA            .leave:
@@ -1322,7 +1323,7 @@
   171  06:C163  6D C2 00    ADC mouse_index+1
   172  06:C166  8D 01 70    STA puzzle_index
   173                     
-  174  06:C169  20 D5 CB    JSR TurnOffSprites
+  174  06:C169  20 E4 CB    JSR TurnOffSprites
   175                       
   176                       MACROGetLabelPointer PUZZLE_TABLE, table_address
                           
@@ -1338,7 +1339,7 @@
        06:C179  0A                ASL A
        06:C17A  A8                TAY
                                   
-  178  06:C17B  20 49 CA    JSR GetTableAtIndex
+  178  06:C17B  20 58 CA    JSR GetTableAtIndex
   179                       MACROGetPointer table_address, puzzle_address
                           
        06:C17E  AD 14 00          LDA table_address
@@ -1352,7 +1353,7 @@
   183  06:C18E  AA          TAX
   184                     
   185  06:C18F  A9 01       LDA #GAME_IDX
-  186  06:C191  20 66 C9    JSR ChangeGameMode
+  186  06:C191  20 75 C9    JSR ChangeGameMode
   187                       
   188  06:C194            .leave
   189  06:C194  60          RTS
@@ -1608,7 +1609,7 @@
    26  06:C2B1            DoUpdateGame:
    27                     
    28  06:C2B1  AD 0F 00    LDA mode_state
-   29  06:C2B4  20 23 CA    JSR Dynamic_Jump
+   29  06:C2B4  20 32 CA    JSR Dynamic_Jump
    30                       
    31  06:C2B7            UpdateGameJumpTable:
    32                     
@@ -1616,12 +1617,12 @@
    34  06:C2B9  77 C3       .word UpdateDrawVertClues
    35  06:C2BB  9F C3       .word UpdateDrawHoriClues
    36  06:C2BD  E5 C3       .word UpdateGamePlay
-   37  06:C2BF  B2 C5       .word UpdateClearPuzzle
-   38  06:C2C1  C5 C5       .word UpdateMoveScreen
-   39  06:C2C3  3E C6       .word UpdateDrawImage
-   40  06:C2C5  C4 C6       .word UpdateWaitInput
-   41  06:C2C7  DA C6       .word UpdateGameFadeOut
-   42  06:C2C9  EF C6       .word UpdateGameExit
+   37  06:C2BF  BC C5       .word UpdateClearPuzzle
+   38  06:C2C1  CF C5       .word UpdateMoveScreen
+   39  06:C2C3  48 C6       .word UpdateDrawImage
+   40  06:C2C5  CE C6       .word UpdateWaitInput
+   41  06:C2C7  E4 C6       .word UpdateGameFadeOut
+   42  06:C2C9  F9 C6       .word UpdateGameExit
    43                     
    44  06:C2CB            UpdateGameInit:
    45                     
@@ -1640,7 +1641,7 @@
        06:C2D8  0A                ASL A
        06:C2D9  A8                TAY
                                   
-   49  06:C2DA  20 49 CA    JSR GetTableAtIndex
+   49  06:C2DA  20 58 CA    JSR GetTableAtIndex
    50                       MACROGetPointer table_address, puzzle_address
                           
        06:C2DD  AD 14 00          LDA table_address
@@ -1661,7 +1662,7 @@
    54  06:C2F3  A0 00       LDY #$00
    55  06:C2F5  B1 A9       LDA [puzzle_address], y
    56  06:C2F7  AA          TAX
-   57  06:C2F8  BD 12 C9    LDA PuzzleHeaderSkips, x
+   57  06:C2F8  BD 21 C9    LDA PuzzleHeaderSkips, x
    58  06:C2FB  8D 00 00    STA temp1
    59                       
    60  06:C2FE  AD A9 00    LDA puzzle_address
@@ -1681,10 +1682,10 @@
    74  06:C321  8D C2 00    STA mouse_index+1
    75  06:C324  8D C4 00    STA solutionCount
    76  06:C327  8D C5 00    STA nonSolutionCount
-   77  06:C32A  8D C8 00    STA GameTime
-   78  06:C32D  8D C9 00    STA GameTime+1
-   79  06:C330  8D CA 00    STA GameTime+2
-   80  06:C333  8D CB 00    STA GameTime+3
+   77  06:C32A  8D C9 00    STA GameTime
+   78  06:C32D  8D CA 00    STA GameTime+1
+   79  06:C330  8D CB 00    STA GameTime+2
+   80  06:C333  8D CC 00    STA GameTime+3
    81                             
    82  06:C336  A9 20       LDA #$20
    83  06:C338  8D BA 00    STA clueDrawAdd
@@ -1697,35 +1698,35 @@
        06:C33F  8E B3 00          STX clue_start_address
        06:C342  8D B4 00          STA clue_start_address+1
                                   
-   86  06:C345  20 5D CD    JSR ResetClueDrawAddress
+   86  06:C345  20 6C CD    JSR ResetClueDrawAddress
    87                       
    88                       MACROAddPPUStringEntryRawData #HIGH(BANK_LEVEL), #LOW(BANK_LEVEL), #DRAW_HORIZONTAL, #$03
                           
        06:C348  A9 01       LDA #$01
        06:C34A  8D 21 00    STA PPU_PendingWrite
        06:C34D  A9 20       LDA #HIGH(BANK_LEVEL)
-       06:C34F  20 84 CB    JSR WriteToPPUString
+       06:C34F  20 93 CB    JSR WriteToPPUString
        06:C352  A9 A8       LDA #LOW(BANK_LEVEL)
-       06:C354  20 84 CB    JSR WriteToPPUString
+       06:C354  20 93 CB    JSR WriteToPPUString
        06:C357  A9 00       LDA #DRAW_HORIZONTAL
-       06:C359  20 84 CB    JSR WriteToPPUString
+       06:C359  20 93 CB    JSR WriteToPPUString
        06:C35C  A9 03       LDA #$03 
-       06:C35E  20 84 CB    JSR WriteToPPUString
+       06:C35E  20 93 CB    JSR WriteToPPUString
                             
    89  06:C361  AD 00 70    LDA bank_index
-   90  06:C364  20 84 CB    JSR WriteToPPUString
+   90  06:C364  20 93 CB    JSR WriteToPPUString
    91  06:C367  A9 60       LDA #$60
-   92  06:C369  20 84 CB    JSR WriteToPPUString
+   92  06:C369  20 93 CB    JSR WriteToPPUString
    93  06:C36C  AE 01 70    LDX puzzle_index
    94  06:C36F  E8          INX
    95  06:C370  8A          TXA 
-   96  06:C371  20 84 CB    JSR WriteToPPUString
+   96  06:C371  20 93 CB    JSR WriteToPPUString
    97                       
    98  06:C374  EE 0F 00    INC mode_state
    99                     
   100  06:C377            UpdateDrawVertClues:
   101                       
-  102  06:C377  20 C2 CC    JSR PopulateClues
+  102  06:C377  20 D1 CC    JSR PopulateClues
   103  06:C37A  90 22       BCC .leave
   104                       
   105  06:C37C            .changeModeState:
@@ -1748,7 +1749,7 @@
        06:C392  8E B3 00          STX clue_start_address
        06:C395  8D B4 00          STA clue_start_address+1
                                   
-  118  06:C398  20 5D CD    JSR ResetClueDrawAddress
+  118  06:C398  20 6C CD    JSR ResetClueDrawAddress
   119                     
   120  06:C39B  EE 0F 00    INC mode_state
   121  06:C39E            .leave:
@@ -1756,11 +1757,11 @@
   123                       
   124  06:C39F            UpdateDrawHoriClues:
   125                     
-  126  06:C39F  20 C2 CC    JSR PopulateClues
+  126  06:C39F  20 D1 CC    JSR PopulateClues
   127  06:C3A2  90 40       BCC .leave
   128                     
   129  06:C3A4            .changeModeState:
-  130  06:C3A4  20 CC CB    JSR TurnOnSprites
+  130  06:C3A4  20 DB CB    JSR TurnOnSprites
   131                       
   132                       ;;set the timer to 00
   133                       MACROAddPPUStringEntryRawData #HIGH(TIMER_LOC), #LOW(TIMER_LOC), #DRAW_HORIZONTAL, #$05
@@ -1768,24 +1769,24 @@
        06:C3A7  A9 01       LDA #$01
        06:C3A9  8D 21 00    STA PPU_PendingWrite
        06:C3AC  A9 20       LDA #HIGH(TIMER_LOC)
-       06:C3AE  20 84 CB    JSR WriteToPPUString
+       06:C3AE  20 93 CB    JSR WriteToPPUString
        06:C3B1  A9 E5       LDA #LOW(TIMER_LOC)
-       06:C3B3  20 84 CB    JSR WriteToPPUString
+       06:C3B3  20 93 CB    JSR WriteToPPUString
        06:C3B6  A9 00       LDA #DRAW_HORIZONTAL
-       06:C3B8  20 84 CB    JSR WriteToPPUString
+       06:C3B8  20 93 CB    JSR WriteToPPUString
        06:C3BB  A9 05       LDA #$05 
-       06:C3BD  20 84 CB    JSR WriteToPPUString
+       06:C3BD  20 93 CB    JSR WriteToPPUString
                             
   134  06:C3C0  A9 00       LDA #$00
-  135  06:C3C2  20 84 CB    JSR WriteToPPUString
+  135  06:C3C2  20 93 CB    JSR WriteToPPUString
   136  06:C3C5  A9 00       LDA #$00
-  137  06:C3C7  20 84 CB    JSR WriteToPPUString
+  137  06:C3C7  20 93 CB    JSR WriteToPPUString
   138  06:C3CA  A9 61       LDA #$61
-  139  06:C3CC  20 84 CB    JSR WriteToPPUString
+  139  06:C3CC  20 93 CB    JSR WriteToPPUString
   140  06:C3CF  A9 00       LDA #$00
-  141  06:C3D1  20 84 CB    JSR WriteToPPUString
+  141  06:C3D1  20 93 CB    JSR WriteToPPUString
   142  06:C3D4  A9 00       LDA #$00
-  143  06:C3D6  20 84 CB    JSR WriteToPPUString
+  143  06:C3D6  20 93 CB    JSR WriteToPPUString
   144                       
   145                       ;;reset time
   146  06:C3D9  A9 00       LDA #$00
@@ -1800,7 +1801,7 @@
   155                         
   156  06:C3E5  AD C6 00    LDA pauseState
   157  06:C3E8  F0 04       BEQ .checkPause
-  158  06:C3EA  20 45 C8    JSR UpdatePause
+  158  06:C3EA  20 4F C8    JSR UpdatePause
   159  06:C3ED  60          RTS
   160                       
   161  06:C3EE            .checkPause:
@@ -1841,7 +1842,7 @@
   182                     
   183  06:C41E            .updatePlay:
   184                     
-  185  06:C41E  20 C6 C7    JSR UpdateTimeDisplay
+  185  06:C41E  20 D0 C7    JSR UpdateTimeDisplay
   186                             
   187  06:C421  A9 00       LDA #$00
   188  06:C423  8D 00 00    STA temp1
@@ -1855,7 +1856,7 @@
   196  06:C431  F0 0B       BEQ .checkHeld
   197                       
   198  06:C433  A9 10       LDA #HOLD_TIME
-  199  06:C435  8D C7 00    STA holdTimer 
+  199  06:C435  8D C8 00    STA holdTimer 
   200  06:C438  AD 1A 00    LDA gamepadPressed
   201  06:C43B  4C 52 C4    JMP .parseInputs
   202                       
@@ -1866,10 +1867,10 @@
   207  06:C443  F0 2F       BEQ .checkPaintPress
   208                       
   209                       ;;decrement the hold timer
-  210  06:C445  CE C7 00    DEC holdTimer
+  210  06:C445  CE C8 00    DEC holdTimer
   211  06:C448  D0 2A       BNE .checkPaintPress
   212  06:C44A  A9 04       LDA #HOLD_FREQ
-  213  06:C44C  8D C7 00    STA holdTimer
+  213  06:C44C  8D C8 00    STA holdTimer
   214  06:C44F  AD 18 00    LDA gamepad
   215                     
   216  06:C452            .parseInputs:
@@ -1894,8 +1895,8 @@
   235                       
   236  06:C46E            .move:
   237                      
-  238  06:C46E  20 0A C7    JSR MoveMouse
-  239  06:C471  20 72 C7    JSR UpdateMouseScreenPos
+  238  06:C46E  20 14 C7    JSR MoveMouse
+  239  06:C471  20 7C C7    JSR UpdateMouseScreenPos
   240                       
   241  06:C474            .checkPaintPress:
   242                     
@@ -1952,7 +1953,7 @@
   293                       
   294  06:C4B6            .finishGetTile:
   295  06:C4B6  8D C3 00    STA currentPaintTile
-  296  06:C4B9  4C C4 C4    JMP .setTile
+  296  06:C4B9  4C CE C4    JMP .setTile
   297                     
   298                     ;;we'll keep a copy of the puzzle tiles in memory, since we can't easily access tiles in the PPU
   299                     ;;might be best to just keep an entire copy of the nametable instead of trying to index it and deal with 16 bit math
@@ -1962,813 +1963,828 @@
   303                     
   304  06:C4BC  AD 18 00    LDA gamepad
   305  06:C4BF  29 03       AND #GAMEPAD_AB
-  306  06:C4C1  D0 01       BNE .setTile
-  307  06:C4C3  60          RTS  
-  308                       
-  309  06:C4C4            .setTile:
-  310                     
-  311                       ;;take Y position, mult by 2 to get starting index in puzzle solution
-  312  06:C4C4  AD C2 00    LDA mouse_index+1
-  313                     ;;if the puzzle is a 5x5, we only have one byte per row, so no need to double this
-  314  06:C4C7  8D 00 00    STA temp1
-  315  06:C4CA  A0 00       LDY #$00
-  316  06:C4CC  B1 A9       LDA [puzzle_address], y
-  317  06:C4CE  F0 03       BEQ .skipDouble
-  318  06:C4D0  0E 00 00    ASL temp1
-  319  06:C4D3            .skipDouble:
-  320  06:C4D3  AD 00 00    LDA temp1
-  321  06:C4D6  18          CLC
-  322  06:C4D7  69 04       ADC #$04 ;; add to get past header
-  323  06:C4D9  8D 00 00    STA temp1
-  324                       
-  325                       ;;div X position by 8 to get the byte index
-  326  06:C4DC  AD C1 00    LDA mouse_index
-  327  06:C4DF  4A          LSR A
-  328  06:C4E0  4A          LSR A
-  329  06:C4E1  4A          LSR A
-  330  06:C4E2  F0 03       BEQ .getMask
-  331                       
-  332  06:C4E4  EE 00 00    INC temp1
-  333                       
-  334  06:C4E7            .getMask:
+  306  06:C4C1  D0 06       BNE .checkInputLock
+  307                       
+  308  06:C4C3  A9 00       LDA #$00
+  309  06:C4C5  8D C7 00    STA pauseInputLock
+  310                       
+  311  06:C4C8            .leaveEarly:
+  312  06:C4C8  60          RTS  
+  313                     
+  314  06:C4C9            .checkInputLock:
+  315                     
+  316                       ;;check if the input lock is on
+  317  06:C4C9  2D C7 00    AND pauseInputLock
+  318  06:C4CC  D0 FA       BNE .leaveEarly
+  319                       
+  320  06:C4CE            .setTile:
+  321                       
+  322                       ;;take Y position, mult by 2 to get starting index in puzzle solution
+  323  06:C4CE  AD C2 00    LDA mouse_index+1
+  324                     ;;if the puzzle is a 5x5, we only have one byte per row, so no need to double this
+  325  06:C4D1  8D 00 00    STA temp1
+  326  06:C4D4  A0 00       LDY #$00
+  327  06:C4D6  B1 A9       LDA [puzzle_address], y
+  328  06:C4D8  F0 03       BEQ .skipDouble
+  329  06:C4DA  0E 00 00    ASL temp1
+  330  06:C4DD            .skipDouble:
+  331  06:C4DD  AD 00 00    LDA temp1
+  332  06:C4E0  18          CLC
+  333  06:C4E1  69 04       ADC #$04 ;; add to get past header
+  334  06:C4E3  8D 00 00    STA temp1
   335                       
-  336  06:C4E7  AD C1 00    LDA mouse_index
-  337  06:C4EA  29 07       AND #$07
-  338  06:C4EC  AA          TAX
-  339  06:C4ED  A9 80       LDA #$80
-  340  06:C4EF  E0 00       CPX #$00
-  341  06:C4F1  F0 04       BEQ .storeMask
-  342                     
-  343  06:C4F3            .maskLoop:
-  344  06:C4F3  4A          LSR A
-  345  06:C4F4  CA          DEX
-  346  06:C4F5  D0 FC       BNE .maskLoop
-  347  06:C4F7            .storeMask:
-  348  06:C4F7  8D 01 00    STA temp2
-  349                     
-  350  06:C4FA  AC 00 00    LDY temp1
-  351  06:C4FD  B1 A9       LDA [puzzle_address], y
-  352  06:C4FF  2D 01 00    AND temp2
-  353  06:C502  8D 00 00    STA temp1     ;get the 0/non zero solution flag 
-  354                     
-  355  06:C505  A0 00       LDY #$00
-  356  06:C507  B1 BF       LDA [mouse_location], y
-  357  06:C509  8D 02 00    STA temp3
-  358  06:C50C  29 F0       AND #$F0
-  359  06:C50E  CD C3 00    CMP currentPaintTile
-  360  06:C511  D0 01       BNE .diffTiles
-  361  06:C513  60          RTS
-  362                       
-  363  06:C514            .diffTiles:
-  364                       ;;tiles are different- check if the current tile is marked as a solution tile
-  365  06:C514  C9 70       CMP #$70
-  366  06:C516  D0 0B       BNE .checkNewMark
-  367                       ;;if erasing a mark, check if the tile was part of the solution
-  368  06:C518  AD 00 00    LDA temp1
-  369  06:C51B  D0 18       BNE .antiMark
-  370  06:C51D  CE C5 00    DEC nonSolutionCount
-  371  06:C520  4C 3E C5    JMP .overwriteTile
-  372                       
-  373  06:C523            .checkNewMark:
-  374                     
-  375  06:C523  AD C3 00    LDA currentPaintTile
-  376  06:C526  C9 70       CMP #$70
-  377  06:C528  D0 14       BNE .overwriteTile
-  378                       
-  379  06:C52A  AD 00 00    LDA temp1
-  380  06:C52D  D0 0C       BNE .proMark
-  381  06:C52F  EE C5 00    INC nonSolutionCount 
-  382  06:C532  4C 3E C5    JMP .overwriteTile  
+  336                       ;;div X position by 8 to get the byte index
+  337  06:C4E6  AD C1 00    LDA mouse_index
+  338  06:C4E9  4A          LSR A
+  339  06:C4EA  4A          LSR A
+  340  06:C4EB  4A          LSR A
+  341  06:C4EC  F0 03       BEQ .getMask
+  342                       
+  343  06:C4EE  EE 00 00    INC temp1
+  344                       
+  345  06:C4F1            .getMask:
+  346                       
+  347  06:C4F1  AD C1 00    LDA mouse_index
+  348  06:C4F4  29 07       AND #$07
+  349  06:C4F6  AA          TAX
+  350  06:C4F7  A9 80       LDA #$80
+  351  06:C4F9  E0 00       CPX #$00
+  352  06:C4FB  F0 04       BEQ .storeMask
+  353                     
+  354  06:C4FD            .maskLoop:
+  355  06:C4FD  4A          LSR A
+  356  06:C4FE  CA          DEX
+  357  06:C4FF  D0 FC       BNE .maskLoop
+  358  06:C501            .storeMask:
+  359  06:C501  8D 01 00    STA temp2
+  360                     
+  361  06:C504  AC 00 00    LDY temp1
+  362  06:C507  B1 A9       LDA [puzzle_address], y
+  363  06:C509  2D 01 00    AND temp2
+  364  06:C50C  8D 00 00    STA temp1     ;get the 0/non zero solution flag 
+  365                     
+  366  06:C50F  A0 00       LDY #$00
+  367  06:C511  B1 BF       LDA [mouse_location], y
+  368  06:C513  8D 02 00    STA temp3
+  369  06:C516  29 F0       AND #$F0
+  370  06:C518  CD C3 00    CMP currentPaintTile
+  371  06:C51B  D0 01       BNE .diffTiles
+  372  06:C51D  60          RTS
+  373                       
+  374  06:C51E            .diffTiles:
+  375                       ;;tiles are different- check if the current tile is marked as a solution tile
+  376  06:C51E  C9 70       CMP #$70
+  377  06:C520  D0 0B       BNE .checkNewMark
+  378                       ;;if erasing a mark, check if the tile was part of the solution
+  379  06:C522  AD 00 00    LDA temp1
+  380  06:C525  D0 18       BNE .antiMark
+  381  06:C527  CE C5 00    DEC nonSolutionCount
+  382  06:C52A  4C 48 C5    JMP .overwriteTile
   383                       
-  384  06:C535            .antiMark:
-  385  06:C535  CE C4 00    DEC solutionCount
-  386  06:C538  4C 3E C5    JMP .overwriteTile
-  387  06:C53B            .proMark:   
-  388                       
-  389  06:C53B  EE C4 00    INC solutionCount
-  390                       
-  391  06:C53E            .overwriteTile:
-  392                       ;;overwrite tile
-  393  06:C53E  AD 02 00    LDA temp3
-  394  06:C541  29 0F       AND #$0F
-  395  06:C543  0D C3 00    ORA currentPaintTile
-  396  06:C546  A0 00       LDY #$00
-  397  06:C548  91 BF       STA [mouse_location], y
-  398  06:C54A  8D 00 00    STA temp1
+  384  06:C52D            .checkNewMark:
+  385                     
+  386  06:C52D  AD C3 00    LDA currentPaintTile
+  387  06:C530  C9 70       CMP #$70
+  388  06:C532  D0 14       BNE .overwriteTile
+  389                       
+  390  06:C534  AD 00 00    LDA temp1
+  391  06:C537  D0 0C       BNE .proMark
+  392  06:C539  EE C5 00    INC nonSolutionCount 
+  393  06:C53C  4C 48 C5    JMP .overwriteTile  
+  394                       
+  395  06:C53F            .antiMark:
+  396  06:C53F  CE C4 00    DEC solutionCount
+  397  06:C542  4C 48 C5    JMP .overwriteTile
+  398  06:C545            .proMark:   
   399                       
-  400  06:C54D  AD C0 00    LDA mouse_location+1
-  401  06:C550  29 3F       AND #$3F
-  402  06:C552  8D 01 00    STA temp2
-  403                         
-  404                       MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
+  400  06:C545  EE C4 00    INC solutionCount
+  401                       
+  402  06:C548            .overwriteTile:
+  403                       ;;overwrite tile
+  404  06:C548  AD 02 00    LDA temp3
+  405  06:C54B  29 0F       AND #$0F
+  406  06:C54D  0D C3 00    ORA currentPaintTile
+  407  06:C550  A0 00       LDY #$00
+  408  06:C552  91 BF       STA [mouse_location], y
+  409  06:C554  8D 00 00    STA temp1
+  410                       
+  411  06:C557  AD C0 00    LDA mouse_location+1
+  412  06:C55A  29 3F       AND #$3F
+  413  06:C55C  8D 01 00    STA temp2
+  414                         
+  415                       MACROAddPPUStringEntryRawData temp2, mouse_location, #DRAW_HORIZONTAL, #$01
                           
-       06:C555  A9 01       LDA #$01
-       06:C557  8D 21 00    STA PPU_PendingWrite
-       06:C55A  AD 01 00    LDA temp2
-       06:C55D  20 84 CB    JSR WriteToPPUString
-       06:C560  AD BF 00    LDA mouse_location
-       06:C563  20 84 CB    JSR WriteToPPUString
-       06:C566  A9 00       LDA #DRAW_HORIZONTAL
-       06:C568  20 84 CB    JSR WriteToPPUString
-       06:C56B  A9 01       LDA #$01 
-       06:C56D  20 84 CB    JSR WriteToPPUString
+       06:C55F  A9 01       LDA #$01
+       06:C561  8D 21 00    STA PPU_PendingWrite
+       06:C564  AD 01 00    LDA temp2
+       06:C567  20 93 CB    JSR WriteToPPUString
+       06:C56A  AD BF 00    LDA mouse_location
+       06:C56D  20 93 CB    JSR WriteToPPUString
+       06:C570  A9 00       LDA #DRAW_HORIZONTAL
+       06:C572  20 93 CB    JSR WriteToPPUString
+       06:C575  A9 01       LDA #$01 
+       06:C577  20 93 CB    JSR WriteToPPUString
                             
-  405  06:C570  AD 00 00    LDA temp1
-  406  06:C573  20 84 CB    JSR WriteToPPUString
-  407                       
-  408                       ;;also copy to ... copy
-  409  06:C576  AD B5 00    LDA clue_draw_address
-  410  06:C579  8D AF 00    STA copy_address
-  411  06:C57C  AD B6 00    LDA clue_draw_address+1
-  412  06:C57F  29 0F       AND #$0F
-  413  06:C581  09 60       ORA #$60
-  414  06:C583  8D B0 00    STA copy_address+1
-  415  06:C586  AD 00 00    LDA temp1
-  416  06:C589  A0 00       LDY #$00
-  417  06:C58B  91 AF       STA [copy_address],y
+  416  06:C57A  AD 00 00    LDA temp1
+  417  06:C57D  20 93 CB    JSR WriteToPPUString
   418                       
-  419  06:C58D            .checkSolution: 
-  420                     
-  421  06:C58D  A0 01       LDY #$01
-  422  06:C58F  B1 A9       LDA [puzzle_address], y
-  423  06:C591  CD C4 00    CMP solutionCount
-  424  06:C594  D0 1B       BNE .leave
-  425  06:C596  AD C5 00    LDA nonSolutionCount
-  426  06:C599  F0 03       BEQ .changeModeState
-  427                       
-  428  06:C59B  4C B1 C5    JMP .leave
+  419                       ;;also copy to ... copy
+  420  06:C580  AD B5 00    LDA clue_draw_address
+  421  06:C583  8D AF 00    STA copy_address
+  422  06:C586  AD B6 00    LDA clue_draw_address+1
+  423  06:C589  29 0F       AND #$0F
+  424  06:C58B  09 60       ORA #$60
+  425  06:C58D  8D B0 00    STA copy_address+1
+  426  06:C590  AD 00 00    LDA temp1
+  427  06:C593  A0 00       LDY #$00
+  428  06:C595  91 AF       STA [copy_address],y
   429                       
-  430                       ;;update the painting
-  431  06:C59E            .changeModeState:
-  432                      
-  433  06:C59E  20 D5 CB    JSR TurnOffSprites
-  434                        
-  435  06:C5A1  A9 00       LDA #$00
-  436  06:C5A3  8D B5 00    STA clue_draw_address
-  437  06:C5A6  8D B8 00    STA clueLineIndex
-  438  06:C5A9  A9 20       LDA #$20
-  439  06:C5AB  8D B6 00    STA clue_draw_address+1
+  430  06:C597            .checkSolution: 
+  431                     
+  432  06:C597  A0 01       LDY #$01
+  433  06:C599  B1 A9       LDA [puzzle_address], y
+  434  06:C59B  CD C4 00    CMP solutionCount
+  435  06:C59E  D0 1B       BNE .leave
+  436  06:C5A0  AD C5 00    LDA nonSolutionCount
+  437  06:C5A3  F0 03       BEQ .changeModeState
+  438                       
+  439  06:C5A5  4C BB C5    JMP .leave
   440                       
-  441  06:C5AE  EE 0F 00    INC mode_state
-  442                     
-  443  06:C5B1            .leave:
-  444                      
-  445  06:C5B1  60          RTS
-  446                       
-  447  06:C5B2            UpdateClearPuzzle:
-  448                     
-  449  06:C5B2  20 D1 CD    JSR ClearPuzzle
-  450  06:C5B5  AD B8 00    LDA clueLineIndex
-  451  06:C5B8  C9 1E       CMP #30
-  452  06:C5BA  D0 08       BNE .leave
-  453                       
-  454  06:C5BC            .changeModeState:
-  455                     
-  456  06:C5BC  A9 00       LDA #$00
-  457  06:C5BE  8D B8 00    STA clueLineIndex ;using this as a scroller
-  458  06:C5C1  EE 0F 00    INC mode_state
+  441                       ;;update the painting
+  442  06:C5A8            .changeModeState:
+  443                      
+  444  06:C5A8  20 E4 CB    JSR TurnOffSprites
+  445                        
+  446  06:C5AB  A9 00       LDA #$00
+  447  06:C5AD  8D B5 00    STA clue_draw_address
+  448  06:C5B0  8D B8 00    STA clueLineIndex
+  449  06:C5B3  A9 20       LDA #$20
+  450  06:C5B5  8D B6 00    STA clue_draw_address+1
+  451                       
+  452  06:C5B8  EE 0F 00    INC mode_state
+  453                     
+  454  06:C5BB            .leave:
+  455                      
+  456  06:C5BB  60          RTS
+  457                       
+  458  06:C5BC            UpdateClearPuzzle:
   459                     
-  460  06:C5C4            .leave:
-  461                      
-  462  06:C5C4  60          RTS
-  463  06:C5C5            UpdateMoveScreen:
+  460  06:C5BC  20 E0 CD    JSR ClearPuzzle
+  461  06:C5BF  AD B8 00    LDA clueLineIndex
+  462  06:C5C2  C9 1E       CMP #30
+  463  06:C5C4  D0 08       BNE .leave
   464                       
-  465                       ;for 15x15, move 5 tiles left and 5 tiles up- let's do 1 at a time
-  466                       ;we'll take the lower nibble of the clue line index as our scroll counter, and the higher nibble as the x/y flag
-  467                       
-  468  06:C5C5  A0 00       LDY #$00
-  469  06:C5C7  B1 A9       LDA [puzzle_address], y
-  470  06:C5C9  AA          TAX
-  471  06:C5CA  BD 0C C9    LDA PuzzleScrollHori, x
-  472  06:C5CD  8D 00 00    STA temp1
-  473  06:C5D0  BD 0F C9    LDA PuzzleScrollVert, x
-  474  06:C5D3  8D 01 00    STA temp2
+  465  06:C5C6            .changeModeState:
+  466                     
+  467  06:C5C6  A9 00       LDA #$00
+  468  06:C5C8  8D B8 00    STA clueLineIndex ;using this as a scroller
+  469  06:C5CB  EE 0F 00    INC mode_state
+  470                     
+  471  06:C5CE            .leave:
+  472                      
+  473  06:C5CE  60          RTS
+  474  06:C5CF            UpdateMoveScreen:
   475                       
-  476  06:C5D6  AD B8 00    LDA clueLineIndex
-  477  06:C5D9  29 10       AND #$10
-  478  06:C5DB  D0 1E       BNE .scrollY
-  479                       
-  480                       ;;scroll X over
-  481  06:C5DD  AD B8 00    LDA clueLineIndex
-  482  06:C5E0  29 0F       AND #$0F
-  483  06:C5E2  0A          ASL A
-  484  06:C5E3  0A          ASL A
-  485  06:C5E4  0A          ASL A ;mult by 8
-  486  06:C5E5  8D 1D 00    STA PPU_ScrollX
-  487                       
-  488  06:C5E8  EE B8 00    INC clueLineIndex
-  489  06:C5EB  AD B8 00    LDA clueLineIndex
-  490  06:C5EE  CD 00 00    CMP temp1
-  491  06:C5F1  D0 4A       BNE .leave
-  492  06:C5F3  A9 10       LDA #$10
-  493  06:C5F5  8D B8 00    STA clueLineIndex
-  494  06:C5F8  4C 3D C6    JMP .leave
-  495                       
-  496  06:C5FB            .scrollY:
-  497                     
-  498  06:C5FB  AD B8 00    LDA clueLineIndex
-  499  06:C5FE  29 0F       AND #$0F
-  500  06:C600  0A          ASL A
-  501  06:C601  0A          ASL A
-  502  06:C602  0A          ASL A ;mult by 8
-  503  06:C603  8D 1E 00    STA PPU_ScrollY
-  504                     
-  505  06:C606  EE B8 00    INC clueLineIndex
-  506  06:C609  AD B8 00    LDA clueLineIndex
-  507  06:C60C  29 0F       AND #$0F
-  508  06:C60E  CD 01 00    CMP temp2
-  509  06:C611  D0 2A       BNE .leave
-  510                       
-  511  06:C613            .changeModeState:
-  512                     
-  513  06:C613  A9 8E       LDA #$8E
-  514  06:C615  8D B5 00    STA clue_draw_address
-  515  06:C618  A9 21       LDA #$21
-  516  06:C61A  8D B6 00    STA clue_draw_address+1
-  517                       
-  518  06:C61D  AD AB 00    LDA clues_address
-  519  06:C620  18          CLC
-  520  06:C621  6D B7 00    ADC clueTableIndex
-  521  06:C624  8D AB 00    STA clues_address
-  522  06:C627  AD AC 00    LDA clues_address+1
-  523  06:C62A  69 00       ADC #$00
-  524  06:C62C  8D AC 00    STA clues_address+1
-  525                       
-  526  06:C62F  A9 00       LDA #$00
-  527  06:C631  8D B7 00    STA clueTableIndex
-  528  06:C634  8D B8 00    STA clueLineIndex
-  529  06:C637  8D B9 00    STA clueOffsetShift
-  530                     
-  531  06:C63A  EE 0F 00    INC mode_state
-  532                     
-  533  06:C63D            .leave:
-  534                      
-  535  06:C63D  60          RTS
-  536  06:C63E            UpdateDrawImage:
-  537                     
-  538                       ;run it twice for a faster draw
-  539  06:C63E  20 B3 CE    JSR DrawImage
-  540  06:C641  AD B7 00    LDA clueTableIndex
-  541  06:C644  CD 09 00    CMP tempy
-  542                       ;BEQ .changeModeState
-  543                       
-  544                       ;JSR DrawImage
-  545                       ;LDA clueTableIndex
-  546                       ;CMP tempy
-  547  06:C647  D0 7A       BNE .leave
-  548                       
-  549  06:C649            .changeModeState:
-  550                     
-  551                       ;;do a palette draw
-  552                       ;;puzzle address + 03 has the desired palette offset
-  553                     
-  554  06:C649  A0 03       LDY #$03
-  555  06:C64B  B1 A9       LDA [puzzle_address],y
-  556  06:C64D  29 0F       AND #$0F
-  557  06:C64F  AA          TAX
-  558                       
-  559  06:C650  B1 A9       LDA [puzzle_address],y
-  560  06:C652  29 10       AND #$10
-  561  06:C654  F0 15       BEQ .storeBottomVals
-  562                       
-  563  06:C656  8A          TXA
-  564  06:C657  09 10       ORA #$10
-  565  06:C659  8D 01 00    STA temp2
-  566  06:C65C  8A          TXA
-  567  06:C65D  09 20       ORA #$20
-  568  06:C65F  8D 02 00    STA temp3
-  569  06:C662  8A          TXA
-  570  06:C663  09 30       ORA #$30
-  571  06:C665  8D 03 00    STA temp4
-  572                     
-  573  06:C668  4C 7D C6    JMP .checkKeepWhite
-  574                       
-  575  06:C66B            .storeBottomVals:
-  576                     
-  577  06:C66B  8A          TXA
-  578  06:C66C  09 00       ORA #$00
-  579  06:C66E  8D 01 00    STA temp2
-  580  06:C671  8A          TXA
-  581  06:C672  09 10       ORA #$10
-  582  06:C674  8D 02 00    STA temp3
-  583  06:C677  8A          TXA
-  584  06:C678  09 20       ORA #$20
-  585  06:C67A  8D 03 00    STA temp4
-  586                       
-  587  06:C67D            .checkKeepWhite:
-  588                       
-  589  06:C67D  B1 A9       LDA [puzzle_address],y
-  590  06:C67F  29 20       AND #$20
-  591  06:C681  F0 05       BEQ .loadPalToPPUStr
-  592                       
-  593  06:C683  A9 30       LDA #$30
-  594  06:C685  8D 03 00    STA temp4
-  595                       
-  596                       
-  597  06:C688            .loadPalToPPUStr:
-  598                       
-  599                       MACROAddPPUStringEntryRawData #$3F, #$01, #DRAW_HORIZONTAL, #03
-                          
-       06:C688  A9 01       LDA #$01
-       06:C68A  8D 21 00    STA PPU_PendingWrite
-       06:C68D  A9 3F       LDA #$3F
-       06:C68F  20 84 CB    JSR WriteToPPUString
-       06:C692  A9 01       LDA #$01
-       06:C694  20 84 CB    JSR WriteToPPUString
-       06:C697  A9 00       LDA #DRAW_HORIZONTAL
-       06:C699  20 84 CB    JSR WriteToPPUString
-       06:C69C  A9 03       LDA #03 
-       06:C69E  20 84 CB    JSR WriteToPPUString
-                            
-  600  06:C6A1  AD 01 00    LDA temp2
-  601  06:C6A4  20 84 CB    JSR WriteToPPUString
-  602  06:C6A7  AD 02 00    LDA temp3
-  603  06:C6AA  20 84 CB    JSR WriteToPPUString
-  604  06:C6AD  AD 03 00    LDA temp4
-  605  06:C6B0  20 84 CB    JSR WriteToPPUString
+  476                       ;for 15x15, move 5 tiles left and 5 tiles up- let's do 1 at a time
+  477                       ;we'll take the lower nibble of the clue line index as our scroll counter, and the higher nibble as the x/y flag
+  478                       
+  479  06:C5CF  A0 00       LDY #$00
+  480  06:C5D1  B1 A9       LDA [puzzle_address], y
+  481  06:C5D3  AA          TAX
+  482  06:C5D4  BD 1B C9    LDA PuzzleScrollHori, x
+  483  06:C5D7  8D 00 00    STA temp1
+  484  06:C5DA  BD 1E C9    LDA PuzzleScrollVert, x
+  485  06:C5DD  8D 01 00    STA temp2
+  486                       
+  487  06:C5E0  AD B8 00    LDA clueLineIndex
+  488  06:C5E3  29 10       AND #$10
+  489  06:C5E5  D0 1E       BNE .scrollY
+  490                       
+  491                       ;;scroll X over
+  492  06:C5E7  AD B8 00    LDA clueLineIndex
+  493  06:C5EA  29 0F       AND #$0F
+  494  06:C5EC  0A          ASL A
+  495  06:C5ED  0A          ASL A
+  496  06:C5EE  0A          ASL A ;mult by 8
+  497  06:C5EF  8D 1D 00    STA PPU_ScrollX
+  498                       
+  499  06:C5F2  EE B8 00    INC clueLineIndex
+  500  06:C5F5  AD B8 00    LDA clueLineIndex
+  501  06:C5F8  CD 00 00    CMP temp1
+  502  06:C5FB  D0 4A       BNE .leave
+  503  06:C5FD  A9 10       LDA #$10
+  504  06:C5FF  8D B8 00    STA clueLineIndex
+  505  06:C602  4C 47 C6    JMP .leave
+  506                       
+  507  06:C605            .scrollY:
+  508                     
+  509  06:C605  AD B8 00    LDA clueLineIndex
+  510  06:C608  29 0F       AND #$0F
+  511  06:C60A  0A          ASL A
+  512  06:C60B  0A          ASL A
+  513  06:C60C  0A          ASL A ;mult by 8
+  514  06:C60D  8D 1E 00    STA PPU_ScrollY
+  515                     
+  516  06:C610  EE B8 00    INC clueLineIndex
+  517  06:C613  AD B8 00    LDA clueLineIndex
+  518  06:C616  29 0F       AND #$0F
+  519  06:C618  CD 01 00    CMP temp2
+  520  06:C61B  D0 2A       BNE .leave
+  521                       
+  522  06:C61D            .changeModeState:
+  523                     
+  524  06:C61D  A9 8E       LDA #$8E
+  525  06:C61F  8D B5 00    STA clue_draw_address
+  526  06:C622  A9 21       LDA #$21
+  527  06:C624  8D B6 00    STA clue_draw_address+1
+  528                       
+  529  06:C627  AD AB 00    LDA clues_address
+  530  06:C62A  18          CLC
+  531  06:C62B  6D B7 00    ADC clueTableIndex
+  532  06:C62E  8D AB 00    STA clues_address
+  533  06:C631  AD AC 00    LDA clues_address+1
+  534  06:C634  69 00       ADC #$00
+  535  06:C636  8D AC 00    STA clues_address+1
+  536                       
+  537  06:C639  A9 00       LDA #$00
+  538  06:C63B  8D B7 00    STA clueTableIndex
+  539  06:C63E  8D B8 00    STA clueLineIndex
+  540  06:C641  8D B9 00    STA clueOffsetShift
+  541                     
+  542  06:C644  EE 0F 00    INC mode_state
+  543                     
+  544  06:C647            .leave:
+  545                      
+  546  06:C647  60          RTS
+  547  06:C648            UpdateDrawImage:
+  548                     
+  549                       ;run it twice for a faster draw
+  550  06:C648  20 C2 CE    JSR DrawImage
+  551  06:C64B  AD B7 00    LDA clueTableIndex
+  552  06:C64E  CD 09 00    CMP tempy
+  553                       ;BEQ .changeModeState
+  554                       
+  555                       ;JSR DrawImage
+  556                       ;LDA clueTableIndex
+  557                       ;CMP tempy
+  558  06:C651  D0 7A       BNE .leave
+  559                       
+  560  06:C653            .changeModeState:
+  561                     
+  562                       ;;do a palette draw
+  563                       ;;puzzle address + 03 has the desired palette offset
+  564                     
+  565  06:C653  A0 03       LDY #$03
+  566  06:C655  B1 A9       LDA [puzzle_address],y
+  567  06:C657  29 0F       AND #$0F
+  568  06:C659  AA          TAX
+  569                       
+  570  06:C65A  B1 A9       LDA [puzzle_address],y
+  571  06:C65C  29 10       AND #$10
+  572  06:C65E  F0 15       BEQ .storeBottomVals
+  573                       
+  574  06:C660  8A          TXA
+  575  06:C661  09 10       ORA #$10
+  576  06:C663  8D 01 00    STA temp2
+  577  06:C666  8A          TXA
+  578  06:C667  09 20       ORA #$20
+  579  06:C669  8D 02 00    STA temp3
+  580  06:C66C  8A          TXA
+  581  06:C66D  09 30       ORA #$30
+  582  06:C66F  8D 03 00    STA temp4
+  583                     
+  584  06:C672  4C 87 C6    JMP .checkKeepWhite
+  585                       
+  586  06:C675            .storeBottomVals:
+  587                     
+  588  06:C675  8A          TXA
+  589  06:C676  09 00       ORA #$00
+  590  06:C678  8D 01 00    STA temp2
+  591  06:C67B  8A          TXA
+  592  06:C67C  09 10       ORA #$10
+  593  06:C67E  8D 02 00    STA temp3
+  594  06:C681  8A          TXA
+  595  06:C682  09 20       ORA #$20
+  596  06:C684  8D 03 00    STA temp4
+  597                       
+  598  06:C687            .checkKeepWhite:
+  599                       
+  600  06:C687  B1 A9       LDA [puzzle_address],y
+  601  06:C689  29 20       AND #$20
+  602  06:C68B  F0 05       BEQ .loadPalToPPUStr
+  603                       
+  604  06:C68D  A9 30       LDA #$30
+  605  06:C68F  8D 03 00    STA temp4
   606                       
-  607  06:C6B3  A2 01       LDX #$01
-  608  06:C6B5            .copyLoop:
-  609                       ;;also store in the copy 
-  610  06:C6B5  BD 00 00    LDA temp1, x
-  611  06:C6B8  9D 00 68    STA Palette_Copy, x
-  612  06:C6BB  E8          INX
-  613  06:C6BC  E0 04       CPX #$04
-  614  06:C6BE  D0 F5       BNE .copyLoop
-  615                       
-  616                       
-  617  06:C6C0  EE 0F 00    INC mode_state
-  618                     
-  619  06:C6C3            .leave:
-  620                      
-  621  06:C6C3  60          RTS
-  622                       
-  623  06:C6C4            UpdateWaitInput:
-  624                     
-  625  06:C6C4  AD 1A 00    LDA gamepadPressed
-  626  06:C6C7  F0 10       BEQ .leave
-  627                       
-  628  06:C6C9            .changeModeState:
-  629  06:C6C9  A9 00       LDA #$00
-  630  06:C6CB  8D 0A 00    STA time
-  631  06:C6CE  8D 0B 00    STA scaledTime
-  632  06:C6D1  A9 02       LDA #GAMEOVER_IDX
-  633  06:C6D3  8D CC 00    STA targetGameMode
-  634  06:C6D6  EE 0F 00    INC mode_state
-  635                     
-  636  06:C6D9            .leave:
-  637                      
-  638  06:C6D9  60          RTS
-  639                       
-  640  06:C6DA            UpdateGameFadeOut:
-  641                     
-  642  06:C6DA  AD 0A 00    LDA time
-  643  06:C6DD  29 07       AND #$07
-  644  06:C6DF  D0 0D       BNE .leave
-  645                       ;;every 8 frames, decrement the palettes
-  646  06:C6E1  20 01 CC    JSR FadeOutPalettes
-  647  06:C6E4  B0 08       BCS .leave
-  648                     
-  649  06:C6E6            .changeModeState:
-  650  06:C6E6  A9 00       LDA #$00
-  651  06:C6E8  8D 0A 00    STA time
-  652  06:C6EB  EE 0F 00    INC mode_state
-  653  06:C6EE            .leave:
-  654  06:C6EE  60          RTS  
-  655                     
-  656  06:C6EF            UpdateGameExit:
-  657                     
-  658  06:C6EF  AD 0A 00    LDA time
-  659  06:C6F2  29 0F       AND #$0F
-  660  06:C6F4  D0 13       BNE .leave
-  661                     
-  662  06:C6F6  A9 00       LDA #$00
-  663  06:C6F8  8D 1D 00    STA PPU_ScrollX
-  664  06:C6FB  8D 1E 00    STA PPU_ScrollY
-  665  06:C6FE  8D 1F 00    STA PPU_ScrollNT
-  666                       
-  667  06:C701  AD CC 00    LDA targetGameMode
-  668  06:C704  A2 00       LDX #$00
-  669  06:C706  20 66 C9    JSR ChangeGameMode
-  670  06:C709            .leave:
-  671  06:C709  60          RTS
-  672                       
-  673  06:C70A            MoveMouse:
-  674                     
-  675  06:C70A  AD 00 00    LDA temp1
-  676  06:C70D  0E 00 00    ASL temp1
-  677  06:C710  0E 00 00    ASL temp1
-  678  06:C713  0E 00 00    ASL temp1
-  679                       
-  680  06:C716  AD 01 00    LDA temp2
-  681  06:C719  0E 01 00    ASL temp2 
-  682  06:C71C  0E 01 00    ASL temp2
-  683  06:C71F  0E 01 00    ASL temp2
-  684                       
-  685  06:C722  A0 00       LDY #$00
-  686  06:C724  B1 A9       LDA [puzzle_address], y ;puzzle size 0 = 5, 1 = 10, 2 = 15  
-  687  06:C726  0A          ASL A
-  688  06:C727  AA          TAX
-  689  06:C728  BD 00 C9    LDA MouseMinimums, x
-  690  06:C72B  8D 02 00    STA temp3
-  691  06:C72E  BD 06 C9    LDA MouseMaximums, x
-  692  06:C731  8D 03 00    STA temp4
-  693  06:C734  8A          TXA
-  694  06:C735  48          PHA
-  695                       
-  696  06:C736  A2 03       LDX #SPRITE_XPOS
-  697  06:C738  BD 00 02    LDA SPRITE_DATA, x
-  698  06:C73B  18          CLC
-  699  06:C73C  6D 00 00    ADC temp1
-  700                       ;;check against borders
-  701  06:C73F  CD 02 00    CMP temp3
-  702  06:C742  F0 08       BEQ .moveVert 
-  703  06:C744  CD 03 00    CMP temp4
-  704  06:C747  F0 03       BEQ .moveVert
-  705  06:C749  9D 00 02    STA SPRITE_DATA, x
-  706                     
-  707  06:C74C            .moveVert:
-  708                     
-  709  06:C74C  68          PLA
-  710  06:C74D  AA          TAX
-  711  06:C74E  E8          INX
-  712  06:C74F  BD 00 C9    LDA MouseMinimums, x
-  713  06:C752  8D 02 00    STA temp3
-  714  06:C755  BD 06 C9    LDA MouseMaximums, x
-  715  06:C758  8D 03 00    STA temp4
-  716                     
-  717  06:C75B  A2 00       LDX #SPRITE_YPOS
-  718  06:C75D  BD 00 02    LDA SPRITE_DATA, x
-  719  06:C760  18          CLC
-  720  06:C761  6D 01 00    ADC temp2
-  721                       ;;check against borders
-  722  06:C764  CD 02 00    CMP temp3
-  723  06:C767  F0 08       BEQ .leave
-  724  06:C769  CD 03 00    CMP temp4
-  725  06:C76C  F0 03       BEQ .leave
-  726  06:C76E  9D 00 02    STA SPRITE_DATA, x
-  727                     
-  728  06:C771            .leave:
-  729  06:C771  60          RTS
-  730                             
-  731  06:C772            UpdateMouseScreenPos:
-  732                     
-  733  06:C772  A2 00       LDX #$00
-  734  06:C774  BD 00 02    LDA SPRITE_DATA, x;ypos       ;yyyy y...
-  735  06:C777  4A          LSR A                                         ;0yyy yy..
-  736  06:C778  4A          LSR A                                         ;00yy yyy.
-  737  06:C779  4A          LSR A                                         ;000y yyyy
-  738  06:C77A  8D 00 00    STA temp1
-  739  06:C77D  8D C2 00    STA mouse_index+1
-  740  06:C780  E8          INX
-  741  06:C781  E8          INX
-  742  06:C782  E8          INX   
-  743  06:C783  BD 00 02    LDA SPRITE_DATA, x ;xpos  ;  xxxx x...
-  744  06:C786  29 F8       AND #$F8                       ;              ;  xxxx x000
-  745  06:C788  8D 01 00    STA temp2                      ;      ;  
-  746  06:C78B  4E 00 00    LSR temp1                      ;              ;  0000 yyyy y
-  747  06:C78E  6E 01 00    ROR temp2                      ;      ;  yxxx xx00
-  748  06:C791  4E 00 00    LSR temp1                      ;              ;  0000 0yyy y
-  749  06:C794  6E 01 00    ROR temp2                      ;              ;  yyxx xxx0
-  750  06:C797  4E 00 00    LSR temp1              ;              ;  0000 00yy y
-  751  06:C79A  6E 01 00    ROR temp2                      ;              ;  yyyx xxxx
-  752  06:C79D  AD 01 00    LDA temp2
-  753  06:C7A0  29 1F       AND #$1F
-  754  06:C7A2  8D C1 00    STA mouse_index
-  755                       
-  756  06:C7A5  AD C1 00    LDA mouse_index
-  757  06:C7A8  38          SEC 
-  758  06:C7A9  E9 0E       SBC #$0E
-  759  06:C7AB  8D C1 00    STA mouse_index
-  760                       
-  761  06:C7AE  AD C2 00    LDA mouse_index+1
-  762  06:C7B1  38          SEC 
-  763  06:C7B2  E9 0C       SBC #$0C
-  764  06:C7B4  8D C2 00    STA mouse_index+1
-  765                       
-  766                       ;subtract starting offsets for mouse index
-  767                       
-  768  06:C7B7  AD 00 00    LDA temp1                      ;              ;  0000 00yy
-  769  06:C7BA  09 60       ORA #$60                       ;              ;  0110 00yy
-  770                       
-  771  06:C7BC  8D C0 00    STA mouse_location+1
-  772  06:C7BF  AD 01 00    LDA temp2
-  773  06:C7C2  8D BF 00    STA mouse_location
-  774                       
-  775  06:C7C5            .leave:
-  776  06:C7C5  60          RTS
-  777                       
-  778  06:C7C6            UpdateTimeDisplay:
-  779                     
-  780  06:C7C6  AD 0B 00    LDA scaledTime
-  781  06:C7C9  C9 3C       CMP #60
-  782  06:C7CB  D0 77       BNE .leave
-  783                       
-  784  06:C7CD  A9 00       LDA #$00
-  785  06:C7CF  8D 0B 00    STA scaledTime
-  786                       
-  787  06:C7D2  EE C8 00    INC GameTime
-  788  06:C7D5  AD C8 00    LDA GameTime
-  789  06:C7D8  C9 0A       CMP #10
-  790  06:C7DA  D0 32       BNE .printTime
-  791                       
-  792  06:C7DC  A9 00       LDA #$00
-  793  06:C7DE  8D C8 00    STA GameTime
-  794  06:C7E1  EE C9 00    INC GameTime+1
-  795  06:C7E4  AD C9 00    LDA GameTime+1
-  796  06:C7E7  C9 06       CMP #6
-  797  06:C7E9  D0 23       BNE .printTime
-  798                       
-  799  06:C7EB  A9 00       LDA #$00
-  800  06:C7ED  8D C9 00    STA GameTime+1
-  801  06:C7F0  EE CA 00    INC GameTime+2
-  802  06:C7F3  AD CA 00    LDA GameTime+2
-  803  06:C7F6  C9 0A       CMP #10
-  804  06:C7F8  D0 14       BNE .printTime
-  805                       
-  806  06:C7FA  A9 00       LDA #$00
-  807  06:C7FC  8D CA 00    STA GameTime+2
-  808  06:C7FF  EE CB 00    INC GameTime+3
-  809  06:C802  AD CB 00    LDA GameTime+3
-  810  06:C805  C9 0A       CMP #10
-  811  06:C807  D0 05       BNE .printTime
-  812                       
-  813  06:C809  A9 00       LDA #$00
-  814  06:C80B  8D CB 00    STA GameTime+3
-  815                       
-  816  06:C80E            .printTime:
-  817                     
-  818                       MACROAddPPUStringEntryRawData #HIGH(TIMER_LOC), #LOW(TIMER_LOC), #DRAW_HORIZONTAL, #$05
+  607                       
+  608  06:C692            .loadPalToPPUStr:
+  609                       
+  610                       MACROAddPPUStringEntryRawData #$3F, #$01, #DRAW_HORIZONTAL, #03
                           
-       06:C80E  A9 01       LDA #$01
-       06:C810  8D 21 00    STA PPU_PendingWrite
-       06:C813  A9 20       LDA #HIGH(TIMER_LOC)
-       06:C815  20 84 CB    JSR WriteToPPUString
-       06:C818  A9 E5       LDA #LOW(TIMER_LOC)
-       06:C81A  20 84 CB    JSR WriteToPPUString
-       06:C81D  A9 00       LDA #DRAW_HORIZONTAL
-       06:C81F  20 84 CB    JSR WriteToPPUString
-       06:C822  A9 05       LDA #$05 
-       06:C824  20 84 CB    JSR WriteToPPUString
+       06:C692  A9 01       LDA #$01
+       06:C694  8D 21 00    STA PPU_PendingWrite
+       06:C697  A9 3F       LDA #$3F
+       06:C699  20 93 CB    JSR WriteToPPUString
+       06:C69C  A9 01       LDA #$01
+       06:C69E  20 93 CB    JSR WriteToPPUString
+       06:C6A1  A9 00       LDA #DRAW_HORIZONTAL
+       06:C6A3  20 93 CB    JSR WriteToPPUString
+       06:C6A6  A9 03       LDA #03 
+       06:C6A8  20 93 CB    JSR WriteToPPUString
                             
-  819  06:C827  AD CB 00    LDA GameTime+3
-  820  06:C82A  20 84 CB    JSR WriteToPPUString
-  821  06:C82D  AD CA 00    LDA GameTime+2
-  822  06:C830  20 84 CB    JSR WriteToPPUString
-  823  06:C833  A9 61       LDA #$61
-  824  06:C835  20 84 CB    JSR WriteToPPUString
-  825  06:C838  AD C9 00    LDA GameTime+1
-  826  06:C83B  20 84 CB    JSR WriteToPPUString
-  827  06:C83E  AD C8 00    LDA GameTime
-  828  06:C841  20 84 CB    JSR WriteToPPUString
-  829                       
-  830                       
-  831                       
-  832  06:C844            .leave: 
-  833  06:C844  60          RTS  
-  834                       
-  835  06:C845            UpdatePause:
-  836                     
-  837                     ;;load screen
-  838                     ;;update selection
-  839                     ;; close - remove screen, then upause
-  840                     ;; quit - jump to fade out
-  841  06:C845  AD C6 00    LDA pauseState
-  842  06:C848  20 23 CA    JSR Dynamic_Jump
-  843                     
-  844  06:C84B            UpdatePauseJumpTable:  
-  845                     
-  846  06:C84B  FF C8       .word ExitPause                       ;fail safe
-  847  06:C84D  53 C8       .word UpdateLoadPauseScreen
-  848  06:C84F  6F C8       .word UpdatePauseScreen
-  849  06:C851  E8 C8       .word UpdateUnloadPauseScreen
-  850                       
-  851  06:C853            UpdateLoadPauseScreen:
-  852                       
-  853  06:C853  20 18 CE    JSR LoadPauseScreen
-  854  06:C856  AD B9 00    LDA clueOffsetShift
-  855  06:C859  C9 06       CMP #$06
-  856  06:C85B  D0 11       BNE .leave
-  857                       
-  858  06:C85D            .changePauseState:
-  859                     
-  860  06:C85D  A9 60       LDA #PAUSE_YES
-  861  06:C85F  A2 01       LDX #$01
-  862  06:C861  20 D0 C1    JSR SetSpriteXPosition  
-  863  06:C864  A9 01       LDA #$01
-  864  06:C866  A2 01       LDX #$01
-  865  06:C868  20 DB C1    JSR SetSpriteImage
-  866                       
-  867  06:C86B  EE C6 00    INC pauseState
-  868  06:C86E            .leave:
-  869  06:C86E  60          RTS
-  870                       
-  871  06:C86F            UpdatePauseScreen:
-  872                       
-  873  06:C86F  AD 1A 00    LDA gamepadPressed
-  874  06:C872  C9 08       CMP #GAMEPAD_START
-  875  06:C874  F0 29       BEQ .unPause
-  876  06:C876  C9 02       CMP #GAMEPAD_B
-  877  06:C878  F0 25       BEQ .unPause
-  878  06:C87A  C9 01       CMP #GAMEPAD_A
-  879  06:C87C  F0 4A       BEQ .checkA
-  880                       
-  881                       ;;update pointer
-  882                       
-  883  06:C87E  AD 1A 00    LDA gamepadPressed
-  884  06:C881  29 C0       AND #GAMEPAD_HORI
-  885                       ;;binary system- left and right don't really matter, we'll just toggle the position
-  886  06:C883  F0 62       BEQ .leave
-  887                       
-  888  06:C885  A9 03       LDA #SPRITE_XPOS
-  889  06:C887  A2 01       LDX #$01
-  890  06:C889  20 F2 C1    JSR GetSpriteData
+  611  06:C6AB  AD 01 00    LDA temp2
+  612  06:C6AE  20 93 CB    JSR WriteToPPUString
+  613  06:C6B1  AD 02 00    LDA temp3
+  614  06:C6B4  20 93 CB    JSR WriteToPPUString
+  615  06:C6B7  AD 03 00    LDA temp4
+  616  06:C6BA  20 93 CB    JSR WriteToPPUString
+  617                       
+  618  06:C6BD  A2 01       LDX #$01
+  619  06:C6BF            .copyLoop:
+  620                       ;;also store in the copy 
+  621  06:C6BF  BD 00 00    LDA temp1, x
+  622  06:C6C2  9D 00 68    STA Palette_Copy, x
+  623  06:C6C5  E8          INX
+  624  06:C6C6  E0 04       CPX #$04
+  625  06:C6C8  D0 F5       BNE .copyLoop
+  626                       
+  627                       
+  628  06:C6CA  EE 0F 00    INC mode_state
+  629                     
+  630  06:C6CD            .leave:
+  631                      
+  632  06:C6CD  60          RTS
+  633                       
+  634  06:C6CE            UpdateWaitInput:
+  635                     
+  636  06:C6CE  AD 1A 00    LDA gamepadPressed
+  637  06:C6D1  F0 10       BEQ .leave
+  638                       
+  639  06:C6D3            .changeModeState:
+  640  06:C6D3  A9 00       LDA #$00
+  641  06:C6D5  8D 0A 00    STA time
+  642  06:C6D8  8D 0B 00    STA scaledTime
+  643  06:C6DB  A9 02       LDA #GAMEOVER_IDX
+  644  06:C6DD  8D CD 00    STA targetGameMode
+  645  06:C6E0  EE 0F 00    INC mode_state
+  646                     
+  647  06:C6E3            .leave:
+  648                      
+  649  06:C6E3  60          RTS
+  650                       
+  651  06:C6E4            UpdateGameFadeOut:
+  652                     
+  653  06:C6E4  AD 0A 00    LDA time
+  654  06:C6E7  29 07       AND #$07
+  655  06:C6E9  D0 0D       BNE .leave
+  656                       ;;every 8 frames, decrement the palettes
+  657  06:C6EB  20 10 CC    JSR FadeOutPalettes
+  658  06:C6EE  B0 08       BCS .leave
+  659                     
+  660  06:C6F0            .changeModeState:
+  661  06:C6F0  A9 00       LDA #$00
+  662  06:C6F2  8D 0A 00    STA time
+  663  06:C6F5  EE 0F 00    INC mode_state
+  664  06:C6F8            .leave:
+  665  06:C6F8  60          RTS  
+  666                     
+  667  06:C6F9            UpdateGameExit:
+  668                     
+  669  06:C6F9  AD 0A 00    LDA time
+  670  06:C6FC  29 0F       AND #$0F
+  671  06:C6FE  D0 13       BNE .leave
+  672                     
+  673  06:C700  A9 00       LDA #$00
+  674  06:C702  8D 1D 00    STA PPU_ScrollX
+  675  06:C705  8D 1E 00    STA PPU_ScrollY
+  676  06:C708  8D 1F 00    STA PPU_ScrollNT
+  677                       
+  678  06:C70B  AD CD 00    LDA targetGameMode
+  679  06:C70E  A2 00       LDX #$00
+  680  06:C710  20 75 C9    JSR ChangeGameMode
+  681  06:C713            .leave:
+  682  06:C713  60          RTS
+  683                       
+  684  06:C714            MoveMouse:
+  685                     
+  686  06:C714  AD 00 00    LDA temp1
+  687  06:C717  0E 00 00    ASL temp1
+  688  06:C71A  0E 00 00    ASL temp1
+  689  06:C71D  0E 00 00    ASL temp1
+  690                       
+  691  06:C720  AD 01 00    LDA temp2
+  692  06:C723  0E 01 00    ASL temp2 
+  693  06:C726  0E 01 00    ASL temp2
+  694  06:C729  0E 01 00    ASL temp2
+  695                       
+  696  06:C72C  A0 00       LDY #$00
+  697  06:C72E  B1 A9       LDA [puzzle_address], y ;puzzle size 0 = 5, 1 = 10, 2 = 15  
+  698  06:C730  0A          ASL A
+  699  06:C731  AA          TAX
+  700  06:C732  BD 0F C9    LDA MouseMinimums, x
+  701  06:C735  8D 02 00    STA temp3
+  702  06:C738  BD 15 C9    LDA MouseMaximums, x
+  703  06:C73B  8D 03 00    STA temp4
+  704  06:C73E  8A          TXA
+  705  06:C73F  48          PHA
+  706                       
+  707  06:C740  A2 03       LDX #SPRITE_XPOS
+  708  06:C742  BD 00 02    LDA SPRITE_DATA, x
+  709  06:C745  18          CLC
+  710  06:C746  6D 00 00    ADC temp1
+  711                       ;;check against borders
+  712  06:C749  CD 02 00    CMP temp3
+  713  06:C74C  F0 08       BEQ .moveVert 
+  714  06:C74E  CD 03 00    CMP temp4
+  715  06:C751  F0 03       BEQ .moveVert
+  716  06:C753  9D 00 02    STA SPRITE_DATA, x
+  717                     
+  718  06:C756            .moveVert:
+  719                     
+  720  06:C756  68          PLA
+  721  06:C757  AA          TAX
+  722  06:C758  E8          INX
+  723  06:C759  BD 0F C9    LDA MouseMinimums, x
+  724  06:C75C  8D 02 00    STA temp3
+  725  06:C75F  BD 15 C9    LDA MouseMaximums, x
+  726  06:C762  8D 03 00    STA temp4
+  727                     
+  728  06:C765  A2 00       LDX #SPRITE_YPOS
+  729  06:C767  BD 00 02    LDA SPRITE_DATA, x
+  730  06:C76A  18          CLC
+  731  06:C76B  6D 01 00    ADC temp2
+  732                       ;;check against borders
+  733  06:C76E  CD 02 00    CMP temp3
+  734  06:C771  F0 08       BEQ .leave
+  735  06:C773  CD 03 00    CMP temp4
+  736  06:C776  F0 03       BEQ .leave
+  737  06:C778  9D 00 02    STA SPRITE_DATA, x
+  738                     
+  739  06:C77B            .leave:
+  740  06:C77B  60          RTS
+  741                             
+  742  06:C77C            UpdateMouseScreenPos:
+  743                     
+  744  06:C77C  A2 00       LDX #$00
+  745  06:C77E  BD 00 02    LDA SPRITE_DATA, x;ypos       ;yyyy y...
+  746  06:C781  4A          LSR A                                         ;0yyy yy..
+  747  06:C782  4A          LSR A                                         ;00yy yyy.
+  748  06:C783  4A          LSR A                                         ;000y yyyy
+  749  06:C784  8D 00 00    STA temp1
+  750  06:C787  8D C2 00    STA mouse_index+1
+  751  06:C78A  E8          INX
+  752  06:C78B  E8          INX
+  753  06:C78C  E8          INX   
+  754  06:C78D  BD 00 02    LDA SPRITE_DATA, x ;xpos  ;  xxxx x...
+  755  06:C790  29 F8       AND #$F8                       ;              ;  xxxx x000
+  756  06:C792  8D 01 00    STA temp2                      ;      ;  
+  757  06:C795  4E 00 00    LSR temp1                      ;              ;  0000 yyyy y
+  758  06:C798  6E 01 00    ROR temp2                      ;      ;  yxxx xx00
+  759  06:C79B  4E 00 00    LSR temp1                      ;              ;  0000 0yyy y
+  760  06:C79E  6E 01 00    ROR temp2                      ;              ;  yyxx xxx0
+  761  06:C7A1  4E 00 00    LSR temp1              ;              ;  0000 00yy y
+  762  06:C7A4  6E 01 00    ROR temp2                      ;              ;  yyyx xxxx
+  763  06:C7A7  AD 01 00    LDA temp2
+  764  06:C7AA  29 1F       AND #$1F
+  765  06:C7AC  8D C1 00    STA mouse_index
+  766                       
+  767  06:C7AF  AD C1 00    LDA mouse_index
+  768  06:C7B2  38          SEC 
+  769  06:C7B3  E9 0E       SBC #$0E
+  770  06:C7B5  8D C1 00    STA mouse_index
+  771                       
+  772  06:C7B8  AD C2 00    LDA mouse_index+1
+  773  06:C7BB  38          SEC 
+  774  06:C7BC  E9 0C       SBC #$0C
+  775  06:C7BE  8D C2 00    STA mouse_index+1
+  776                       
+  777                       ;subtract starting offsets for mouse index
+  778                       
+  779  06:C7C1  AD 00 00    LDA temp1                      ;              ;  0000 00yy
+  780  06:C7C4  09 60       ORA #$60                       ;              ;  0110 00yy
+  781                       
+  782  06:C7C6  8D C0 00    STA mouse_location+1
+  783  06:C7C9  AD 01 00    LDA temp2
+  784  06:C7CC  8D BF 00    STA mouse_location
+  785                       
+  786  06:C7CF            .leave:
+  787  06:C7CF  60          RTS
+  788                       
+  789  06:C7D0            UpdateTimeDisplay:
+  790                     
+  791  06:C7D0  AD 0B 00    LDA scaledTime
+  792  06:C7D3  C9 3C       CMP #60
+  793  06:C7D5  D0 77       BNE .leave
+  794                       
+  795  06:C7D7  A9 00       LDA #$00
+  796  06:C7D9  8D 0B 00    STA scaledTime
+  797                       
+  798  06:C7DC  EE C9 00    INC GameTime
+  799  06:C7DF  AD C9 00    LDA GameTime
+  800  06:C7E2  C9 0A       CMP #10
+  801  06:C7E4  D0 32       BNE .printTime
+  802                       
+  803  06:C7E6  A9 00       LDA #$00
+  804  06:C7E8  8D C9 00    STA GameTime
+  805  06:C7EB  EE CA 00    INC GameTime+1
+  806  06:C7EE  AD CA 00    LDA GameTime+1
+  807  06:C7F1  C9 06       CMP #6
+  808  06:C7F3  D0 23       BNE .printTime
+  809                       
+  810  06:C7F5  A9 00       LDA #$00
+  811  06:C7F7  8D CA 00    STA GameTime+1
+  812  06:C7FA  EE CB 00    INC GameTime+2
+  813  06:C7FD  AD CB 00    LDA GameTime+2
+  814  06:C800  C9 0A       CMP #10
+  815  06:C802  D0 14       BNE .printTime
+  816                       
+  817  06:C804  A9 00       LDA #$00
+  818  06:C806  8D CB 00    STA GameTime+2
+  819  06:C809  EE CC 00    INC GameTime+3
+  820  06:C80C  AD CC 00    LDA GameTime+3
+  821  06:C80F  C9 0A       CMP #10
+  822  06:C811  D0 05       BNE .printTime
+  823                       
+  824  06:C813  A9 00       LDA #$00
+  825  06:C815  8D CC 00    STA GameTime+3
+  826                       
+  827  06:C818            .printTime:
+  828                     
+  829                       MACROAddPPUStringEntryRawData #HIGH(TIMER_LOC), #LOW(TIMER_LOC), #DRAW_HORIZONTAL, #$05
+                          
+       06:C818  A9 01       LDA #$01
+       06:C81A  8D 21 00    STA PPU_PendingWrite
+       06:C81D  A9 20       LDA #HIGH(TIMER_LOC)
+       06:C81F  20 93 CB    JSR WriteToPPUString
+       06:C822  A9 E5       LDA #LOW(TIMER_LOC)
+       06:C824  20 93 CB    JSR WriteToPPUString
+       06:C827  A9 00       LDA #DRAW_HORIZONTAL
+       06:C829  20 93 CB    JSR WriteToPPUString
+       06:C82C  A9 05       LDA #$05 
+       06:C82E  20 93 CB    JSR WriteToPPUString
+                            
+  830  06:C831  AD CC 00    LDA GameTime+3
+  831  06:C834  20 93 CB    JSR WriteToPPUString
+  832  06:C837  AD CB 00    LDA GameTime+2
+  833  06:C83A  20 93 CB    JSR WriteToPPUString
+  834  06:C83D  A9 61       LDA #$61
+  835  06:C83F  20 93 CB    JSR WriteToPPUString
+  836  06:C842  AD CA 00    LDA GameTime+1
+  837  06:C845  20 93 CB    JSR WriteToPPUString
+  838  06:C848  AD C9 00    LDA GameTime
+  839  06:C84B  20 93 CB    JSR WriteToPPUString
+  840                       
+  841                       
+  842                       
+  843  06:C84E            .leave: 
+  844  06:C84E  60          RTS  
+  845                       
+  846  06:C84F            UpdatePause:
+  847                     
+  848                     ;;load screen
+  849                     ;;update selection
+  850                     ;; close - remove screen, then upause
+  851                     ;; quit - jump to fade out
+  852  06:C84F  AD C6 00    LDA pauseState
+  853  06:C852  20 32 CA    JSR Dynamic_Jump
+  854                     
+  855  06:C855            UpdatePauseJumpTable:  
+  856                     
+  857  06:C855  0E C9       .word ExitPause                       ;fail safe
+  858  06:C857  5D C8       .word UpdateLoadPauseScreen
+  859  06:C859  79 C8       .word UpdatePauseScreen
+  860  06:C85B  F2 C8       .word UpdateUnloadPauseScreen
+  861                       
+  862  06:C85D            UpdateLoadPauseScreen:
+  863                       
+  864  06:C85D  20 27 CE    JSR LoadPauseScreen
+  865  06:C860  AD B9 00    LDA clueOffsetShift
+  866  06:C863  C9 06       CMP #$06
+  867  06:C865  D0 11       BNE .leave
+  868                       
+  869  06:C867            .changePauseState:
+  870                     
+  871  06:C867  A9 60       LDA #PAUSE_YES
+  872  06:C869  A2 01       LDX #$01
+  873  06:C86B  20 D0 C1    JSR SetSpriteXPosition  
+  874  06:C86E  A9 01       LDA #$01
+  875  06:C870  A2 01       LDX #$01
+  876  06:C872  20 DB C1    JSR SetSpriteImage
+  877                       
+  878  06:C875  EE C6 00    INC pauseState
+  879  06:C878            .leave:
+  880  06:C878  60          RTS
+  881                       
+  882  06:C879            UpdatePauseScreen:
+  883                       
+  884  06:C879  AD 1A 00    LDA gamepadPressed
+  885  06:C87C  C9 08       CMP #GAMEPAD_START
+  886  06:C87E  F0 29       BEQ .unPause
+  887  06:C880  C9 02       CMP #GAMEPAD_B
+  888  06:C882  F0 25       BEQ .unPause
+  889  06:C884  C9 01       CMP #GAMEPAD_A
+  890  06:C886  F0 4A       BEQ .checkA
   891                       
-  892  06:C88C  C9 60       CMP #PAUSE_YES
-  893  06:C88E  F0 05       BEQ .loadNo
-  894                       
-  895  06:C890  A9 60       LDA #PAUSE_YES
-  896  06:C892  4C 97 C8    JMP .setPosition
-  897                       
-  898  06:C895            .loadNo:
-  899  06:C895  A9 88       LDA #PAUSE_NO
-  900                     
-  901  06:C897            .setPosition
+  892                       ;;update pointer
+  893                       
+  894  06:C888  AD 1A 00    LDA gamepadPressed
+  895  06:C88B  29 C0       AND #GAMEPAD_HORI
+  896                       ;;binary system- left and right don't really matter, we'll just toggle the position
+  897  06:C88D  F0 62       BEQ .leave
+  898                       
+  899  06:C88F  A9 03       LDA #SPRITE_XPOS
+  900  06:C891  A2 01       LDX #$01
+  901  06:C893  20 F2 C1    JSR GetSpriteData
   902                       
-  903  06:C897  A2 01       LDX #$01
-  904  06:C899  20 D0 C1    JSR SetSpriteXPosition  
-  905                     
-  906  06:C89C  4C E7 C8    JMP .leave 
-  907                     
-  908  06:C89F            .unPause:
-  909                     
-  910  06:C89F  A9 00       LDA #$00
-  911  06:C8A1  8D B8 00    STA clueLineIndex
-  912  06:C8A4  8D B9 00    STA clueOffsetShift
+  903  06:C896  C9 60       CMP #PAUSE_YES
+  904  06:C898  F0 05       BEQ .loadNo
+  905                       
+  906  06:C89A  A9 60       LDA #PAUSE_YES
+  907  06:C89C  4C A1 C8    JMP .setPosition
+  908                       
+  909  06:C89F            .loadNo:
+  910  06:C89F  A9 88       LDA #PAUSE_NO
+  911                     
+  912  06:C8A1            .setPosition
   913                       
-  914  06:C8A7  A9 FF       LDA #$FF
-  915  06:C8A9  A2 01       LDX #$01
-  916  06:C8AB  20 DB C1    JSR SetSpriteImage
-  917                     
-  918                       MACROGetLabelPointer $610A, pause_address
-                          
-       06:C8AE  A9 61             LDA #HIGH($610A)
-       06:C8B0  A2 0A             LDX #LOW($610A)
-                                  
-       06:C8B2  8E AD 00          STX pause_address
-       06:C8B5  8D AE 00          STA pause_address+1
-                                  
-  919                       MACROGetLabelPointer $210A, pause_draw_address
-                          
-       06:C8B8  A9 21             LDA #HIGH($210A)
-       06:C8BA  A2 0A             LDX #LOW($210A)
-                                  
-       06:C8BC  8E B1 00          STX pause_draw_address
-       06:C8BF  8D B2 00          STA pause_draw_address+1
-                                  
-  920  06:C8C2  EE C6 00    INC pauseState
-  921  06:C8C5  4C E7 C8    JMP .leave
-  922                      
-  923  06:C8C8            .checkA:
+  914  06:C8A1  A2 01       LDX #$01
+  915  06:C8A3  20 D0 C1    JSR SetSpriteXPosition  
+  916                     
+  917  06:C8A6  4C F1 C8    JMP .leave 
+  918                     
+  919  06:C8A9            .unPause:
+  920                     
+  921  06:C8A9  A9 00       LDA #$00
+  922  06:C8AB  8D B8 00    STA clueLineIndex
+  923  06:C8AE  8D B9 00    STA clueOffsetShift
   924                       
-  925  06:C8C8  A9 03       LDA #SPRITE_XPOS
-  926  06:C8CA  A2 01       LDX #$01
-  927  06:C8CC  20 F2 C1    JSR GetSpriteData
-  928                       
-  929  06:C8CF  C9 88       CMP #PAUSE_NO
-  930  06:C8D1  F0 CC       BEQ .unPause
-  931                        
-  932  06:C8D3            .quit:
-  933                     
-  934  06:C8D3  A9 00       LDA #$00
-  935  06:C8D5  8D C6 00    STA pauseState
-  936  06:C8D8  A9 00       LDA #$00
-  937  06:C8DA  8D 0A 00    STA time
-  938  06:C8DD  A9 00       LDA #TITLE_IDX
-  939  06:C8DF  8D CC 00    STA targetGameMode
-  940  06:C8E2  A9 08       LDA #$08
-  941  06:C8E4  8D 0F 00    STA mode_state
-  942                       
-  943  06:C8E7            .leave:
-  944  06:C8E7  60          RTS
-  945                       
-  946  06:C8E8            UpdateUnloadPauseScreen:
-  947                       
-  948  06:C8E8  20 5F CE    JSR ClearPauseScreen
-  949  06:C8EB  AD B9 00    LDA clueOffsetShift
-  950  06:C8EE  C9 06       CMP #$06
-  951  06:C8F0  D0 0C       BNE .leave
-  952  06:C8F2            .changePauseState:
-  953                     
-  954  06:C8F2  A9 02       LDA #$02
-  955  06:C8F4  A2 00       LDX #$00
-  956  06:C8F6  20 DB C1    JSR SetSpriteImage
+  925  06:C8B1  A9 FF       LDA #$FF
+  926  06:C8B3  A2 01       LDX #$01
+  927  06:C8B5  20 DB C1    JSR SetSpriteImage
+  928                     
+  929                       MACROGetLabelPointer $610A, pause_address
+                          
+       06:C8B8  A9 61             LDA #HIGH($610A)
+       06:C8BA  A2 0A             LDX #LOW($610A)
+                                  
+       06:C8BC  8E AD 00          STX pause_address
+       06:C8BF  8D AE 00          STA pause_address+1
+                                  
+  930                       MACROGetLabelPointer $210A, pause_draw_address
+                          
+       06:C8C2  A9 21             LDA #HIGH($210A)
+       06:C8C4  A2 0A             LDX #LOW($210A)
+                                  
+       06:C8C6  8E B1 00          STX pause_draw_address
+       06:C8C9  8D B2 00          STA pause_draw_address+1
+                                  
+  931                         
+  932  06:C8CC  EE C6 00    INC pauseState
+  933  06:C8CF  4C F1 C8    JMP .leave
+  934                      
+  935  06:C8D2            .checkA:
+  936                       
+  937  06:C8D2  A9 03       LDA #SPRITE_XPOS
+  938  06:C8D4  A2 01       LDX #$01
+  939  06:C8D6  20 F2 C1    JSR GetSpriteData
+  940                       
+  941  06:C8D9  C9 88       CMP #PAUSE_NO
+  942  06:C8DB  F0 CC       BEQ .unPause
+  943                        
+  944  06:C8DD            .quit:
+  945                     
+  946  06:C8DD  A9 00       LDA #$00
+  947  06:C8DF  8D C6 00    STA pauseState
+  948  06:C8E2  A9 00       LDA #$00
+  949  06:C8E4  8D 0A 00    STA time
+  950  06:C8E7  A9 00       LDA #TITLE_IDX
+  951  06:C8E9  8D CD 00    STA targetGameMode
+  952  06:C8EC  A9 08       LDA #$08
+  953  06:C8EE  8D 0F 00    STA mode_state
+  954                       
+  955  06:C8F1            .leave:
+  956  06:C8F1  60          RTS
   957                       
-  958  06:C8F9  A9 00       LDA #$00
-  959  06:C8FB  8D C6 00    STA pauseState
-  960  06:C8FE            .leave:
-  961  06:C8FE  60          RTS
-  962                       
-  963  06:C8FF            ExitPause:
-  964  06:C8FF  60          RTS
-  965                       
-  966                     ;hori, vert
-  967  06:C900            MouseMinimums:
-  968  06:C900  6A 5A       .db $6A, $5A
-  969  06:C902  6A 5A       .db $6A, $5A
-  970  06:C904  6A 5A       .db $6A, $5A
-  971  06:C906            MouseMaximums:
-  972  06:C906  9A 8A       .db $9A, $8A
-  973  06:C908  C2 B2       .db $C2, $B2
-  974  06:C90A  EA DA       .db $EA, $DA
-  975                       
-  976  06:C90C            PuzzleScrollHori:
-  977  06:C90C  01 04 06    .db $01, $04, $06
-  978  06:C90F            PuzzleScrollVert:
-  979  06:C90F  01 03 05    .db $01, $03, $05
+  958  06:C8F2            UpdateUnloadPauseScreen:
+  959                       
+  960  06:C8F2  20 6E CE    JSR ClearPauseScreen
+  961  06:C8F5  AD B9 00    LDA clueOffsetShift
+  962  06:C8F8  C9 06       CMP #$06
+  963  06:C8FA  D0 11       BNE .leave
+  964  06:C8FC            .changePauseState:
+  965                     
+  966  06:C8FC  A9 02       LDA #$02
+  967  06:C8FE  A2 00       LDX #$00
+  968  06:C900  20 DB C1    JSR SetSpriteImage
+  969                       
+  970  06:C903  A9 03       LDA #GAMEPAD_AB
+  971  06:C905  8D C7 00    STA pauseInputLock 
+  972                       
+  973  06:C908  A9 00       LDA #$00
+  974  06:C90A  8D C6 00    STA pauseState
+  975  06:C90D            .leave:
+  976  06:C90D  60          RTS
+  977                       
+  978  06:C90E            ExitPause:
+  979  06:C90E  60          RTS
   980                       
-  981  06:C912            PuzzleHeaderSkips:
-  982                     
-  983  06:C912  09 18 22    .db $09, $18, $22
-  984                       
-  985           0060      PAUSE_YES = $60
-  986           0088      PAUSE_NO = $88
-  987                     
-  988                       
+  981                     ;hori, vert
+  982  06:C90F            MouseMinimums:
+  983  06:C90F  6A 5A       .db $6A, $5A
+  984  06:C911  6A 5A       .db $6A, $5A
+  985  06:C913  6A 5A       .db $6A, $5A
+  986  06:C915            MouseMaximums:
+  987  06:C915  9A 8A       .db $9A, $8A
+  988  06:C917  C2 B2       .db $C2, $B2
+  989  06:C919  EA DA       .db $EA, $DA
+  990                       
+  991  06:C91B            PuzzleScrollHori:
+  992  06:C91B  01 04 06    .db $01, $04, $06
+  993  06:C91E            PuzzleScrollVert:
+  994  06:C91E  01 03 05    .db $01, $03, $05
+  995                       
+  996  06:C921            PuzzleHeaderSkips:
+  997                     
+  998  06:C921  09 18 22    .db $09, $18, $22
+  999                       
+ 1000           0060      PAUSE_YES = $60
+ 1001           0088      PAUSE_NO = $88
+ 1002                     
+ 1003                       
 #[1]   Picross.asm
 #[2]   Routines/Game_States/UpdateGameOver.asm
    85                       .include "Routines/Game_States/UpdateGameOver.asm"
-    1  06:C915            UpdateGameOver:
+    1  06:C924            UpdateGameOver:
     2                     
-    3  06:C915  AD 10 00    LDA NMI_locks
-    4  06:C918  F0 01       BEQ .unlocked
+    3  06:C924  AD 10 00    LDA NMI_locks
+    4  06:C927  F0 01       BEQ .unlocked
     5                       
-    6  06:C91A  60          RTS
+    6  06:C929  60          RTS
     7                       
-    8  06:C91B            .unlocked:
+    8  06:C92A            .unlocked:
     9                     
-   10  06:C91B  20 1F C9    JSR DoUpdateGameOver 
-   11  06:C91E  60          RTS
+   10  06:C92A  20 2E C9    JSR DoUpdateGameOver 
+   11  06:C92D  60          RTS
    12                       
-   13  06:C91F            DoUpdateGameOver:
+   13  06:C92E            DoUpdateGameOver:
    14                     
-   15  06:C91F  AD 0F 00    LDA mode_state
-   16  06:C922  20 23 CA    JSR Dynamic_Jump
+   15  06:C92E  AD 0F 00    LDA mode_state
+   16  06:C931  20 32 CA    JSR Dynamic_Jump
    17                         
-   18  06:C925            UpdateGameOverJumpTable:
+   18  06:C934            UpdateGameOverJumpTable:
    19                     
-   20  06:C925  2D C9       .word UpdateGameOverInit
-   21  06:C927  34 C9       .word UpdateGameOverWaitInput
-   22  06:C929  42 C9       .word UpdateGameOverFadeOut
-   23  06:C92B  57 C9       .word UpdateGameOverExit
+   20  06:C934  3C C9       .word UpdateGameOverInit
+   21  06:C936  43 C9       .word UpdateGameOverWaitInput
+   22  06:C938  51 C9       .word UpdateGameOverFadeOut
+   23  06:C93A  66 C9       .word UpdateGameOverExit
    24                       
-   25  06:C92D            UpdateGameOverInit:
+   25  06:C93C            UpdateGameOverInit:
    26                     
-   27  06:C92D  20 CC CB    JSR TurnOnSprites
-   28  06:C930  EE 0F 00    INC mode_state
-   29  06:C933  60          RTS
+   27  06:C93C  20 DB CB    JSR TurnOnSprites
+   28  06:C93F  EE 0F 00    INC mode_state
+   29  06:C942  60          RTS
    30                     
-   31  06:C934            UpdateGameOverWaitInput:
+   31  06:C943            UpdateGameOverWaitInput:
    32                     
-   33  06:C934  AD 1A 00    LDA gamepadPressed
-   34  06:C937  F0 08       BEQ .leave
+   33  06:C943  AD 1A 00    LDA gamepadPressed
+   34  06:C946  F0 08       BEQ .leave
    35                     
-   36  06:C939            .changeModeState:
+   36  06:C948            .changeModeState:
    37                     
-   38  06:C939  A9 00       LDA #$00
-   39  06:C93B  8D 0A 00    STA time
-   40  06:C93E  EE 0F 00    INC mode_state
-   41  06:C941            .leave:
-   42  06:C941  60          RTS
+   38  06:C948  A9 00       LDA #$00
+   39  06:C94A  8D 0A 00    STA time
+   40  06:C94D  EE 0F 00    INC mode_state
+   41  06:C950            .leave:
+   42  06:C950  60          RTS
    43                     
-   44  06:C942            UpdateGameOverFadeOut:
+   44  06:C951            UpdateGameOverFadeOut:
    45                     
-   46  06:C942  AD 0A 00    LDA time
-   47  06:C945  29 07       AND #$07
-   48  06:C947  D0 0D       BNE .leave
+   46  06:C951  AD 0A 00    LDA time
+   47  06:C954  29 07       AND #$07
+   48  06:C956  D0 0D       BNE .leave
    49                       ;;every 8 frames, decrement the palettes
-   50  06:C949  20 01 CC    JSR FadeOutPalettes
-   51  06:C94C  B0 08       BCS .leave
+   50  06:C958  20 10 CC    JSR FadeOutPalettes
+   51  06:C95B  B0 08       BCS .leave
    52                     
-   53  06:C94E            .changeModeState:
-   54  06:C94E  A9 00       LDA #$00
-   55  06:C950  8D 0A 00    STA time
-   56  06:C953  EE 0F 00    INC mode_state
-   57  06:C956            .leave:
-   58  06:C956  60          RTS
+   53  06:C95D            .changeModeState:
+   54  06:C95D  A9 00       LDA #$00
+   55  06:C95F  8D 0A 00    STA time
+   56  06:C962  EE 0F 00    INC mode_state
+   57  06:C965            .leave:
+   58  06:C965  60          RTS
    59                     
-   60  06:C957            UpdateGameOverExit:
+   60  06:C966            UpdateGameOverExit:
    61                     
-   62  06:C957  AD 0A 00    LDA time
-   63  06:C95A  29 0F       AND #$0F
-   64  06:C95C  D0 07       BNE .leave
+   62  06:C966  AD 0A 00    LDA time
+   63  06:C969  29 0F       AND #$0F
+   64  06:C96B  D0 07       BNE .leave
    65                     
-   66  06:C95E  A9 00       LDA #TITLE_IDX
-   67  06:C960  A2 00       LDX #$00
-   68  06:C962  20 66 C9    JSR ChangeGameMode
+   66  06:C96D  A9 00       LDA #TITLE_IDX
+   67  06:C96F  A2 00       LDX #$00
+   68  06:C971  20 75 C9    JSR ChangeGameMode
    69                       
-   70  06:C965            .leave:
-   71  06:C965  60          RTS
+   70  06:C974            .leave:
+   71  06:C974  60          RTS
 #[1]   Picross.asm
    86                       
    87                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2778,503 +2794,503 @@
    91                     
 #[2]   Routines/Common/GameModeRoutines.asm
    92                       .include "Routines/Common/GameModeRoutines.asm"
-    1  06:C966            ChangeGameMode:
+    1  06:C975            ChangeGameMode:
     2                       ;A - game mode index
     3                       ;X - high nibble: palette start flag, low nibble: screen index
-    4  06:C966  8D 0E 00    STA game_mode
-    5  06:C969  8E 0D 00    STX mode_loadFlags
-    6  06:C96C  A9 00       LDA #$00
-    7  06:C96E  8D 0F 00    STA mode_state
-    8  06:C971  20 98 CB    JSR ClearPPUString
-    9  06:C974  20 78 C9    JSR LoadGameModeScreen
-   10  06:C977  60          RTS
+    4  06:C975  8D 0E 00    STA game_mode
+    5  06:C978  8E 0D 00    STX mode_loadFlags
+    6  06:C97B  A9 00       LDA #$00
+    7  06:C97D  8D 0F 00    STA mode_state
+    8  06:C980  20 A7 CB    JSR ClearPPUString
+    9  06:C983  20 87 C9    JSR LoadGameModeScreen
+   10  06:C986  60          RTS
    11                       
-   12  06:C978            LoadGameModeScreen:
+   12  06:C987            LoadGameModeScreen:
    13                     
    14                       MACROSetFlags NMI_locks, BGLOAD_NMI_LOCK
                           
-       06:C978  AD 10 00    LDA NMI_locks
-       06:C97B  09 01       ORA #BGLOAD_NMI_LOCK
-       06:C97D  8D 10 00    STA NMI_locks
+       06:C987  AD 10 00    LDA NMI_locks
+       06:C98A  09 01       ORA #BGLOAD_NMI_LOCK
+       06:C98C  8D 10 00    STA NMI_locks
                                   
    15                       
-   16  06:C980  A9 00       LDA #$00
-   17  06:C982  8D 01 20    STA PPU_MASK    ; disable rendering- reenable on NMI when not updating
+   16  06:C98F  A9 00       LDA #$00
+   17  06:C991  8D 01 20    STA PPU_MASK    ; disable rendering- reenable on NMI when not updating
    18                     
-   19  06:C985  20 B3 C9    JSR LoadGameModeBackground
-   20  06:C988  20 00 CA    JSR LoadGameModeSprites
+   19  06:C994  20 C2 C9    JSR LoadGameModeBackground
+   20  06:C997  20 0F CA    JSR LoadGameModeSprites
    21                     
    22                       MACROClearFlags NMI_locks, BGLOAD_NMI_LOCK
                           
-       06:C98B  A9 01       LDA #BGLOAD_NMI_LOCK
-       06:C98D  49 FF       EOR #$FF
-       06:C98F  2D 10 00    AND NMI_locks  
-       06:C992  8D 10 00    STA NMI_locks
+       06:C99A  A9 01       LDA #BGLOAD_NMI_LOCK
+       06:C99C  49 FF       EOR #$FF
+       06:C99E  2D 10 00    AND NMI_locks  
+       06:C9A1  8D 10 00    STA NMI_locks
                           
    23                     
    24                       
    25                       ;; load the CHR bank for this mode
-   26  06:C995  20 6B CC    JSR ResetMapper
+   26  06:C9A4  20 7A CC    JSR ResetMapper
    27                       ;;remember, we're loading the SECOND set in each chr bank
    28                       ;;so we'll take the index from the game mode chr table and add one mult 2
-   29  06:C998  AE 0E 00    LDX game_mode
-   30  06:C99B  BD 1D CA    LDA gameModeInitCHRROMB, x
-   31  06:C99E  0A          ASL A
-   32  06:C99F  18          CLC 
-   33  06:C9A0  69 01       ADC #$01
-   34  06:C9A2  20 90 CC    JSR LoadCHRBankB
+   29  06:C9A7  AE 0E 00    LDX game_mode
+   30  06:C9AA  BD 2C CA    LDA gameModeInitCHRROMB, x
+   31  06:C9AD  0A          ASL A
+   32  06:C9AE  18          CLC 
+   33  06:C9AF  69 01       ADC #$01
+   34  06:C9B1  20 9F CC    JSR LoadCHRBankB
    35                       
-   36  06:C9A5  20 6B CC    JSR ResetMapper
-   37  06:C9A8  AE 0E 00    LDX game_mode
-   38  06:C9AB  BD 20 CA    LDA gameModeInitCHRROMA, x
-   39  06:C9AE  0A          ASL A
-   40  06:C9AF  20 85 CC    JSR LoadCHRBankA
+   36  06:C9B4  20 7A CC    JSR ResetMapper
+   37  06:C9B7  AE 0E 00    LDX game_mode
+   38  06:C9BA  BD 2F CA    LDA gameModeInitCHRROMA, x
+   39  06:C9BD  0A          ASL A
+   40  06:C9BE  20 94 CC    JSR LoadCHRBankA
    41                       
    42                       
    43                       
-   44  06:C9B2  60          RTS
+   44  06:C9C1  60          RTS
    45                       
-   46  06:C9B3            LoadGameModeBackground:
+   46  06:C9C2            LoadGameModeBackground:
    47                             
    48                       MACROGetDoubleIndex game_mode
                           
-       06:C9B3  AD 0E 00          LDA game_mode
-       06:C9B6  0A                ASL A
-       06:C9B7  A8                TAY
+       06:C9C2  AD 0E 00          LDA game_mode
+       06:C9C5  0A                ASL A
+       06:C9C6  A8                TAY
                                   
-   49  06:C9B8  8C 00 00    STY temp1
+   49  06:C9C7  8C 00 00    STY temp1
    50                             
    51                       MACROGetLabelPointer Palettes, table_address
                           
-       06:C9BB  A9 E0             LDA #HIGH(Palettes)
-       06:C9BD  A2 00             LDX #LOW(Palettes)
+       06:C9CA  A9 E0             LDA #HIGH(Palettes)
+       06:C9CC  A2 00             LDX #LOW(Palettes)
                                   
-       06:C9BF  8E 14 00          STX table_address
-       06:C9C2  8D 15 00          STA table_address+1
+       06:C9CE  8E 14 00          STX table_address
+       06:C9D1  8D 15 00          STA table_address+1
                                   
-   52  06:C9C5  20 49 CA    JSR GetTableAtIndex
+   52  06:C9D4  20 58 CA    JSR GetTableAtIndex
    53                     
-   54  06:C9C8  20 56 CA    JSR LoadFullPaletteFromTable
+   54  06:C9D7  20 65 CA    JSR LoadFullPaletteFromTable
    55                             
-   56  06:C9CB  AC 00 00    LDY temp1
+   56  06:C9DA  AC 00 00    LDY temp1
    57                       MACROGetLabelPointer NameTables, table_address
                           
-       06:C9CE  A9 E0             LDA #HIGH(NameTables)
-       06:C9D0  A2 06             LDX #LOW(NameTables)
+       06:C9DD  A9 E0             LDA #HIGH(NameTables)
+       06:C9DF  A2 06             LDX #LOW(NameTables)
                                   
-       06:C9D2  8E 14 00          STX table_address
-       06:C9D5  8D 15 00          STA table_address+1
+       06:C9E1  8E 14 00          STX table_address
+       06:C9E4  8D 15 00          STA table_address+1
                                   
-   58  06:C9D8  20 49 CA    JSR GetTableAtIndex
-   59  06:C9DB  AD 0D 00    LDA mode_loadFlags
-   60  06:C9DE  29 0F       AND #$0F
-   61  06:C9E0  0A          ASL A
-   62  06:C9E1  A8          TAY
-   63  06:C9E2  20 49 CA    JSR GetTableAtIndex
+   58  06:C9E7  20 58 CA    JSR GetTableAtIndex
+   59  06:C9EA  AD 0D 00    LDA mode_loadFlags
+   60  06:C9ED  29 0F       AND #$0F
+   61  06:C9EF  0A          ASL A
+   62  06:C9F0  A8          TAY
+   63  06:C9F1  20 58 CA    JSR GetTableAtIndex
    64                             
-   65  06:C9E5  A9 00       LDA #$00
-   66  06:C9E7  20 85 CA    JSR LoadFullBackgroundFromTable
+   65  06:C9F4  A9 00       LDA #$00
+   66  06:C9F6  20 94 CA    JSR LoadFullBackgroundFromTable
    67                       
-   68  06:C9EA  AC 00 00    LDY temp1
+   68  06:C9F9  AC 00 00    LDY temp1
    69                       MACROGetLabelPointer NameTables2, table_address
                           
-       06:C9ED  A9 E0             LDA #HIGH(NameTables2)
-       06:C9EF  A2 0C             LDX #LOW(NameTables2)
+       06:C9FC  A9 E0             LDA #HIGH(NameTables2)
+       06:C9FE  A2 0C             LDX #LOW(NameTables2)
                                   
-       06:C9F1  8E 14 00          STX table_address
-       06:C9F4  8D 15 00          STA table_address+1
+       06:CA00  8E 14 00          STX table_address
+       06:CA03  8D 15 00          STA table_address+1
                                   
-   70  06:C9F7  20 49 CA    JSR GetTableAtIndex
+   70  06:CA06  20 58 CA    JSR GetTableAtIndex
    71                       
-   72  06:C9FA  A9 01       LDA #$01
-   73  06:C9FC  20 85 CA    JSR LoadFullBackgroundFromTable
+   72  06:CA09  A9 01       LDA #$01
+   73  06:CA0B  20 94 CA    JSR LoadFullBackgroundFromTable
    74                       
-   75  06:C9FF  60          RTS
+   75  06:CA0E  60          RTS
    76                       
-   77  06:CA00            LoadGameModeSprites:
+   77  06:CA0F            LoadGameModeSprites:
    78                     
    79                       MACROGetDoubleIndex game_mode  
                           
-       06:CA00  AD 0E 00          LDA game_mode
-       06:CA03  0A                ASL A
-       06:CA04  A8                TAY
+       06:CA0F  AD 0E 00          LDA game_mode
+       06:CA12  0A                ASL A
+       06:CA13  A8                TAY
                                   
    80                       MACROGetLabelPointer Sprites, table_address
                           
-       06:CA05  A9 FC             LDA #HIGH(Sprites)
-       06:CA07  A2 CA             LDX #LOW(Sprites)
+       06:CA14  A9 FC             LDA #HIGH(Sprites)
+       06:CA16  A2 CA             LDX #LOW(Sprites)
                                   
-       06:CA09  8E 14 00          STX table_address
-       06:CA0C  8D 15 00          STA table_address+1
+       06:CA18  8E 14 00          STX table_address
+       06:CA1B  8D 15 00          STA table_address+1
                                   
-   81  06:CA0F  20 49 CA    JSR GetTableAtIndex
-   82  06:CA12  A0 00       LDY #$00
-   83  06:CA14  B1 14       LDA [table_address],y
-   84  06:CA16  EE 14 00    INC table_address
-   85  06:CA19  20 6D CB    JSR LoadSprites_impl
+   81  06:CA1E  20 58 CA    JSR GetTableAtIndex
+   82  06:CA21  A0 00       LDY #$00
+   83  06:CA23  B1 14       LDA [table_address],y
+   84  06:CA25  EE 14 00    INC table_address
+   85  06:CA28  20 7C CB    JSR LoadSprites_impl
    86                       
-   87  06:CA1C  60          RTS
+   87  06:CA2B  60          RTS
    88                       
-   89  06:CA1D            gameModeInitCHRROMB:
-   90  06:CA1D  00 02 02          .db $00, $02, $02
-   91  06:CA20            gameModeInitCHRROMA:
-   92  06:CA20  00 02 02          .db $00, $02, $02
+   89  06:CA2C            gameModeInitCHRROMB:
+   90  06:CA2C  00 02 02          .db $00, $02, $02
+   91  06:CA2F            gameModeInitCHRROMA:
+   92  06:CA2F  00 02 02          .db $00, $02, $02
    93                             
 #[1]   Picross.asm
 #[2]   Routines/Utils/PointerUtils.asm
    93                       .include "Routines/Utils/PointerUtils.asm"
-    1  06:CA23            Dynamic_Jump:
+    1  06:CA32            Dynamic_Jump:
     2                     
-    3  06:CA23  0A          ASL A                                 ;; double the index passed into A
-    4  06:CA24  8E 08 00    STX tempx
-    5  06:CA27  8C 09 00    STY tempy
-    6  06:CA2A  A8          TAY
-    7  06:CA2B  C8          INY  
-    8  06:CA2C  68          PLA
-    9  06:CA2D  8D 16 00    STA jump_address
-   10  06:CA30  68          PLA 
-   11  06:CA31  8D 17 00    STA jump_address+1            
-   12  06:CA34  B1 16       LDA [jump_address], y
-   13  06:CA36  AA          TAX
-   14  06:CA37  C8          INY
-   15  06:CA38  B1 16       LDA [jump_address], y
-   16  06:CA3A  8E 16 00    STX jump_address
-   17  06:CA3D  8D 17 00    STA jump_address+1
-   18  06:CA40  AE 08 00    LDX tempx
-   19  06:CA43  AC 09 00    LDY tempy
-   20  06:CA46  6C 16 00    JMP [jump_address]
+    3  06:CA32  0A          ASL A                                 ;; double the index passed into A
+    4  06:CA33  8E 08 00    STX tempx
+    5  06:CA36  8C 09 00    STY tempy
+    6  06:CA39  A8          TAY
+    7  06:CA3A  C8          INY  
+    8  06:CA3B  68          PLA
+    9  06:CA3C  8D 16 00    STA jump_address
+   10  06:CA3F  68          PLA 
+   11  06:CA40  8D 17 00    STA jump_address+1            
+   12  06:CA43  B1 16       LDA [jump_address], y
+   13  06:CA45  AA          TAX
+   14  06:CA46  C8          INY
+   15  06:CA47  B1 16       LDA [jump_address], y
+   16  06:CA49  8E 16 00    STX jump_address
+   17  06:CA4C  8D 17 00    STA jump_address+1
+   18  06:CA4F  AE 08 00    LDX tempx
+   19  06:CA52  AC 09 00    LDY tempy
+   20  06:CA55  6C 16 00    JMP [jump_address]
    21                       
-   22  06:CA49            GetTableAtIndex:
+   22  06:CA58            GetTableAtIndex:
    23                     
-   24  06:CA49  B1 14             LDA [table_address], y
-   25  06:CA4B  AA                TAX
-   26  06:CA4C  C8                INY
-   27  06:CA4D  B1 14             LDA [table_address], y
+   24  06:CA58  B1 14             LDA [table_address], y
+   25  06:CA5A  AA                TAX
+   26  06:CA5B  C8                INY
+   27  06:CA5C  B1 14             LDA [table_address], y
    28                             
-   29  06:CA4F            SetTableAddress:
+   29  06:CA5E            SetTableAddress:
    30                             
    31                             ;;A is hi, X is lo
-   32  06:CA4F  8E 14 00          STX table_address
-   33  06:CA52  8D 15 00          STA table_address+1
-   34  06:CA55  60                RTS
+   32  06:CA5E  8E 14 00          STX table_address
+   33  06:CA61  8D 15 00          STA table_address+1
+   34  06:CA64  60                RTS
 #[1]   Picross.asm
 #[2]   Routines/Utils/PPUUtils.asm
    94                       .include "Routines/Utils/PPUUtils.asm"
-    1  06:CA56            LoadFullPaletteFromTable:
+    1  06:CA65            LoadFullPaletteFromTable:
     2                     
     3                       MACROSetPPUAddress $3F00
                           
-       06:CA56  AD 02 20    LDA PPU_STATUS             ; read PPU status to reset the high/low latch
-       06:CA59  A9 3F       LDA #HIGH($3F00)
-       06:CA5B  8D 06 20    STA PPU_ADDR            ; write the high byte of $2000 address
-       06:CA5E  A9 00       LDA #LOW($3F00)
-       06:CA60  8D 06 20    STA PPU_ADDR           ; write the low byte of $2000 address
+       06:CA65  AD 02 20    LDA PPU_STATUS             ; read PPU status to reset the high/low latch
+       06:CA68  A9 3F       LDA #HIGH($3F00)
+       06:CA6A  8D 06 20    STA PPU_ADDR            ; write the high byte of $2000 address
+       06:CA6D  A9 00       LDA #LOW($3F00)
+       06:CA6F  8D 06 20    STA PPU_ADDR           ; write the low byte of $2000 address
                             
-    4  06:CA63  A0 00       LDY #$00              ; start out at 0
-    5  06:CA65  A2 00       LDX #$00
-    6  06:CA67            .loop:
-    7  06:CA67  B1 14       LDA [table_address], y        ; load data from address (palette + the value in x)
-    8  06:CA69  9D 00 68    STA Palette_Copy, x
-    9  06:CA6C  48          PHA 
-   10  06:CA6D  AD 0D 00    LDA mode_loadFlags
-   11  06:CA70  29 10       AND #$10
-   12  06:CA72  D0 04       BNE .setBlack
-   13  06:CA74  68          PLA 
-   14  06:CA75  4C 7B CA    JMP .setPPUData
-   15  06:CA78            .setBlack:
+    4  06:CA72  A0 00       LDY #$00              ; start out at 0
+    5  06:CA74  A2 00       LDX #$00
+    6  06:CA76            .loop:
+    7  06:CA76  B1 14       LDA [table_address], y        ; load data from address (palette + the value in x)
+    8  06:CA78  9D 00 68    STA Palette_Copy, x
+    9  06:CA7B  48          PHA 
+   10  06:CA7C  AD 0D 00    LDA mode_loadFlags
+   11  06:CA7F  29 10       AND #$10
+   12  06:CA81  D0 04       BNE .setBlack
+   13  06:CA83  68          PLA 
+   14  06:CA84  4C 8A CA    JMP .setPPUData
+   15  06:CA87            .setBlack:
    16                     
-   17  06:CA78  68          PLA 
-   18  06:CA79  A9 0F       LDA #$0F
+   17  06:CA87  68          PLA 
+   18  06:CA88  A9 0F       LDA #$0F
    19                       
-   20  06:CA7B            .setPPUData:
-   21  06:CA7B  8D 07 20    STA PPU_DATA            ; write to PPU
-   22  06:CA7E  C8          INY                   ; X = X + 1
-   23  06:CA7F  E8          INX
-   24  06:CA80  C0 20       CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites
-   25  06:CA82  D0 E3       BNE .loop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
-   26  06:CA84  60          RTS
+   20  06:CA8A            .setPPUData:
+   21  06:CA8A  8D 07 20    STA PPU_DATA            ; write to PPU
+   22  06:CA8D  C8          INY                   ; X = X + 1
+   23  06:CA8E  E8          INX
+   24  06:CA8F  C0 20       CPY #$20              ; Compare X to hex $10, decimal 16 - copying 16 bytes = 4 sprites
+   25  06:CA91  D0 E3       BNE .loop  ; Branch to LoadPalettesLoop if compare was Not Equal to zero
+   26  06:CA93  60          RTS
    27                     
-   28  06:CA85            LoadFullBackgroundFromTable:
+   28  06:CA94            LoadFullBackgroundFromTable:
    29                     
    30                         ;;use A as an index for which nametable to write to
-   31  06:CA85  20 B8 CB          JSR SetNametableFromIndex
-   32  06:CA88  8A                TXA
-   33  06:CA89  4A                LSR A
-   34  06:CA8A  29 01             AND #$01
-   35  06:CA8C  D0 0D             BNE .copyScreenB
+   31  06:CA94  20 C7 CB          JSR SetNametableFromIndex
+   32  06:CA97  8A                TXA
+   33  06:CA98  4A                LSR A
+   34  06:CA99  29 01             AND #$01
+   35  06:CA9B  D0 0D             BNE .copyScreenB
    36                             MACROGetLabelPointer Screen_Copy, pointer_address
                           
-       06:CA8E  A9 60             LDA #HIGH(Screen_Copy)
-       06:CA90  A2 00             LDX #LOW(Screen_Copy)
+       06:CA9D  A9 60             LDA #HIGH(Screen_Copy)
+       06:CA9F  A2 00             LDX #LOW(Screen_Copy)
                                   
-       06:CA92  8E 12 00          STX pointer_address
-       06:CA95  8D 13 00          STA pointer_address+1
+       06:CAA1  8E 12 00          STX pointer_address
+       06:CAA4  8D 13 00          STA pointer_address+1
                                   
-   37  06:CA98  4C A5 CA          JMP .setCounters
+   37  06:CAA7  4C B4 CA          JMP .setCounters
    38                             
-   39  06:CA9B            .copyScreenB:
+   39  06:CAAA            .copyScreenB:
    40                             MACROGetLabelPointer ScreenB_Copy, pointer_address
                           
-       06:CA9B  A9 64             LDA #HIGH(ScreenB_Copy)
-       06:CA9D  A2 00             LDX #LOW(ScreenB_Copy)
+       06:CAAA  A9 64             LDA #HIGH(ScreenB_Copy)
+       06:CAAC  A2 00             LDX #LOW(ScreenB_Copy)
                                   
-       06:CA9F  8E 12 00          STX pointer_address
-       06:CAA2  8D 13 00          STA pointer_address+1
+       06:CAAE  8E 12 00          STX pointer_address
+       06:CAB1  8D 13 00          STA pointer_address+1
                                   
    41                             
    42                             ;;set pointer
    43                             ;; set counters
-   44  06:CAA5            .setCounters:
-   45  06:CAA5  A0 00             LDY #$00
-   46  06:CAA7  A2 00             LDX #$00
+   44  06:CAB4            .setCounters:
+   45  06:CAB4  A0 00             LDY #$00
+   46  06:CAB6  A2 00             LDX #$00
    47                             
    48                             ;;start loop
    49                     
-   50  06:CAA9            .outerloop:
+   50  06:CAB8            .outerloop:
    51                     
-   52  06:CAA9            .innerloop:
+   52  06:CAB8            .innerloop:
    53                     
-   54  06:CAA9  B1 14             LDA [table_address], y
-   55  06:CAAB  8D 07 20          STA PPU_DATA
-   56  06:CAAE  91 12             STA [pointer_address],y
-   57  06:CAB0  C8                INY
-   58  06:CAB1  C0 00             CPY #$00
-   59  06:CAB3  D0 F4             BNE .innerloop
+   54  06:CAB8  B1 14             LDA [table_address], y
+   55  06:CABA  8D 07 20          STA PPU_DATA
+   56  06:CABD  91 12             STA [pointer_address],y
+   57  06:CABF  C8                INY
+   58  06:CAC0  C0 00             CPY #$00
+   59  06:CAC2  D0 F4             BNE .innerloop
    60                     
-   61  06:CAB5  EE 13 00          INC pointer_address+1
-   62  06:CAB8  EE 15 00          INC table_address+1
+   61  06:CAC4  EE 13 00          INC pointer_address+1
+   62  06:CAC7  EE 15 00          INC table_address+1
    63                             
-   64  06:CABB  E8                INX
-   65  06:CABC  E0 04             CPX #$04
-   66  06:CABE  D0 E9             BNE .outerloop
-   67  06:CAC0  60                RTS
+   64  06:CACA  E8                INX
+   65  06:CACB  E0 04             CPX #$04
+   66  06:CACD  D0 E9             BNE .outerloop
+   67  06:CACF  60                RTS
    68                             
    69                     
    70           0000      DATA_LEN = temp1
    71           0001      WRITE_SETTINGS = temp2
    72                             
-   73  06:CAC1            ProcessPPUString:
+   73  06:CAD0            ProcessPPUString:
    74                     
-   75  06:CAC1  AD 21 00          LDA PPU_PendingWrite
-   76  06:CAC4  D0 01             BNE .continueProcess
-   77  06:CAC6  60                RTS
+   75  06:CAD0  AD 21 00          LDA PPU_PendingWrite
+   76  06:CAD3  D0 01             BNE .continueProcess
+   77  06:CAD5  60                RTS
    78                             
-   79  06:CAC7            .continueProcess:
-   80  06:CAC7  A0 00             LDY #$00
+   79  06:CAD6            .continueProcess:
+   80  06:CAD6  A0 00             LDY #$00
    81                             
-   82  06:CAC9  A9 23             LDA #LOW(PPU_String)
-   83  06:CACB  8D 12 00          STA pointer_address
-   84  06:CACE  A9 00             LDA #HIGH(PPU_String)
-   85  06:CAD0  8D 13 00          STA pointer_address + 1
+   82  06:CAD8  A9 23             LDA #LOW(PPU_String)
+   83  06:CADA  8D 12 00          STA pointer_address
+   84  06:CADD  A9 00             LDA #HIGH(PPU_String)
+   85  06:CADF  8D 13 00          STA pointer_address + 1
    86                     
-   87  06:CAD3            .outerloop:
-   88  06:CAD3  AD 02 20          LDA PPU_STATUS
-   89  06:CAD6  B1 12             LDA [pointer_address], y
-   90  06:CAD8  F0 79             BEQ .finish
-   91  06:CADA  8D 06 20          STA PPU_ADDR
-   92  06:CADD  C8                INY
-   93  06:CADE  B1 12             LDA [pointer_address], y
-   94  06:CAE0  8D 06 20          STA PPU_ADDR
-   95  06:CAE3  C8            INY 
-   96  06:CAE4  B1 12             LDA [pointer_address], y
-   97  06:CAE6  8D 01 00          STA WRITE_SETTINGS
-   98  06:CAE9  C8                INY
+   87  06:CAE2            .outerloop:
+   88  06:CAE2  AD 02 20          LDA PPU_STATUS
+   89  06:CAE5  B1 12             LDA [pointer_address], y
+   90  06:CAE7  F0 79             BEQ .finish
+   91  06:CAE9  8D 06 20          STA PPU_ADDR
+   92  06:CAEC  C8                INY
+   93  06:CAED  B1 12             LDA [pointer_address], y
+   94  06:CAEF  8D 06 20          STA PPU_ADDR
+   95  06:CAF2  C8            INY 
+   96  06:CAF3  B1 12             LDA [pointer_address], y
+   97  06:CAF5  8D 01 00          STA WRITE_SETTINGS
+   98  06:CAF8  C8                INY
    99                             
-  100  06:CAEA  AD 00 20          LDA PPU_CTRL
-  101  06:CAED  29 FB             AND #$FB
-  102  06:CAEF  8D 00 20          STA PPU_CTRL
+  100  06:CAF9  AD 00 20          LDA PPU_CTRL
+  101  06:CAFC  29 FB             AND #$FB
+  102  06:CAFE  8D 00 20          STA PPU_CTRL
   103                             
-  104  06:CAF2  AD 01 00          LDA WRITE_SETTINGS      ;check horizontal or vertical write
-  105  06:CAF5  29 80             AND #%10000000
-  106  06:CAF7  F0 06             BEQ .checkRepeat
-  107  06:CAF9  0D 00 20          ORA PPU_CTRL 
-  108  06:CAFC  8D 00 20          STA PPU_CTRL 
+  104  06:CB01  AD 01 00          LDA WRITE_SETTINGS      ;check horizontal or vertical write
+  105  06:CB04  29 80             AND #%10000000
+  106  06:CB06  F0 06             BEQ .checkRepeat
+  107  06:CB08  0D 00 20          ORA PPU_CTRL 
+  108  06:CB0B  8D 00 20          STA PPU_CTRL 
   109                             
   110                             
-  111  06:CAFF            .checkRepeat:
-  112  06:CAFF  AD 01 00    LDA WRITE_SETTINGS
-  113  06:CB02  29 40       AND #%01000000
-  114  06:CB04  F0 19       BEQ .checkTable
+  111  06:CB0E            .checkRepeat:
+  112  06:CB0E  AD 01 00    LDA WRITE_SETTINGS
+  113  06:CB11  29 40       AND #%01000000
+  114  06:CB13  F0 19       BEQ .checkTable
   115                       
-  116  06:CB06  AD 01 00    LDA WRITE_SETTINGS
-  117  06:CB09  29 3F       AND #$3F
-  118  06:CB0B  8D 00 00    STA DATA_LEN
+  116  06:CB15  AD 01 00    LDA WRITE_SETTINGS
+  117  06:CB18  29 3F       AND #$3F
+  118  06:CB1A  8D 00 00    STA DATA_LEN
   119                       ;;the usual data length byte is now the repeatable byte
-  120  06:CB0E  A2 00       LDX #$00
+  120  06:CB1D  A2 00       LDX #$00
   121                       
-  122  06:CB10            .repeatLoop:
-  123  06:CB10  B1 12       LDA [pointer_address], y
-  124  06:CB12  8D 07 20    STA PPU_DATA
-  125  06:CB15  E8          INX 
-  126  06:CB16  EC 00 00    CPX DATA_LEN
-  127  06:CB19  D0 F5       BNE .repeatLoop
-  128  06:CB1B  C8          INY
-  129  06:CB1C  4C D3 CA    JMP .outerloop
+  122  06:CB1F            .repeatLoop:
+  123  06:CB1F  B1 12       LDA [pointer_address], y
+  124  06:CB21  8D 07 20    STA PPU_DATA
+  125  06:CB24  E8          INX 
+  126  06:CB25  EC 00 00    CPX DATA_LEN
+  127  06:CB28  D0 F5       BNE .repeatLoop
+  128  06:CB2A  C8          INY
+  129  06:CB2B  4C E2 CA    JMP .outerloop
   130                             
-  131  06:CB1F            .checkTable:
-  132  06:CB1F  AD 01 00          LDA WRITE_SETTINGS
-  133  06:CB22  29 20             AND #%00100000
-  134  06:CB24  F0 16             BEQ .rawData
+  131  06:CB2E            .checkTable:
+  132  06:CB2E  AD 01 00          LDA WRITE_SETTINGS
+  133  06:CB31  29 20             AND #%00100000
+  134  06:CB33  F0 16             BEQ .rawData
   135                             
-  136  06:CB26  B1 12             LDA [pointer_address], y
-  137  06:CB28  8D 14 00          STA table_address
-  138  06:CB2B  C8                INY 
-  139  06:CB2C  B1 12             LDA [pointer_address], y
-  140  06:CB2E  8D 15 00          STA table_address + 1
-  141  06:CB31  C8                INY
-  142  06:CB32  98                TYA 
-  143  06:CB33  48                PHA
-  144  06:CB34  20 57 CB          JSR WriteToPPUFromTable
-  145  06:CB37  68                PLA
-  146  06:CB38  A8                TAY
-  147  06:CB39  4C D3 CA          JMP .outerloop
+  136  06:CB35  B1 12             LDA [pointer_address], y
+  137  06:CB37  8D 14 00          STA table_address
+  138  06:CB3A  C8                INY 
+  139  06:CB3B  B1 12             LDA [pointer_address], y
+  140  06:CB3D  8D 15 00          STA table_address + 1
+  141  06:CB40  C8                INY
+  142  06:CB41  98                TYA 
+  143  06:CB42  48                PHA
+  144  06:CB43  20 66 CB          JSR WriteToPPUFromTable
+  145  06:CB46  68                PLA
+  146  06:CB47  A8                TAY
+  147  06:CB48  4C E2 CA          JMP .outerloop
   148                             
-  149  06:CB3C            .rawData:
+  149  06:CB4B            .rawData:
   150                     
-  151  06:CB3C  B1 12             LDA [pointer_address], y
-  152  06:CB3E  C8                INY
-  153  06:CB3F  8D 00 00          STA DATA_LEN
+  151  06:CB4B  B1 12             LDA [pointer_address], y
+  152  06:CB4D  C8                INY
+  153  06:CB4E  8D 00 00          STA DATA_LEN
   154                     
-  155  06:CB42  A2 00             LDX #$00
+  155  06:CB51  A2 00             LDX #$00
   156                     
-  157  06:CB44            .innerloop:
+  157  06:CB53            .innerloop:
   158                             
-  159  06:CB44  B1 12             LDA [pointer_address], y
-  160  06:CB46  8D 07 20          STA PPU_DATA
-  161  06:CB49  C8                INY
-  162  06:CB4A  E8                INX
-  163  06:CB4B  EC 00 00          CPX DATA_LEN
-  164  06:CB4E  D0 F4             BNE .innerloop
-  165  06:CB50  4C D3 CA          JMP .outerloop
+  159  06:CB53  B1 12             LDA [pointer_address], y
+  160  06:CB55  8D 07 20          STA PPU_DATA
+  161  06:CB58  C8                INY
+  162  06:CB59  E8                INX
+  163  06:CB5A  EC 00 00          CPX DATA_LEN
+  164  06:CB5D  D0 F4             BNE .innerloop
+  165  06:CB5F  4C E2 CA          JMP .outerloop
   166                             
-  167  06:CB53            .finish:
-  168  06:CB53  20 98 CB          JSR ClearPPUString
-  169  06:CB56            .leave:
-  170  06:CB56  60                RTS
+  167  06:CB62            .finish:
+  168  06:CB62  20 A7 CB          JSR ClearPPUString
+  169  06:CB65            .leave:
+  170  06:CB65  60                RTS
   171                             
-  172  06:CB57            WriteToPPUFromTable:
-  173  06:CB57  A0 00             LDY #$00
-  174  06:CB59  B1 14             LDA [table_address], y
-  175  06:CB5B  C8                INY
-  176  06:CB5C  8D 00 00          STA DATA_LEN
-  177  06:CB5F            .innerloop:
-  178  06:CB5F  B1 14             LDA [table_address], y
-  179  06:CB61  8D 07 20          STA PPU_DATA
-  180  06:CB64  C8                INY
-  181  06:CB65  CC 00 00          CPY DATA_LEN
-  182  06:CB68  90 F5             BCC .innerloop ;table should have the size in it, but since we count the byte count, we'll want to wait till we go over it
-  183  06:CB6A  F0 F3             BEQ .innerloop
-  184  06:CB6C  60                RTS
+  172  06:CB66            WriteToPPUFromTable:
+  173  06:CB66  A0 00             LDY #$00
+  174  06:CB68  B1 14             LDA [table_address], y
+  175  06:CB6A  C8                INY
+  176  06:CB6B  8D 00 00          STA DATA_LEN
+  177  06:CB6E            .innerloop:
+  178  06:CB6E  B1 14             LDA [table_address], y
+  179  06:CB70  8D 07 20          STA PPU_DATA
+  180  06:CB73  C8                INY
+  181  06:CB74  CC 00 00          CPY DATA_LEN
+  182  06:CB77  90 F5             BCC .innerloop ;table should have the size in it, but since we count the byte count, we'll want to wait till we go over it
+  183  06:CB79  F0 F3             BEQ .innerloop
+  184  06:CB7B  60                RTS
   185                       
-  186  06:CB6D            LoadSprites_impl:
+  186  06:CB7C            LoadSprites_impl:
   187                       ;;A will be the amount of sprites to load
-  188  06:CB6D  8D 00 00    STA DATA_LEN
-  189  06:CB70  0E 00 00    ASL DATA_LEN
-  190  06:CB73  0E 00 00    ASL DATA_LEN
+  188  06:CB7C  8D 00 00    STA DATA_LEN
+  189  06:CB7F  0E 00 00    ASL DATA_LEN
+  190  06:CB82  0E 00 00    ASL DATA_LEN
   191                       
-  192  06:CB76  A0 00       LDY #$00              ; start at 0
+  192  06:CB85  A0 00       LDY #$00              ; start at 0
   193                       
-  194  06:CB78            .loop:
-  195  06:CB78  B1 14       LDA [table_address], y; load data from address (sprites +  x)
-  196  06:CB7A  99 00 02    STA SPRITE_DATA, y    ; store into RAM address ($0200 + x)
-  197  06:CB7D  C8          INY                   ; X = X + 1
-  198  06:CB7E  CC 00 00    CPY DATA_LEN             ; Compare X to hex $10, decimal 16
-  199  06:CB81  D0 F5       BNE .loop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero
+  194  06:CB87            .loop:
+  195  06:CB87  B1 14       LDA [table_address], y; load data from address (sprites +  x)
+  196  06:CB89  99 00 02    STA SPRITE_DATA, y    ; store into RAM address ($0200 + x)
+  197  06:CB8C  C8          INY                   ; X = X + 1
+  198  06:CB8D  CC 00 00    CPY DATA_LEN             ; Compare X to hex $10, decimal 16
+  199  06:CB90  D0 F5       BNE .loop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero
   200                                             ; if compare was equal to 16, keep going down   
-  201  06:CB83  60          RTS
+  201  06:CB92  60          RTS
   202                     
   203                     
-  204  06:CB84            WriteToPPUString:
+  204  06:CB93            WriteToPPUString:
   205                     
-  206  06:CB84  AE 22 00          LDX PPU_StringIdx
-  207  06:CB87  E0 4F             CPX #PPU_STRINGMAX
-  208  06:CB89  F0 0C             BEQ .finish
+  206  06:CB93  AE 22 00          LDX PPU_StringIdx
+  207  06:CB96  E0 4F             CPX #PPU_STRINGMAX
+  208  06:CB98  F0 0C             BEQ .finish
   209                             
-  210  06:CB8B  9D 23 00          STA PPU_String, x
-  211  06:CB8E  EE 22 00          INC PPU_StringIdx
-  212  06:CB91  E8                INX
-  213  06:CB92  A9 00             LDA #$00
-  214  06:CB94  9D 23 00          STA PPU_String, x
+  210  06:CB9A  9D 23 00          STA PPU_String, x
+  211  06:CB9D  EE 22 00          INC PPU_StringIdx
+  212  06:CBA0  E8                INX
+  213  06:CBA1  A9 00             LDA #$00
+  214  06:CBA3  9D 23 00          STA PPU_String, x
   215                                     
-  216  06:CB97            .finish:
-  217  06:CB97  60                RTS
+  216  06:CBA6            .finish:
+  217  06:CBA6  60                RTS
   218                     
-  219  06:CB98            ClearPPUString:
+  219  06:CBA7            ClearPPUString:
   220                             
-  221  06:CB98  A9 00             LDA #$00
-  222  06:CB9A  8D 22 00          STA PPU_StringIdx
-  223  06:CB9D  8D 23 00          STA PPU_String
-  224  06:CBA0  8D 21 00          STA PPU_PendingWrite
-  225  06:CBA3  60                RTS
+  221  06:CBA7  A9 00             LDA #$00
+  222  06:CBA9  8D 22 00          STA PPU_StringIdx
+  223  06:CBAC  8D 23 00          STA PPU_String
+  224  06:CBAF  8D 21 00          STA PPU_PendingWrite
+  225  06:CBB2  60                RTS
   226                     
-  227  06:CBA4            DetectSprite0:
-  228  06:CBA4            WaitNotSprite0:
-  229  06:CBA4  AD 02 20    lda PPU_STATUS
-  230  06:CBA7  29 40       and #SPRITE_0_MASK
-  231  06:CBA9  D0 F9       bne WaitNotSprite0   ; wait until sprite 0 not hit
+  227  06:CBB3            DetectSprite0:
+  228  06:CBB3            WaitNotSprite0:
+  229  06:CBB3  AD 02 20    lda PPU_STATUS
+  230  06:CBB6  29 40       and #SPRITE_0_MASK
+  231  06:CBB8  D0 F9       bne WaitNotSprite0   ; wait until sprite 0 not hit
   232                     
-  233  06:CBAB            WaitSprite0:
-  234  06:CBAB  AD 02 20    lda $2002
-  235  06:CBAE  29 40       and #SPRITE_0_MASK
-  236  06:CBB0  F0 F9       beq WaitSprite0      ; wait until sprite 0 is hit
+  233  06:CBBA            WaitSprite0:
+  234  06:CBBA  AD 02 20    lda $2002
+  235  06:CBBD  29 40       and #SPRITE_0_MASK
+  236  06:CBBF  F0 F9       beq WaitSprite0      ; wait until sprite 0 is hit
   237                     
-  238  06:CBB2  A2 05       ldx #$05                              ;do a scanline wait
-  239  06:CBB4            WaitScanline:
-  240  06:CBB4  CA          dex
-  241  06:CBB5  D0 FD       bne WaitScanline
-  242  06:CBB7  60          RTS
+  238  06:CBC1  A2 05       ldx #$05                              ;do a scanline wait
+  239  06:CBC3            WaitScanline:
+  240  06:CBC3  CA          dex
+  241  06:CBC4  D0 FD       bne WaitScanline
+  242  06:CBC6  60          RTS
   243                     
   244                     
-  245  06:CBB8            SetNametableFromIndex:
+  245  06:CBC7            SetNametableFromIndex:
   246                     
-  247  06:CBB8  48          PHA
-  248  06:CBB9  AD 02 20    LDA PPU_STATUS
-  249  06:CBBC  68          PLA
-  250  06:CBBD  0A          ASL A
-  251  06:CBBE  AA          TAX
-  252  06:CBBF  BD 54 CC    LDA NameTableMemList+1, x
-  253  06:CBC2  8D 06 20    STA PPU_ADDR
-  254  06:CBC5  BD 53 CC    LDA NameTableMemList, x
-  255  06:CBC8  8D 06 20    STA PPU_ADDR
-  256  06:CBCB  60          RTS
+  247  06:CBC7  48          PHA
+  248  06:CBC8  AD 02 20    LDA PPU_STATUS
+  249  06:CBCB  68          PLA
+  250  06:CBCC  0A          ASL A
+  251  06:CBCD  AA          TAX
+  252  06:CBCE  BD 63 CC    LDA NameTableMemList+1, x
+  253  06:CBD1  8D 06 20    STA PPU_ADDR
+  254  06:CBD4  BD 62 CC    LDA NameTableMemList, x
+  255  06:CBD7  8D 06 20    STA PPU_ADDR
+  256  06:CBDA  60          RTS
   257                       
-  258  06:CBCC            TurnOnSprites:
+  258  06:CBDB            TurnOnSprites:
   259                      
-  260  06:CBCC  AD 1C 00    LDA PPU_Mask
-  261  06:CBCF  09 10       ORA #%00010000
-  262  06:CBD1  8D 1C 00    STA PPU_Mask
-  263  06:CBD4  60          RTS
+  260  06:CBDB  AD 1C 00    LDA PPU_Mask
+  261  06:CBDE  09 10       ORA #%00010000
+  262  06:CBE0  8D 1C 00    STA PPU_Mask
+  263  06:CBE3  60          RTS
   264                       
-  265  06:CBD5            TurnOffSprites:
+  265  06:CBE4            TurnOffSprites:
   266                       
-  267  06:CBD5  AD 1C 00    LDA PPU_Mask
-  268  06:CBD8  29 EF       AND #%11101111
-  269  06:CBDA  8D 1C 00    STA PPU_Mask
-  270  06:CBDD  60          RTS
+  267  06:CBE4  AD 1C 00    LDA PPU_Mask
+  268  06:CBE7  29 EF       AND #%11101111
+  269  06:CBE9  8D 1C 00    STA PPU_Mask
+  270  06:CBEC  60          RTS
   271                     
-  272  06:CBDE            UpdatePPUControl:
+  272  06:CBED            UpdatePPUControl:
   273                     
-  274  06:CBDE  AD 1B 00    LDA PPU_Control
-  275  06:CBE1  29 FC       AND #$FC
-  276  06:CBE3  0D 20 00    ORA PPU_NT
-  277  06:CBE6  8D 00 20    STA PPU_CTRL
-  278  06:CBE9  AD 1C 00    LDA PPU_Mask
-  279  06:CBEC  8D 01 20    STA PPU_MASK
-  280  06:CBEF  60          RTS
+  274  06:CBED  AD 1B 00    LDA PPU_Control
+  275  06:CBF0  29 FC       AND #$FC
+  276  06:CBF2  0D 20 00    ORA PPU_NT
+  277  06:CBF5  8D 00 20    STA PPU_CTRL
+  278  06:CBF8  AD 1C 00    LDA PPU_Mask
+  279  06:CBFB  8D 01 20    STA PPU_MASK
+  280  06:CBFE  60          RTS
   281                       
-  282  06:CBF0            InitPPUControl:
+  282  06:CBFF            InitPPUControl:
   283                       
   284                       ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
   285                       ; enable sprites, enable background, no clipping on left side
-  286  06:CBF0  A9 90       LDA #%10010000
-  287  06:CBF2  8D 00 20    STA PPU_CTRL
-  288  06:CBF5  8D 1B 00    STA PPU_Control
-  289  06:CBF8  A9 1E       LDA #%00011110
-  290  06:CBFA  8D 01 20    STA PPU_MASK
-  291  06:CBFD  8D 1C 00    STA PPU_Mask
-  292  06:CC00  60          RTS
+  286  06:CBFF  A9 90       LDA #%10010000
+  287  06:CC01  8D 00 20    STA PPU_CTRL
+  288  06:CC04  8D 1B 00    STA PPU_Control
+  289  06:CC07  A9 1E       LDA #%00011110
+  290  06:CC09  8D 01 20    STA PPU_MASK
+  291  06:CC0C  8D 1C 00    STA PPU_Mask
+  292  06:CC0F  60          RTS
   293                       
-  294  06:CC01            FadeOutPalettes:
+  294  06:CC10            FadeOutPalettes:
   295                     
   296                     ;;take the current values, and decrement the lower nibbles
   297                     ;;we can access from the palette copy 
@@ -3286,89 +3302,89 @@
   303                     
   304                       MACROGetLabelPointer Palette_Copy, table_address
                           
-       06:CC01  A9 68             LDA #HIGH(Palette_Copy)
-       06:CC03  A2 00             LDX #LOW(Palette_Copy)
+       06:CC10  A9 68             LDA #HIGH(Palette_Copy)
+       06:CC12  A2 00             LDX #LOW(Palette_Copy)
                                   
-       06:CC05  8E 14 00          STX table_address
-       06:CC08  8D 15 00          STA table_address+1
+       06:CC14  8E 14 00          STX table_address
+       06:CC17  8D 15 00          STA table_address+1
                                   
   305                     ;;palette copy address is now X accessable
   306                     
-  307  06:CC0B  A0 00       LDY #$00
+  307  06:CC1A  A0 00       LDY #$00
   308                       MACROAddPPUStringEntryRawData #$3F, #$00, #DRAW_HORIZONTAL, #$20  
                           
-       06:CC0D  A9 01       LDA #$01
-       06:CC0F  8D 21 00    STA PPU_PendingWrite
-       06:CC12  A9 3F       LDA #$3F
-       06:CC14  20 84 CB    JSR WriteToPPUString
-       06:CC17  A9 00       LDA #$00
-       06:CC19  20 84 CB    JSR WriteToPPUString
-       06:CC1C  A9 00       LDA #DRAW_HORIZONTAL
-       06:CC1E  20 84 CB    JSR WriteToPPUString
-       06:CC21  A9 20       LDA #$20 
-       06:CC23  20 84 CB    JSR WriteToPPUString
+       06:CC1C  A9 01       LDA #$01
+       06:CC1E  8D 21 00    STA PPU_PendingWrite
+       06:CC21  A9 3F       LDA #$3F
+       06:CC23  20 93 CB    JSR WriteToPPUString
+       06:CC26  A9 00       LDA #$00
+       06:CC28  20 93 CB    JSR WriteToPPUString
+       06:CC2B  A9 00       LDA #DRAW_HORIZONTAL
+       06:CC2D  20 93 CB    JSR WriteToPPUString
+       06:CC30  A9 20       LDA #$20 
+       06:CC32  20 93 CB    JSR WriteToPPUString
                             
   309                     
-  310  06:CC26  A9 00       LDA #$00
-  311  06:CC28  8D 00 00    STA temp1
+  310  06:CC35  A9 00       LDA #$00
+  311  06:CC37  8D 00 00    STA temp1
   312                       
-  313  06:CC2B            .loop:
+  313  06:CC3A            .loop:
   314                     
-  315  06:CC2B  B1 14       LDA [table_address], y
-  316  06:CC2D  C9 0F       CMP #$0F
-  317  06:CC2F  F0 15       BEQ .addToString
-  318  06:CC31  C9 10       CMP #$10
-  319  06:CC33  90 0D       BCC .setBlack
+  315  06:CC3A  B1 14       LDA [table_address], y
+  316  06:CC3C  C9 0F       CMP #$0F
+  317  06:CC3E  F0 15       BEQ .addToString
+  318  06:CC40  C9 10       CMP #$10
+  319  06:CC42  90 0D       BCC .setBlack
   320                       
-  321  06:CC35  A9 80       LDA #$80
-  322  06:CC37  8D 00 00    STA temp1
+  321  06:CC44  A9 80       LDA #$80
+  322  06:CC46  8D 00 00    STA temp1
   323                       
-  324  06:CC3A  B1 14       LDA [table_address], y
-  325  06:CC3C  38          SEC
-  326  06:CC3D  E9 10       SBC #$10
-  327  06:CC3F  4C 44 CC    JMP .setColor
+  324  06:CC49  B1 14       LDA [table_address], y
+  325  06:CC4B  38          SEC
+  326  06:CC4C  E9 10       SBC #$10
+  327  06:CC4E  4C 53 CC    JMP .setColor
   328                     
-  329  06:CC42            .setBlack:
+  329  06:CC51            .setBlack:
   330                     
-  331  06:CC42  A9 0F       LDA #$0F
+  331  06:CC51  A9 0F       LDA #$0F
   332                     
-  333  06:CC44            .setColor:
-  334  06:CC44  91 14       STA [table_address], y
+  333  06:CC53            .setColor:
+  334  06:CC53  91 14       STA [table_address], y
   335                     
-  336  06:CC46            .addToString:
+  336  06:CC55            .addToString:
   337                     
-  338  06:CC46  20 84 CB    JSR WriteToPPUString
+  338  06:CC55  20 93 CB    JSR WriteToPPUString
   339                     
-  340  06:CC49            .incY:
+  340  06:CC58            .incY:
   341                       
-  342  06:CC49  C8          INY
-  343  06:CC4A  C0 20       CPY #$20
-  344  06:CC4C  D0 DD       BNE .loop
+  342  06:CC58  C8          INY
+  343  06:CC59  C0 20       CPY #$20
+  344  06:CC5B  D0 DD       BNE .loop
   345                     
-  346  06:CC4E  0E 00 00    ASL temp1     ;get carry out, if we have one
+  346  06:CC5D  0E 00 00    ASL temp1     ;get carry out, if we have one
   347                     
-  348  06:CC51  60          RTS
+  348  06:CC60  60          RTS
   349                       
-  350  06:CC52            FadeInPalettes:
+  350  06:CC61            FadeInPalettes:
   351                     
   352                     ;;need to be able to store off a target palette first
   353                     ;;we can use the palette copy we make during the game mode change as the target
-  354  06:CC52  60          RTS
+  354  06:CC61  60          RTS
   355                     
-  356  06:CC53            NameTableMemList:
-  357  06:CC53  00 20       .word $2000, $2400, $2800, $2C00
-       06:CC55  00 24     
-       06:CC57  00 28     
-       06:CC59  00 2C     
-  358  06:CC5B            PalettesMemList:
-  359  06:CC5B  00 3F       .word $3F00, $3F04, $3F08, $3F0C
-       06:CC5D  04 3F     
-       06:CC5F  08 3F     
-       06:CC61  0C 3F     
-  360  06:CC63  10 3F       .word $3F10, $3F14, $3F18, $3F1C  
-       06:CC65  14 3F     
-       06:CC67  18 3F     
-       06:CC69  1C 3F     
+  356  06:CC62            NameTableMemList:
+  357  06:CC62  00 20       .word $2000, $2400, $2800, $2C00
+       06:CC64  00 24     
+       06:CC66  00 28     
+       06:CC68  00 2C     
+  358  06:CC6A            PalettesMemList:
+  359  06:CC6A  00 3F       .word $3F00, $3F04, $3F08, $3F0C
+       06:CC6C  04 3F     
+       06:CC6E  08 3F     
+       06:CC70  0C 3F     
+  360  06:CC72  10 3F       .word $3F10, $3F14, $3F18, $3F1C  
+       06:CC74  14 3F     
+       06:CC76  18 3F     
+       06:CC78  1C 3F     
   361                       
   362           0024      BLANK_TILE = $24
 #[1]   Picross.asm
@@ -3379,9 +3395,9 @@
     3           00C0      CHRBANK2 = $C0
     4           00E0      PRGBANK = $E0
     5                     
-    6  06:CC6B            ResetMapper:
-    7  06:CC6B  EE 6B CC    inc ResetMapper
-    8  06:CC6E  60          RTS
+    6  06:CC7A            ResetMapper:
+    7  06:CC7A  EE 7A CC    inc ResetMapper
+    8  06:CC7D  60          RTS
     9                       
    10                     ;;now, set up the controls for the mapper
    11                     ;;4bit0
@@ -3395,305 +3411,305 @@
    19                     ;;|                         3: fix last bank at $C000 and switch 16 KB bank at $8000)
    20                     ;;+----- CHR ROM bank mode (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
    21                        
-   22  06:CC6F            SetMapperControls:
+   22  06:CC7E            SetMapperControls:
    23                       ;;A = controls
-   24  06:CC6F  AA          TAX
-   25  06:CC70  A9 80       LDA #MAPPERCONTROL
-   26  06:CC72  8D A4 00    STA mapper_address+1
-   27  06:CC75  8A          TXA
-   28  06:CC76  20 9B CC    JSR SendMapperCommand
-   29  06:CC79  60          RTS
+   24  06:CC7E  AA          TAX
+   25  06:CC7F  A9 80       LDA #MAPPERCONTROL
+   26  06:CC81  8D A4 00    STA mapper_address+1
+   27  06:CC84  8A          TXA
+   28  06:CC85  20 AA CC    JSR SendMapperCommand
+   29  06:CC88  60          RTS
    30                     
-   31  06:CC7A            LoadPRGBank:
+   31  06:CC89            LoadPRGBank:
    32                     
    33                             ;;A is the desired PRG number
-   34  06:CC7A  AA                TAX
-   35  06:CC7B  A9 E0             LDA #PRGBANK
-   36  06:CC7D  8D A4 00          STA mapper_address+1
-   37  06:CC80  8A                TXA
-   38  06:CC81  20 9B CC          JSR SendMapperCommand
-   39  06:CC84  60                RTS
+   34  06:CC89  AA                TAX
+   35  06:CC8A  A9 E0             LDA #PRGBANK
+   36  06:CC8C  8D A4 00          STA mapper_address+1
+   37  06:CC8F  8A                TXA
+   38  06:CC90  20 AA CC          JSR SendMapperCommand
+   39  06:CC93  60                RTS
    40                             
-   41  06:CC85            LoadCHRBankA:
+   41  06:CC94            LoadCHRBankA:
    42                             ;;A is the desired CHR bank
-   43  06:CC85  AA                TAX
-   44  06:CC86  A9 A0             LDA #CHRBANK1
-   45  06:CC88  8D A4 00          STA mapper_address+1
-   46  06:CC8B  8A                TXA
-   47  06:CC8C  20 9B CC          JSR SendMapperCommand
-   48  06:CC8F  60                RTS
+   43  06:CC94  AA                TAX
+   44  06:CC95  A9 A0             LDA #CHRBANK1
+   45  06:CC97  8D A4 00          STA mapper_address+1
+   46  06:CC9A  8A                TXA
+   47  06:CC9B  20 AA CC          JSR SendMapperCommand
+   48  06:CC9E  60                RTS
    49                             
-   50  06:CC90            LoadCHRBankB:
+   50  06:CC9F            LoadCHRBankB:
    51                             ;;A is the desired CHR bank
-   52  06:CC90  AA                TAX
-   53  06:CC91  A9 C0             LDA #CHRBANK2
-   54  06:CC93  8D A4 00          STA mapper_address+1
-   55  06:CC96  8A                TXA
-   56  06:CC97  20 9B CC          JSR SendMapperCommand
-   57  06:CC9A  60                RTS
+   52  06:CC9F  AA                TAX
+   53  06:CCA0  A9 C0             LDA #CHRBANK2
+   54  06:CCA2  8D A4 00          STA mapper_address+1
+   55  06:CCA5  8A                TXA
+   56  06:CCA6  20 AA CC          JSR SendMapperCommand
+   57  06:CCA9  60                RTS
    58                             
-   59  06:CC9B            SendMapperCommand:
+   59  06:CCAA            SendMapperCommand:
    60                     
-   61  06:CC9B  A0 00             LDY #$00
+   61  06:CCAA  A0 00             LDY #$00
    62                             
-   63  06:CC9D  91 A3             STA [mapper_address], y
-   64  06:CC9F  4A                LSR A
-   65  06:CCA0  91 A3             STA [mapper_address], y
-   66  06:CCA2  4A                LSR A
-   67  06:CCA3  91 A3             STA [mapper_address], y
-   68  06:CCA5  4A                LSR A 
-   69  06:CCA6  91 A3             STA [mapper_address], y
-   70  06:CCA8  4A                LSR A
-   71  06:CCA9  91 A3             STA [mapper_address], y
+   63  06:CCAC  91 A3             STA [mapper_address], y
+   64  06:CCAE  4A                LSR A
+   65  06:CCAF  91 A3             STA [mapper_address], y
+   66  06:CCB1  4A                LSR A
+   67  06:CCB2  91 A3             STA [mapper_address], y
+   68  06:CCB4  4A                LSR A 
+   69  06:CCB5  91 A3             STA [mapper_address], y
+   70  06:CCB7  4A                LSR A
+   71  06:CCB8  91 A3             STA [mapper_address], y
    72                             
-   73  06:CCAB  60                RTS
+   73  06:CCBA  60                RTS
    74                             
-   75  06:CCAC            ResetBanks:
+   75  06:CCBB            ResetBanks:
    76                     
-   77  06:CCAC  20 6B CC          JSR ResetMapper
-   78  06:CCAF  A9 00             LDA #$00
-   79  06:CCB1  20 7A CC          JSR LoadPRGBank
+   77  06:CCBB  20 7A CC          JSR ResetMapper
+   78  06:CCBE  A9 00             LDA #$00
+   79  06:CCC0  20 89 CC          JSR LoadPRGBank
    80                       
    81                             ;;as a test, load up the initial CHR banks
-   82  06:CCB4  20 6B CC          JSR ResetMapper
-   83  06:CCB7  A9 00             LDA #$00
-   84  06:CCB9  20 85 CC          JSR LoadCHRBankA
-   85  06:CCBC  A9 01             LDA #$01
-   86  06:CCBE  20 90 CC          JSR LoadCHRBankB
-   87  06:CCC1  60                RTS
+   82  06:CCC3  20 7A CC          JSR ResetMapper
+   83  06:CCC6  A9 00             LDA #$00
+   84  06:CCC8  20 94 CC          JSR LoadCHRBankA
+   85  06:CCCB  A9 01             LDA #$01
+   86  06:CCCD  20 9F CC          JSR LoadCHRBankB
+   87  06:CCD0  60                RTS
    88                             
    89                       
 #[1]   Picross.asm
 #[2]   Routines/Game_Routines/ScreenEffects.asm
    96                       .include "Routines/Game_Routines/ScreenEffects.asm"
-    1  06:CCC2            PopulateClues:
+    1  06:CCD1            PopulateClues:
     2                       
-    3  06:CCC2  A0 00       LDY #$00
-    4  06:CCC4  B1 A9       LDA [puzzle_address], y
-    5  06:CCC6  AA          TAX
-    6  06:CCC7  BD 25 D0    LDA PuzzleSizes, x
-    7  06:CCCA  8D 00 00    STA temp1
+    3  06:CCD1  A0 00       LDY #$00
+    4  06:CCD3  B1 A9       LDA [puzzle_address], y
+    5  06:CCD5  AA          TAX
+    6  06:CCD6  BD 34 D0    LDA PuzzleSizes, x
+    7  06:CCD9  8D 00 00    STA temp1
     8                       
-    9  06:CCCD            .getByte:
-   10  06:CCCD  AC B7 00    LDY clueTableIndex
-   11  06:CCD0  B1 AB       LDA [clues_address], y
-   12  06:CCD2  D0 07       BNE .checkNewLine
-   13  06:CCD4  EE B7 00    INC clueTableIndex
-   14  06:CCD7  A9 00       LDA #$00
-   15  06:CCD9  F0 39       BEQ .drawClue
+    9  06:CCDC            .getByte:
+   10  06:CCDC  AC B7 00    LDY clueTableIndex
+   11  06:CCDF  B1 AB       LDA [clues_address], y
+   12  06:CCE1  D0 07       BNE .checkNewLine
+   13  06:CCE3  EE B7 00    INC clueTableIndex
+   14  06:CCE6  A9 00       LDA #$00
+   15  06:CCE8  F0 39       BEQ .drawClue
    16                       ;was 0, set up a draw
-   17  06:CCDB            .checkNewLine
-   18  06:CCDB  C9 FF       CMP #$FF
-   19  06:CCDD  D0 18       BNE .getClue
+   17  06:CCEA            .checkNewLine
+   18  06:CCEA  C9 FF       CMP #$FF
+   19  06:CCEC  D0 18       BNE .getClue
    20                       
    21                       ;;was FF- need to inc stuff
-   22  06:CCDF  EE B7 00    INC clueTableIndex
-   23  06:CCE2  A9 00       LDA #$00
-   24  06:CCE4  8D BE 00    STA clueParity
+   22  06:CCEE  EE B7 00    INC clueTableIndex
+   23  06:CCF1  A9 00       LDA #$00
+   24  06:CCF3  8D BE 00    STA clueParity
    25                       
-   26  06:CCE7  EE B8 00    INC clueLineIndex
-   27  06:CCEA  AD B8 00    LDA clueLineIndex
-   28  06:CCED  CD 00 00    CMP temp1
+   26  06:CCF6  EE B8 00    INC clueLineIndex
+   27  06:CCF9  AD B8 00    LDA clueLineIndex
+   28  06:CCFC  CD 00 00    CMP temp1
    29                       ;CMP #$01
-   30  06:CCF0  F0 28       BEQ .leave    ;carry will be set
+   30  06:CCFF  F0 28       BEQ .leave    ;carry will be set
    31                       
-   32  06:CCF2  20 A3 CD    JSR CreateOffsetFromIndex
+   32  06:CD01  20 B2 CD    JSR CreateOffsetFromIndex
    33                      
-   34  06:CCF5  D0 D6       BNE .getByte
+   34  06:CD04  D0 D6       BNE .getByte
    35                       
-   36  06:CCF7            .getClue:
+   36  06:CD06            .getClue:
    37                       ;;clues go from high nibble to low nibble
-   38  06:CCF7  48          PHA 
-   39  06:CCF8  AD BE 00    LDA clueParity
-   40  06:CCFB  D0 0A       BNE .getSecondClue
-   41  06:CCFD  EE BE 00    INC clueParity
-   42  06:CD00  68          PLA
-   43  06:CD01  4A          LSR A
-   44  06:CD02  4A          LSR A
-   45  06:CD03  4A          LSR A
-   46  06:CD04  4A          LSR A         ;move clue over to lower nibble
-   47  06:CD05  D0 0D       BNE .drawClue
+   38  06:CD06  48          PHA 
+   39  06:CD07  AD BE 00    LDA clueParity
+   40  06:CD0A  D0 0A       BNE .getSecondClue
+   41  06:CD0C  EE BE 00    INC clueParity
+   42  06:CD0F  68          PLA
+   43  06:CD10  4A          LSR A
+   44  06:CD11  4A          LSR A
+   45  06:CD12  4A          LSR A
+   46  06:CD13  4A          LSR A         ;move clue over to lower nibble
+   47  06:CD14  D0 0D       BNE .drawClue
    48                       
-   49  06:CD07            .getSecondClue:
+   49  06:CD16            .getSecondClue:
    50                     
-   51  06:CD07  CE BE 00    DEC clueParity
-   52  06:CD0A  EE B7 00    INC clueTableIndex
-   53  06:CD0D  68          PLA 
-   54  06:CD0E  29 0F       AND #$0F
-   55  06:CD10  D0 02       BNE .drawClue
+   51  06:CD16  CE BE 00    DEC clueParity
+   52  06:CD19  EE B7 00    INC clueTableIndex
+   53  06:CD1C  68          PLA 
+   54  06:CD1D  29 0F       AND #$0F
+   55  06:CD1F  D0 02       BNE .drawClue
    56                       ;;if 0, skip
-   57  06:CD12  F0 B9       BEQ .getByte
+   57  06:CD21  F0 B9       BEQ .getByte
    58                      
-   59  06:CD14            .drawClue:
+   59  06:CD23            .drawClue:
    60                       
-   61  06:CD14  09 40       ORA #$40
-   62  06:CD16  20 1B CD    JSR WriteClueByteToPPUString
-   63  06:CD19  18          CLC
+   61  06:CD23  09 40       ORA #$40
+   62  06:CD25  20 2A CD    JSR WriteClueByteToPPUString
+   63  06:CD28  18          CLC
    64                       
-   65  06:CD1A            .leave:
-   66  06:CD1A  60          RTS
+   65  06:CD29            .leave:
+   66  06:CD29  60          RTS
    67                       
-   68  06:CD1B            WriteClueByteToPPUString:
+   68  06:CD2A            WriteClueByteToPPUString:
    69                     
-   70  06:CD1B  8D 00 00    STA temp1 ;store off the tile value
+   70  06:CD2A  8D 00 00    STA temp1 ;store off the tile value
    71                     
    72                       MACROAddPPUStringEntryRawData clue_draw_address+1, clue_draw_address, #DRAW_HORIZONTAL, #$01
                           
-       06:CD1E  A9 01       LDA #$01
-       06:CD20  8D 21 00    STA PPU_PendingWrite
-       06:CD23  AD B6 00    LDA clue_draw_address+1
-       06:CD26  20 84 CB    JSR WriteToPPUString
-       06:CD29  AD B5 00    LDA clue_draw_address
-       06:CD2C  20 84 CB    JSR WriteToPPUString
-       06:CD2F  A9 00       LDA #DRAW_HORIZONTAL
-       06:CD31  20 84 CB    JSR WriteToPPUString
-       06:CD34  A9 01       LDA #$01 
-       06:CD36  20 84 CB    JSR WriteToPPUString
+       06:CD2D  A9 01       LDA #$01
+       06:CD2F  8D 21 00    STA PPU_PendingWrite
+       06:CD32  AD B6 00    LDA clue_draw_address+1
+       06:CD35  20 93 CB    JSR WriteToPPUString
+       06:CD38  AD B5 00    LDA clue_draw_address
+       06:CD3B  20 93 CB    JSR WriteToPPUString
+       06:CD3E  A9 00       LDA #DRAW_HORIZONTAL
+       06:CD40  20 93 CB    JSR WriteToPPUString
+       06:CD43  A9 01       LDA #$01 
+       06:CD45  20 93 CB    JSR WriteToPPUString
                             
-   73  06:CD39  AD 00 00    LDA temp1
-   74  06:CD3C  20 84 CB    JSR WriteToPPUString
+   73  06:CD48  AD 00 00    LDA temp1
+   74  06:CD4B  20 93 CB    JSR WriteToPPUString
    75                       
    76                       ;;also copy to ... copy
-   77  06:CD3F  AD B5 00    LDA clue_draw_address
-   78  06:CD42  8D AF 00    STA copy_address
-   79  06:CD45  AD B6 00    LDA clue_draw_address+1
-   80  06:CD48  29 0F       AND #$0F
-   81  06:CD4A  09 60       ORA #$60
-   82  06:CD4C  8D B0 00    STA copy_address+1
-   83  06:CD4F  AD 00 00    LDA temp1
-   84  06:CD52  A0 00       LDY #$00
-   85  06:CD54  91 AF       STA [copy_address],y
+   77  06:CD4E  AD B5 00    LDA clue_draw_address
+   78  06:CD51  8D AF 00    STA copy_address
+   79  06:CD54  AD B6 00    LDA clue_draw_address+1
+   80  06:CD57  29 0F       AND #$0F
+   81  06:CD59  09 60       ORA #$60
+   82  06:CD5B  8D B0 00    STA copy_address+1
+   83  06:CD5E  AD 00 00    LDA temp1
+   84  06:CD61  A0 00       LDY #$00
+   85  06:CD63  91 AF       STA [copy_address],y
    86                       
-   87  06:CD56  AD BA 00    LDA clueDrawAdd
-   88  06:CD59  20 80 CD    JSR SubFromClueDrawAddress
+   87  06:CD65  AD BA 00    LDA clueDrawAdd
+   88  06:CD68  20 8F CD    JSR SubFromClueDrawAddress
    89                         
-   90  06:CD5C  60          RTS
+   90  06:CD6B  60          RTS
    91                       
-   92  06:CD5D            ResetClueDrawAddress:
+   92  06:CD6C            ResetClueDrawAddress:
    93                     
    94                       MACROGetPointer clue_start_address, clue_draw_address
                           
-       06:CD5D  AD B3 00          LDA clue_start_address
-       06:CD60  8D B5 00          STA clue_draw_address
-       06:CD63  AD B4 00          LDA clue_start_address+1
-       06:CD66  8D B6 00          STA clue_draw_address+1
+       06:CD6C  AD B3 00          LDA clue_start_address
+       06:CD6F  8D B5 00          STA clue_draw_address
+       06:CD72  AD B4 00          LDA clue_start_address+1
+       06:CD75  8D B6 00          STA clue_draw_address+1
                           
    95                       
-   96  06:CD69  60          RTS
+   96  06:CD78  60          RTS
    97                       
-   98  06:CD6A            AddToClueDrawAddress:
+   98  06:CD79            AddToClueDrawAddress:
    99                     
-  100  06:CD6A  8D 00 00    STA temp1
+  100  06:CD79  8D 00 00    STA temp1
   101                       
-  102  06:CD6D  AD B5 00    LDA clue_draw_address
-  103  06:CD70  18          CLC
-  104  06:CD71  6D 00 00    ADC temp1
-  105  06:CD74  8D B5 00    STA clue_draw_address
-  106  06:CD77  AD B6 00    LDA clue_draw_address+1
-  107  06:CD7A  69 00       ADC #$00
-  108  06:CD7C  8D B6 00    STA clue_draw_address+1
+  102  06:CD7C  AD B5 00    LDA clue_draw_address
+  103  06:CD7F  18          CLC
+  104  06:CD80  6D 00 00    ADC temp1
+  105  06:CD83  8D B5 00    STA clue_draw_address
+  106  06:CD86  AD B6 00    LDA clue_draw_address+1
+  107  06:CD89  69 00       ADC #$00
+  108  06:CD8B  8D B6 00    STA clue_draw_address+1
   109                       
-  110  06:CD7F  60          RTS
+  110  06:CD8E  60          RTS
   111                         
-  112  06:CD80            SubFromClueDrawAddress:
+  112  06:CD8F            SubFromClueDrawAddress:
   113                     
-  114  06:CD80  8D 00 00    STA temp1
+  114  06:CD8F  8D 00 00    STA temp1
   115                       
-  116  06:CD83  AD B5 00    LDA clue_draw_address
-  117  06:CD86  38          SEC
-  118  06:CD87  ED 00 00    SBC temp1
-  119  06:CD8A  8D B5 00    STA clue_draw_address
-  120  06:CD8D  AD B6 00    LDA clue_draw_address+1
-  121  06:CD90  E9 00       SBC #$00
-  122  06:CD92  8D B6 00    STA clue_draw_address+1
+  116  06:CD92  AD B5 00    LDA clue_draw_address
+  117  06:CD95  38          SEC
+  118  06:CD96  ED 00 00    SBC temp1
+  119  06:CD99  8D B5 00    STA clue_draw_address
+  120  06:CD9C  AD B6 00    LDA clue_draw_address+1
+  121  06:CD9F  E9 00       SBC #$00
+  122  06:CDA1  8D B6 00    STA clue_draw_address+1
   123                       
-  124  06:CD95  60          RTS
+  124  06:CDA4  60          RTS
   125                       
-  126  06:CD96            AddToClueDrawAddressHi:
+  126  06:CDA5            AddToClueDrawAddressHi:
   127                     
-  128  06:CD96  8D 00 00    STA temp1
+  128  06:CDA5  8D 00 00    STA temp1
   129                       
-  130  06:CD99  AD B6 00    LDA clue_draw_address+1
-  131  06:CD9C  6D 00 00    ADC temp1
-  132  06:CD9F  8D B6 00    STA clue_draw_address+1
+  130  06:CDA8  AD B6 00    LDA clue_draw_address+1
+  131  06:CDAB  6D 00 00    ADC temp1
+  132  06:CDAE  8D B6 00    STA clue_draw_address+1
   133                       
-  134  06:CDA2  60          RTS
+  134  06:CDB1  60          RTS
   135                       
-  136  06:CDA3            CreateOffsetFromIndex:
+  136  06:CDB2            CreateOffsetFromIndex:
   137                     
   138                       ;;would be this, but we need to be able to go further- so we'll make a doulbe offset
-  139  06:CDA3  AD B8 00    LDA clueLineIndex
-  140  06:CDA6  8D BB 00    STA clueDrawOffset
-  141  06:CDA9  A9 00       LDA #$00
-  142  06:CDAB  8D BC 00    STA clueDrawOffset+1
+  139  06:CDB2  AD B8 00    LDA clueLineIndex
+  140  06:CDB5  8D BB 00    STA clueDrawOffset
+  141  06:CDB8  A9 00       LDA #$00
+  142  06:CDBA  8D BC 00    STA clueDrawOffset+1
   143                       
-  144  06:CDAE  AD B9 00    LDA clueOffsetShift   
-  145  06:CDB1  F0 0E       BEQ .addOffset
+  144  06:CDBD  AD B9 00    LDA clueOffsetShift   
+  145  06:CDC0  F0 0E       BEQ .addOffset
   146                       
-  147  06:CDB3  A2 00       LDX #$00
+  147  06:CDC2  A2 00       LDX #$00
   148                       
-  149  06:CDB5            .loopShift:
-  150  06:CDB5  0E BB 00    ASL clueDrawOffset
-  151  06:CDB8  2E BC 00    ROL clueDrawOffset+1
-  152  06:CDBB  E8          INX
-  153  06:CDBC  EC B9 00    CPX clueOffsetShift
-  154  06:CDBF  D0 F4       BNE .loopShift
+  149  06:CDC4            .loopShift:
+  150  06:CDC4  0E BB 00    ASL clueDrawOffset
+  151  06:CDC7  2E BC 00    ROL clueDrawOffset+1
+  152  06:CDCA  E8          INX
+  153  06:CDCB  EC B9 00    CPX clueOffsetShift
+  154  06:CDCE  D0 F4       BNE .loopShift
   155                       
-  156  06:CDC1            .addOffset:
+  156  06:CDD0            .addOffset:
   157                       
-  158  06:CDC1  20 5D CD    JSR ResetClueDrawAddress
-  159  06:CDC4  AD BB 00    LDA clueDrawOffset
-  160  06:CDC7  20 6A CD    JSR AddToClueDrawAddress 
-  161  06:CDCA  AD BC 00    LDA clueDrawOffset+1
-  162  06:CDCD  20 96 CD    JSR AddToClueDrawAddressHi
+  158  06:CDD0  20 6C CD    JSR ResetClueDrawAddress
+  159  06:CDD3  AD BB 00    LDA clueDrawOffset
+  160  06:CDD6  20 79 CD    JSR AddToClueDrawAddress 
+  161  06:CDD9  AD BC 00    LDA clueDrawOffset+1
+  162  06:CDDC  20 A5 CD    JSR AddToClueDrawAddressHi
   163                       
-  164  06:CDD0  60          RTS  
+  164  06:CDDF  60          RTS  
   165                       
-  166  06:CDD1            ClearPuzzle:
+  166  06:CDE0            ClearPuzzle:
   167                     
   168                       ;we'll assume clue draw address has been set to the top of the 1st nametable
   169                      
   170                       MACROGetLabelPointer ClearLineDefs, table_address
                           
-       06:CDD1  A9 D0             LDA #HIGH(ClearLineDefs)
-       06:CDD3  A2 07             LDX #LOW(ClearLineDefs)
+       06:CDE0  A9 D0             LDA #HIGH(ClearLineDefs)
+       06:CDE2  A2 16             LDX #LOW(ClearLineDefs)
                                   
-       06:CDD5  8E 14 00          STX table_address
-       06:CDD8  8D 15 00          STA table_address+1
+       06:CDE4  8E 14 00          STX table_address
+       06:CDE7  8D 15 00          STA table_address+1
                                   
   171                     
-  172  06:CDDB  AC B8 00    LDY clueLineIndex
-  173  06:CDDE  B1 14       LDA [table_address], y
-  174  06:CDE0  8D 00 00    STA temp1
+  172  06:CDEA  AC B8 00    LDY clueLineIndex
+  173  06:CDED  B1 14       LDA [table_address], y
+  174  06:CDEF  8D 00 00    STA temp1
   175                       MACROAddPPUStringEntryRepeat clue_draw_address+1, clue_draw_address, #DRAW_HORIZONTAL, temp1, #$24
                           
-       06:CDE3  A9 01       LDA #$01
-       06:CDE5  8D 21 00    STA PPU_PendingWrite
-       06:CDE8  AD B6 00    LDA clue_draw_address+1
-       06:CDEB  20 84 CB    JSR WriteToPPUString
-       06:CDEE  AD B5 00    LDA clue_draw_address
-       06:CDF1  20 84 CB    JSR WriteToPPUString
-       06:CDF4  A9 40       LDA #$40
-       06:CDF6  09 00       ORA #DRAW_HORIZONTAL
-       06:CDF8  0D 00 00    ORA temp1
-       06:CDFB  20 84 CB    JSR WriteToPPUString
-       06:CDFE  A9 24       LDA #$24
-       06:CE00  20 84 CB    JSR WriteToPPUString
+       06:CDF2  A9 01       LDA #$01
+       06:CDF4  8D 21 00    STA PPU_PendingWrite
+       06:CDF7  AD B6 00    LDA clue_draw_address+1
+       06:CDFA  20 93 CB    JSR WriteToPPUString
+       06:CDFD  AD B5 00    LDA clue_draw_address
+       06:CE00  20 93 CB    JSR WriteToPPUString
+       06:CE03  A9 40       LDA #$40
+       06:CE05  09 00       ORA #DRAW_HORIZONTAL
+       06:CE07  0D 00 00    ORA temp1
+       06:CE0A  20 93 CB    JSR WriteToPPUString
+       06:CE0D  A9 24       LDA #$24
+       06:CE0F  20 93 CB    JSR WriteToPPUString
                             
   176                       ;;no need to load anything else
   177                       
-  178  06:CE03  AD B5 00    LDA clue_draw_address
-  179  06:CE06  18          CLC
-  180  06:CE07  69 20       ADC #32
-  181  06:CE09  8D B5 00    STA clue_draw_address
-  182  06:CE0C  AD B6 00    LDA clue_draw_address+1
-  183  06:CE0F  69 00       ADC #$00
-  184  06:CE11  8D B6 00    STA clue_draw_address+1
+  178  06:CE12  AD B5 00    LDA clue_draw_address
+  179  06:CE15  18          CLC
+  180  06:CE16  69 20       ADC #32
+  181  06:CE18  8D B5 00    STA clue_draw_address
+  182  06:CE1B  AD B6 00    LDA clue_draw_address+1
+  183  06:CE1E  69 00       ADC #$00
+  184  06:CE20  8D B6 00    STA clue_draw_address+1
   185                       
-  186  06:CE14  EE B8 00    INC clueLineIndex
-  187  06:CE17  60          RTS
+  186  06:CE23  EE B8 00    INC clueLineIndex
+  187  06:CE26  60          RTS
   188                       
-  189  06:CE18            LoadPauseScreen:
+  189  06:CE27            LoadPauseScreen:
   190                     
   191                     ;;use clue indexes again
   192                     ;;we want to draw one line at a time
@@ -3710,325 +3726,325 @@
   203                     
   204                       MACROAddPPUStringEntryRawData pause_draw_address+1, pause_draw_address, #DRAW_HORIZONTAL, #13
                           
-       06:CE18  A9 01       LDA #$01
-       06:CE1A  8D 21 00    STA PPU_PendingWrite
-       06:CE1D  AD B2 00    LDA pause_draw_address+1
-       06:CE20  20 84 CB    JSR WriteToPPUString
-       06:CE23  AD B1 00    LDA pause_draw_address
-       06:CE26  20 84 CB    JSR WriteToPPUString
-       06:CE29  A9 00       LDA #DRAW_HORIZONTAL
-       06:CE2B  20 84 CB    JSR WriteToPPUString
-       06:CE2E  A9 0D       LDA #13 
-       06:CE30  20 84 CB    JSR WriteToPPUString
+       06:CE27  A9 01       LDA #$01
+       06:CE29  8D 21 00    STA PPU_PendingWrite
+       06:CE2C  AD B2 00    LDA pause_draw_address+1
+       06:CE2F  20 93 CB    JSR WriteToPPUString
+       06:CE32  AD B1 00    LDA pause_draw_address
+       06:CE35  20 93 CB    JSR WriteToPPUString
+       06:CE38  A9 00       LDA #DRAW_HORIZONTAL
+       06:CE3A  20 93 CB    JSR WriteToPPUString
+       06:CE3D  A9 0D       LDA #13 
+       06:CE3F  20 93 CB    JSR WriteToPPUString
                             
   205                     
-  206  06:CE33  A2 00       LDX #$00
-  207  06:CE35  AC B8 00    LDY clueLineIndex
-  208  06:CE38            .loop:
+  206  06:CE42  A2 00       LDX #$00
+  207  06:CE44  AC B8 00    LDY clueLineIndex
+  208  06:CE47            .loop:
   209                      
-  210  06:CE38  8A          TXA
-  211  06:CE39  48          PHA
-  212  06:CE3A  B1 AD       LDA [pause_address],y
-  213  06:CE3C  20 84 CB    JSR WriteToPPUString
-  214  06:CE3F  68          PLA
-  215  06:CE40  AA          TAX
-  216  06:CE41  C8          INY
-  217  06:CE42  E8          INX 
-  218  06:CE43  E0 0D       CPX #13
-  219  06:CE45  D0 F1       BNE .loop
+  210  06:CE47  8A          TXA
+  211  06:CE48  48          PHA
+  212  06:CE49  B1 AD       LDA [pause_address],y
+  213  06:CE4B  20 93 CB    JSR WriteToPPUString
+  214  06:CE4E  68          PLA
+  215  06:CE4F  AA          TAX
+  216  06:CE50  C8          INY
+  217  06:CE51  E8          INX 
+  218  06:CE52  E0 0D       CPX #13
+  219  06:CE54  D0 F1       BNE .loop
   220                       
-  221  06:CE47  8C B8 00    STY clueLineIndex
+  221  06:CE56  8C B8 00    STY clueLineIndex
   222                       
-  223  06:CE4A  AD B1 00    LDA pause_draw_address
-  224  06:CE4D  18          CLC
-  225  06:CE4E  69 20       ADC #$20
-  226  06:CE50  8D B1 00    STA pause_draw_address
-  227  06:CE53  AD B2 00    LDA pause_draw_address+1
-  228  06:CE56  69 00       ADC #$00
-  229  06:CE58  8D B2 00    STA pause_draw_address+1
+  223  06:CE59  AD B1 00    LDA pause_draw_address
+  224  06:CE5C  18          CLC
+  225  06:CE5D  69 20       ADC #$20
+  226  06:CE5F  8D B1 00    STA pause_draw_address
+  227  06:CE62  AD B2 00    LDA pause_draw_address+1
+  228  06:CE65  69 00       ADC #$00
+  229  06:CE67  8D B2 00    STA pause_draw_address+1
   230                       
-  231  06:CE5B  EE B9 00    INC clueOffsetShift
-  232  06:CE5E  60          RTS
+  231  06:CE6A  EE B9 00    INC clueOffsetShift
+  232  06:CE6D  60          RTS
   233                       
   234                       
   235                     
   236                     
-  237  06:CE5F            ClearPauseScreen:  
+  237  06:CE6E            ClearPauseScreen:  
   238                     
   239                       MACROAddPPUStringEntryRawData pause_draw_address+1, pause_draw_address, #DRAW_HORIZONTAL, #13
                           
-       06:CE5F  A9 01       LDA #$01
-       06:CE61  8D 21 00    STA PPU_PendingWrite
-       06:CE64  AD B2 00    LDA pause_draw_address+1
-       06:CE67  20 84 CB    JSR WriteToPPUString
-       06:CE6A  AD B1 00    LDA pause_draw_address
-       06:CE6D  20 84 CB    JSR WriteToPPUString
-       06:CE70  A9 00       LDA #DRAW_HORIZONTAL
-       06:CE72  20 84 CB    JSR WriteToPPUString
-       06:CE75  A9 0D       LDA #13 
-       06:CE77  20 84 CB    JSR WriteToPPUString
+       06:CE6E  A9 01       LDA #$01
+       06:CE70  8D 21 00    STA PPU_PendingWrite
+       06:CE73  AD B2 00    LDA pause_draw_address+1
+       06:CE76  20 93 CB    JSR WriteToPPUString
+       06:CE79  AD B1 00    LDA pause_draw_address
+       06:CE7C  20 93 CB    JSR WriteToPPUString
+       06:CE7F  A9 00       LDA #DRAW_HORIZONTAL
+       06:CE81  20 93 CB    JSR WriteToPPUString
+       06:CE84  A9 0D       LDA #13 
+       06:CE86  20 93 CB    JSR WriteToPPUString
                             
   240                     
-  241  06:CE7A  A2 00       LDX #$00
-  242  06:CE7C  A0 00       LDY #$00
-  243  06:CE7E            .loop:
+  241  06:CE89  A2 00       LDX #$00
+  242  06:CE8B  A0 00       LDY #$00
+  243  06:CE8D            .loop:
   244                      
-  245  06:CE7E  8A          TXA
-  246  06:CE7F  48          PHA
-  247  06:CE80  B1 AD       LDA [pause_address],y
-  248  06:CE82  20 84 CB    JSR WriteToPPUString
-  249  06:CE85  68          PLA
-  250  06:CE86  AA          TAX
-  251  06:CE87  C8          INY
-  252  06:CE88  E8          INX 
-  253  06:CE89  E0 0D       CPX #13
-  254  06:CE8B  D0 F1       BNE .loop
+  245  06:CE8D  8A          TXA
+  246  06:CE8E  48          PHA
+  247  06:CE8F  B1 AD       LDA [pause_address],y
+  248  06:CE91  20 93 CB    JSR WriteToPPUString
+  249  06:CE94  68          PLA
+  250  06:CE95  AA          TAX
+  251  06:CE96  C8          INY
+  252  06:CE97  E8          INX 
+  253  06:CE98  E0 0D       CPX #13
+  254  06:CE9A  D0 F1       BNE .loop
   255                       
   256                       
-  257  06:CE8D  AD B1 00    LDA pause_draw_address
-  258  06:CE90  18          CLC
-  259  06:CE91  69 20       ADC #$20
-  260  06:CE93  8D B1 00    STA pause_draw_address
-  261  06:CE96  AD B2 00    LDA pause_draw_address+1
-  262  06:CE99  69 00       ADC #$00
-  263  06:CE9B  8D B2 00    STA pause_draw_address+1
+  257  06:CE9C  AD B1 00    LDA pause_draw_address
+  258  06:CE9F  18          CLC
+  259  06:CEA0  69 20       ADC #$20
+  260  06:CEA2  8D B1 00    STA pause_draw_address
+  261  06:CEA5  AD B2 00    LDA pause_draw_address+1
+  262  06:CEA8  69 00       ADC #$00
+  263  06:CEAA  8D B2 00    STA pause_draw_address+1
   264                       
-  265  06:CE9E  AD AD 00    LDA pause_address
-  266  06:CEA1  18          CLC
-  267  06:CEA2  69 20       ADC #$20
-  268  06:CEA4  8D AD 00    STA pause_address
-  269  06:CEA7  AD AE 00    LDA pause_address+1
-  270  06:CEAA  69 00       ADC #$00
-  271  06:CEAC  8D AE 00    STA pause_address+1
+  265  06:CEAD  AD AD 00    LDA pause_address
+  266  06:CEB0  18          CLC
+  267  06:CEB1  69 20       ADC #$20
+  268  06:CEB3  8D AD 00    STA pause_address
+  269  06:CEB6  AD AE 00    LDA pause_address+1
+  270  06:CEB9  69 00       ADC #$00
+  271  06:CEBB  8D AE 00    STA pause_address+1
   272                       
-  273  06:CEAF  EE B9 00    INC clueOffsetShift
-  274  06:CEB2  60         RTS
-  275  06:CEB3            DrawImage:
+  273  06:CEBE  EE B9 00    INC clueOffsetShift
+  274  06:CEC1  60         RTS
+  275  06:CEC2            DrawImage:
   276                     
   277                       ;;we have clueTableIndex, which should be at the image bytes now
   278                       ;;clue line index will keep track of our place in a byte
   279                        
-  280  06:CEB3  A9 00       LDA #$00
-  281  06:CEB5  8D 00 00    STA temp1
-  282  06:CEB8  8D 01 00    STA temp2
-  283  06:CEBB  8D 02 00    STA temp3
-  284  06:CEBE  8D 03 00    STA temp4
-  285  06:CEC1  8D 05 00    STA temp6
+  280  06:CEC2  A9 00       LDA #$00
+  281  06:CEC4  8D 00 00    STA temp1
+  282  06:CEC7  8D 01 00    STA temp2
+  283  06:CECA  8D 02 00    STA temp3
+  284  06:CECD  8D 03 00    STA temp4
+  285  06:CED0  8D 05 00    STA temp6
   286                       
-  287  06:CEC4  A9 04       LDA #$04
-  288  06:CEC6  8D 04 00    STA temp5
+  287  06:CED3  A9 04       LDA #$04
+  288  06:CED5  8D 04 00    STA temp5
   289                       
-  290  06:CEC9  A0 00       LDY #$00
-  291  06:CECB  B1 A9       LDA [puzzle_address], y
-  292  06:CECD  AA          TAX
-  293  06:CECE  BD 25 D0    LDA PuzzleSizes, x
-  294  06:CED1  8D 06 00    STA temp7
-  295  06:CED4  BD 28 D0    LDA PuzzleImageSizes, x
-  296  06:CED7  8D 07 00    STA temp8
-  297  06:CEDA  4A          LSR A
-  298  06:CEDB  4A          LSR A
-  299  06:CEDC  8D 09 00    STA tempy
-  300  06:CEDF  AD 07 00    LDA temp8
-  301  06:CEE2  29 03       AND #$03
-  302  06:CEE4  F0 03       BEQ .skipAdd1
-  303  06:CEE6  EE 09 00    INC tempy  
-  304  06:CEE9            .skipAdd1:
-  305  06:CEE9  BD 2B D0    LDA ImageDrawWrapOffsets, x
-  306  06:CEEC  8D 08 00    STA tempx
+  290  06:CED8  A0 00       LDY #$00
+  291  06:CEDA  B1 A9       LDA [puzzle_address], y
+  292  06:CEDC  AA          TAX
+  293  06:CEDD  BD 34 D0    LDA PuzzleSizes, x
+  294  06:CEE0  8D 06 00    STA temp7
+  295  06:CEE3  BD 37 D0    LDA PuzzleImageSizes, x
+  296  06:CEE6  8D 07 00    STA temp8
+  297  06:CEE9  4A          LSR A
+  298  06:CEEA  4A          LSR A
+  299  06:CEEB  8D 09 00    STA tempy
+  300  06:CEEE  AD 07 00    LDA temp8
+  301  06:CEF1  29 03       AND #$03
+  302  06:CEF3  F0 03       BEQ .skipAdd1
+  303  06:CEF5  EE 09 00    INC tempy  
+  304  06:CEF8            .skipAdd1:
+  305  06:CEF8  BD 3A D0    LDA ImageDrawWrapOffsets, x
+  306  06:CEFB  8D 08 00    STA tempx
   307                       
-  308  06:CEEF  AC B7 00    LDY clueTableIndex
-  309  06:CEF2  B1 AB       LDA [clues_address], y
+  308  06:CEFE  AC B7 00    LDY clueTableIndex
+  309  06:CF01  B1 AB       LDA [clues_address], y
   310                     
-  311  06:CEF4  0A          ASL A
-  312  06:CEF5  2E 00 00    ROL temp1
-  313  06:CEF8  0A          ASL A
-  314  06:CEF9  2E 00 00    ROL temp1
-  315  06:CEFC  0A          ASL A
-  316  06:CEFD  2E 01 00    ROL temp2
-  317  06:CF00  0A          ASL A
-  318  06:CF01  2E 01 00    ROL temp2
-  319  06:CF04  0A          ASL A
-  320  06:CF05  2E 02 00    ROL temp3
-  321  06:CF08  0A          ASL A
-  322  06:CF09  2E 02 00    ROL temp3
-  323  06:CF0C  0A          ASL A
-  324  06:CF0D  2E 03 00    ROL temp4
-  325  06:CF10  0A          ASL A
-  326  06:CF11  2E 03 00    ROL temp4
+  311  06:CF03  0A          ASL A
+  312  06:CF04  2E 00 00    ROL temp1
+  313  06:CF07  0A          ASL A
+  314  06:CF08  2E 00 00    ROL temp1
+  315  06:CF0B  0A          ASL A
+  316  06:CF0C  2E 01 00    ROL temp2
+  317  06:CF0F  0A          ASL A
+  318  06:CF10  2E 01 00    ROL temp2
+  319  06:CF13  0A          ASL A
+  320  06:CF14  2E 02 00    ROL temp3
+  321  06:CF17  0A          ASL A
+  322  06:CF18  2E 02 00    ROL temp3
+  323  06:CF1B  0A          ASL A
+  324  06:CF1C  2E 03 00    ROL temp4
+  325  06:CF1F  0A          ASL A
+  326  06:CF20  2E 03 00    ROL temp4
   327                       
   328                     
-  329  06:CF14  A2 00       LDX #$00
-  330  06:CF16            .moveUpTiles:
-  331  06:CF16  BD 00 00    LDA temp1, x
-  332  06:CF19  09 24       ORA #$24
-  333  06:CF1B  9D 00 00    STA temp1, x
-  334  06:CF1E  E8          INX
-  335  06:CF1F  E0 04       CPX #$04
-  336  06:CF21  D0 F3       BNE .moveUpTiles
+  329  06:CF23  A2 00       LDX #$00
+  330  06:CF25            .moveUpTiles:
+  331  06:CF25  BD 00 00    LDA temp1, x
+  332  06:CF28  09 24       ORA #$24
+  333  06:CF2A  9D 00 00    STA temp1, x
+  334  06:CF2D  E8          INX
+  335  06:CF2E  E0 04       CPX #$04
+  336  06:CF30  D0 F3       BNE .moveUpTiles
   337                       
   338                       
-  339  06:CF23  AD B9 00    LDA clueOffsetShift
-  340  06:CF26  18          CLC
-  341  06:CF27  69 04       ADC #$04
+  339  06:CF32  AD B9 00    LDA clueOffsetShift
+  340  06:CF35  18          CLC
+  341  06:CF36  69 04       ADC #$04
   342                     
-  343  06:CF29  8D B9 00    STA clueOffsetShift
+  343  06:CF38  8D B9 00    STA clueOffsetShift
   344                       ;;clue offset shift + 4, check if we went over puzle row length
-  345  06:CF2C  38          SEC
-  346  06:CF2D  ED 06 00    SBC temp7 ;;subtract 15
-  347  06:CF30  90 12       BCC .makeStrings
-  348  06:CF32  F0 10       BEQ .makeStrings
+  345  06:CF3B  38          SEC
+  346  06:CF3C  ED 06 00    SBC temp7 ;;subtract 15
+  347  06:CF3F  90 12       BCC .makeStrings
+  348  06:CF41  F0 10       BEQ .makeStrings
   349                       
-  350  06:CF34  8D B9 00    STA clueOffsetShift ;loop offset over
-  351  06:CF37  8D 05 00    STA temp6 ; length of second string
-  352  06:CF3A  AD 04 00    LDA temp5
-  353  06:CF3D  38          SEC
-  354  06:CF3E  ED 05 00    SBC temp6 
-  355  06:CF41  8D 04 00    STA temp5 ;length of first string 
+  350  06:CF43  8D B9 00    STA clueOffsetShift ;loop offset over
+  351  06:CF46  8D 05 00    STA temp6 ; length of second string
+  352  06:CF49  AD 04 00    LDA temp5
+  353  06:CF4C  38          SEC
+  354  06:CF4D  ED 05 00    SBC temp6 
+  355  06:CF50  8D 04 00    STA temp5 ;length of first string 
   356                       
-  357  06:CF44            .makeStrings:
+  357  06:CF53            .makeStrings:
   358                       
-  359  06:CF44  A2 00       LDX #$00
+  359  06:CF53  A2 00       LDX #$00
   360                       
-  361  06:CF46  AD 04 00    LDA temp5
-  362  06:CF49  F0 51       BEQ .makeSecondString
-  363  06:CF4B  8A          TXA
-  364  06:CF4C  48          PHA
+  361  06:CF55  AD 04 00    LDA temp5
+  362  06:CF58  F0 51       BEQ .makeSecondString
+  363  06:CF5A  8A          TXA
+  364  06:CF5B  48          PHA
   365                       MACROAddPPUStringEntryRawData clue_draw_address+1, clue_draw_address, #DRAW_HORIZONTAL, temp5
                           
-       06:CF4D  A9 01       LDA #$01
-       06:CF4F  8D 21 00    STA PPU_PendingWrite
-       06:CF52  AD B6 00    LDA clue_draw_address+1
-       06:CF55  20 84 CB    JSR WriteToPPUString
-       06:CF58  AD B5 00    LDA clue_draw_address
-       06:CF5B  20 84 CB    JSR WriteToPPUString
-       06:CF5E  A9 00       LDA #DRAW_HORIZONTAL
-       06:CF60  20 84 CB    JSR WriteToPPUString
-       06:CF63  AD 04 00    LDA temp5 
-       06:CF66  20 84 CB    JSR WriteToPPUString
+       06:CF5C  A9 01       LDA #$01
+       06:CF5E  8D 21 00    STA PPU_PendingWrite
+       06:CF61  AD B6 00    LDA clue_draw_address+1
+       06:CF64  20 93 CB    JSR WriteToPPUString
+       06:CF67  AD B5 00    LDA clue_draw_address
+       06:CF6A  20 93 CB    JSR WriteToPPUString
+       06:CF6D  A9 00       LDA #DRAW_HORIZONTAL
+       06:CF6F  20 93 CB    JSR WriteToPPUString
+       06:CF72  AD 04 00    LDA temp5 
+       06:CF75  20 93 CB    JSR WriteToPPUString
                             
-  366  06:CF69  68          PLA
-  367  06:CF6A  AA          TAX
+  366  06:CF78  68          PLA
+  367  06:CF79  AA          TAX
   368                       
-  369  06:CF6B            .firstStringLoop:
+  369  06:CF7A            .firstStringLoop:
   370                       
-  371  06:CF6B  8A          TXA 
-  372  06:CF6C  48          PHA
-  373  06:CF6D  BD 00 00    LDA temp1, x
-  374  06:CF70  20 84 CB    JSR WriteToPPUString
+  371  06:CF7A  8A          TXA 
+  372  06:CF7B  48          PHA
+  373  06:CF7C  BD 00 00    LDA temp1, x
+  374  06:CF7F  20 93 CB    JSR WriteToPPUString
   375                       
-  376  06:CF73  EE B8 00    INC clueLineIndex
-  377  06:CF76  AD B8 00    LDA clueLineIndex
-  378  06:CF79  CD 07 00    CMP temp8
-  379  06:CF7C  D0 04       BNE .continueLoop
-  380  06:CF7E  68          PLA 
-  381  06:CF7F  4C 03 D0    JMP .leave
+  376  06:CF82  EE B8 00    INC clueLineIndex
+  377  06:CF85  AD B8 00    LDA clueLineIndex
+  378  06:CF88  CD 07 00    CMP temp8
+  379  06:CF8B  D0 04       BNE .continueLoop
+  380  06:CF8D  68          PLA 
+  381  06:CF8E  4C 12 D0    JMP .leave
   382                       
-  383  06:CF82            .continueLoop:
-  384  06:CF82  68          PLA
-  385  06:CF83  AA          TAX
-  386  06:CF84  E8          INX
-  387  06:CF85  EC 04 00    CPX temp5
-  388  06:CF88  D0 E1       BNE .firstStringLoop
+  383  06:CF91            .continueLoop:
+  384  06:CF91  68          PLA
+  385  06:CF92  AA          TAX
+  386  06:CF93  E8          INX
+  387  06:CF94  EC 04 00    CPX temp5
+  388  06:CF97  D0 E1       BNE .firstStringLoop
   389                       
-  390  06:CF8A  AD B5 00    LDA clue_draw_address
-  391  06:CF8D  18          CLC
-  392  06:CF8E  6D 04 00    ADC temp5
-  393  06:CF91  8D B5 00    STA clue_draw_address
-  394  06:CF94  AD B6 00    LDA clue_draw_address+1
-  395  06:CF97  69 00       ADC #$00
-  396  06:CF99  8D B6 00    STA clue_draw_address+1
+  390  06:CF99  AD B5 00    LDA clue_draw_address
+  391  06:CF9C  18          CLC
+  392  06:CF9D  6D 04 00    ADC temp5
+  393  06:CFA0  8D B5 00    STA clue_draw_address
+  394  06:CFA3  AD B6 00    LDA clue_draw_address+1
+  395  06:CFA6  69 00       ADC #$00
+  396  06:CFA8  8D B6 00    STA clue_draw_address+1
   397                       
-  398  06:CF9C            .makeSecondString:
+  398  06:CFAB            .makeSecondString:
   399                     
-  400  06:CF9C  AD 05 00    LDA temp6
-  401  06:CF9F  F0 62       BEQ .leave
+  400  06:CFAB  AD 05 00    LDA temp6
+  401  06:CFAE  F0 62       BEQ .leave
   402                       
   403                       ;;loop draw address to next line
-  404  06:CFA1  AD B5 00    LDA clue_draw_address
-  405  06:CFA4  18          CLC
-  406  06:CFA5  6D 08 00    ADC tempx
-  407  06:CFA8  8D B5 00    STA clue_draw_address
-  408  06:CFAB  AD B6 00    LDA clue_draw_address+1
-  409  06:CFAE  69 00       ADC #$00
-  410  06:CFB0  8D B6 00    STA clue_draw_address+1
-  411  06:CFB3  8A          TXA
-  412  06:CFB4  48          PHA
+  404  06:CFB0  AD B5 00    LDA clue_draw_address
+  405  06:CFB3  18          CLC
+  406  06:CFB4  6D 08 00    ADC tempx
+  407  06:CFB7  8D B5 00    STA clue_draw_address
+  408  06:CFBA  AD B6 00    LDA clue_draw_address+1
+  409  06:CFBD  69 00       ADC #$00
+  410  06:CFBF  8D B6 00    STA clue_draw_address+1
+  411  06:CFC2  8A          TXA
+  412  06:CFC3  48          PHA
   413                       MACROAddPPUStringEntryRawData clue_draw_address+1, clue_draw_address, #DRAW_HORIZONTAL, temp6
                           
-       06:CFB5  A9 01       LDA #$01
-       06:CFB7  8D 21 00    STA PPU_PendingWrite
-       06:CFBA  AD B6 00    LDA clue_draw_address+1
-       06:CFBD  20 84 CB    JSR WriteToPPUString
-       06:CFC0  AD B5 00    LDA clue_draw_address
-       06:CFC3  20 84 CB    JSR WriteToPPUString
-       06:CFC6  A9 00       LDA #DRAW_HORIZONTAL
-       06:CFC8  20 84 CB    JSR WriteToPPUString
-       06:CFCB  AD 05 00    LDA temp6 
-       06:CFCE  20 84 CB    JSR WriteToPPUString
+       06:CFC4  A9 01       LDA #$01
+       06:CFC6  8D 21 00    STA PPU_PendingWrite
+       06:CFC9  AD B6 00    LDA clue_draw_address+1
+       06:CFCC  20 93 CB    JSR WriteToPPUString
+       06:CFCF  AD B5 00    LDA clue_draw_address
+       06:CFD2  20 93 CB    JSR WriteToPPUString
+       06:CFD5  A9 00       LDA #DRAW_HORIZONTAL
+       06:CFD7  20 93 CB    JSR WriteToPPUString
+       06:CFDA  AD 05 00    LDA temp6 
+       06:CFDD  20 93 CB    JSR WriteToPPUString
                             
-  414  06:CFD1  68          PLA 
-  415  06:CFD2  AA          TAX
+  414  06:CFE0  68          PLA 
+  415  06:CFE1  AA          TAX
   416                       
-  417  06:CFD3            .secondStringLoop:
+  417  06:CFE2            .secondStringLoop:
   418                     
-  419  06:CFD3  8A          TXA
-  420  06:CFD4  48          PHA 
-  421  06:CFD5  BD 00 00    LDA temp1, x
-  422  06:CFD8  20 84 CB    JSR WriteToPPUString
+  419  06:CFE2  8A          TXA
+  420  06:CFE3  48          PHA 
+  421  06:CFE4  BD 00 00    LDA temp1, x
+  422  06:CFE7  20 93 CB    JSR WriteToPPUString
   423                       
-  424  06:CFDB  EE B8 00    INC clueLineIndex
-  425  06:CFDE  AD B8 00    LDA clueLineIndex
-  426  06:CFE1  CD 07 00    CMP temp8
-  427  06:CFE4  D0 04       BNE .continueSecondLoop
+  424  06:CFEA  EE B8 00    INC clueLineIndex
+  425  06:CFED  AD B8 00    LDA clueLineIndex
+  426  06:CFF0  CD 07 00    CMP temp8
+  427  06:CFF3  D0 04       BNE .continueSecondLoop
   428                       
-  429  06:CFE6  68          PLA 
-  430  06:CFE7  4C 03 D0    JMP .leave
+  429  06:CFF5  68          PLA 
+  430  06:CFF6  4C 12 D0    JMP .leave
   431                       
-  432  06:CFEA            .continueSecondLoop:
-  433  06:CFEA  68          PLA
-  434  06:CFEB  AA          TAX
-  435  06:CFEC  E8          INX
-  436  06:CFED  E0 04       CPX #$04
-  437  06:CFEF  D0 E2       BNE .secondStringLoop
+  432  06:CFF9            .continueSecondLoop:
+  433  06:CFF9  68          PLA
+  434  06:CFFA  AA          TAX
+  435  06:CFFB  E8          INX
+  436  06:CFFC  E0 04       CPX #$04
+  437  06:CFFE  D0 E2       BNE .secondStringLoop
   438                       
-  439  06:CFF1  AD B5 00    LDA clue_draw_address
-  440  06:CFF4  18          CLC
-  441  06:CFF5  6D 05 00    ADC temp6
-  442  06:CFF8  8D B5 00    STA clue_draw_address
-  443  06:CFFB  AD B6 00    LDA clue_draw_address+1
-  444  06:CFFE  69 00       ADC #$00
-  445  06:D000  8D B6 00    STA clue_draw_address+1
+  439  06:D000  AD B5 00    LDA clue_draw_address
+  440  06:D003  18          CLC
+  441  06:D004  6D 05 00    ADC temp6
+  442  06:D007  8D B5 00    STA clue_draw_address
+  443  06:D00A  AD B6 00    LDA clue_draw_address+1
+  444  06:D00D  69 00       ADC #$00
+  445  06:D00F  8D B6 00    STA clue_draw_address+1
   446                       
-  447  06:D003            .leave:
-  448  06:D003  EE B7 00    INC clueTableIndex
-  449  06:D006  60          RTS
+  447  06:D012            .leave:
+  448  06:D012  EE B7 00    INC clueTableIndex
+  449  06:D015  60          RTS
   450                     
-  451  06:D007            ClearLineDefs:
+  451  06:D016            ClearLineDefs:
   452                     
-  453  06:D007  20 20 20    .db $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20
-       06:D00A  20 20 20  
-       06:D00D  20 20 20  
-       06:D010  20 20     
-  454  06:D012  0D 0D 0D    .db $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D
-       06:D015  0D 0D 0D  
-       06:D018  0D 0D 0D  
-       06:D01B  0D 0D 0D  
-       06:D01E  0D 0D 0D  
-       06:D021  0D 0D     
-  455  06:D023  20 20       .db $20, $20
+  453  06:D016  20 20 20    .db $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20
+       06:D019  20 20 20  
+       06:D01C  20 20 20  
+       06:D01F  20 20     
+  454  06:D021  0D 0D 0D    .db $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D
+       06:D024  0D 0D 0D  
+       06:D027  0D 0D 0D  
+       06:D02A  0D 0D 0D  
+       06:D02D  0D 0D 0D  
+       06:D030  0D 0D     
+  455  06:D032  20 20       .db $20, $20
   456                       
-  457  06:D025            PuzzleSizes:
+  457  06:D034            PuzzleSizes:
   458                       
-  459  06:D025  05 0A 0F    .db $05, $0A, $0F
+  459  06:D034  05 0A 0F    .db $05, $0A, $0F
   460                       
-  461  06:D028            PuzzleImageSizes:
+  461  06:D037            PuzzleImageSizes:
   462                     
   463                       ;.db $05, $0A, $0F
-  464  06:D028  19 64 E1    .db $19, $64, $E1
+  464  06:D037  19 64 E1    .db $19, $64, $E1
   465                       
-  466  06:D02B            ImageDrawWrapOffsets:
+  466  06:D03A            ImageDrawWrapOffsets:
   467                     
-  468  06:D02B  1B 16 11   .db $1B, $16, $11
+  468  06:D03A  1B 16 11   .db $1B, $16, $11
 #[1]   Picross.asm
    97                       
    98                       
@@ -4039,129 +4055,129 @@
 #[2]   Routines/Common/NMI.asm
   103                       .include "Routines/Common/NMI.asm"
     1                      
-    2  06:D02E            NMI:
+    2  06:D03D            NMI:
     3                     
-    4  06:D02E  48          PHA                              ;protect the registers
-    5  06:D02F  8A          TXA
-    6  06:D030  48          PHA
-    7  06:D031  98          TYA
-    8  06:D032  48          PHA
+    4  06:D03D  48          PHA                              ;protect the registers
+    5  06:D03E  8A          TXA
+    6  06:D03F  48          PHA
+    7  06:D040  98          TYA
+    8  06:D041  48          PHA
     9                       
-   10  06:D033            nmi_started:
-   11  06:D033  A9 00       LDA #$00
-   12  06:D035  8D 03 20    STA OAM_LO      ; set the low byte (00) of the RAM address
-   13  06:D038  A9 02       LDA #$02
-   14  06:D03A  8D 14 40    STA OAM_HI       ; set the high byte (02) of the RAM address, start the transfer
+   10  06:D042            nmi_started:
+   11  06:D042  A9 00       LDA #$00
+   12  06:D044  8D 03 20    STA OAM_LO      ; set the low byte (00) of the RAM address
+   13  06:D047  A9 02       LDA #$02
+   14  06:D049  8D 14 40    STA OAM_HI       ; set the high byte (02) of the RAM address, start the transfer
    15                     
-   16  06:D03D  AD 10 00    LDA NMI_locks
-   17  06:D040  F0 03       BEQ update_controllers
-   18  06:D042  4C B1 D0    JMP WakeUp
+   16  06:D04C  AD 10 00    LDA NMI_locks
+   17  06:D04F  F0 03       BEQ update_controllers
+   18  06:D051  4C C0 D0    JMP WakeUp
    19                     
-   20  06:D045            update_controllers:
+   20  06:D054            update_controllers:
    21                     
 #[3]   Routines/Common/ReadControllers.asm
    22                       .include "Routines/Common/ReadControllers.asm"
     1                     
-    2  06:D045  8A            TXA
-    3  06:D046  48                PHA
-    4  06:D047  98                TYA
-    5  06:D048  48                PHA
+    2  06:D054  8A            TXA
+    3  06:D055  48                PHA
+    4  06:D056  98                TYA
+    5  06:D057  48                PHA
     6                     
-    7  06:D049  A2 00             LDX #$00
+    7  06:D058  A2 00             LDX #$00
     8                     
-    9  06:D04B            GamePadCheck:
-   10  06:D04B  A9 01             LDA #$01        ;load 1
-   11  06:D04D  8D 16 40          STA $4016       ; turn latch on
+    9  06:D05A            GamePadCheck:
+   10  06:D05A  A9 01             LDA #$01        ;load 1
+   11  06:D05C  8D 16 40          STA $4016       ; turn latch on
    12                             ;STA gamepad2
-   13  06:D050  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
-   14  06:D051  8D 16 40          STA $4016       ;turn latch off
+   13  06:D05F  4A                LSR     A               ; move acc it over for a 0 bit, better than loading 0 to the acc, I guess
+   14  06:D060  8D 16 40          STA $4016       ;turn latch off
    15                             
    16                             ;do a ring counter technique- load %10000000 into both
-   17  06:D054  A9 80             LDA #$80
-   18  06:D056  8D 18 00          STA gamepad
+   17  06:D063  A9 80             LDA #$80
+   18  06:D065  8D 18 00          STA gamepad
    19                     
-   20  06:D059            ReadControllerABytesLoop:
-   21  06:D059  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
-   22  06:D05C  29 03             AND #%00000011  ;acc: %00000001 c: 0
-   23  06:D05E  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
+   20  06:D068            ReadControllerABytesLoop:
+   21  06:D068  AD 16 40          LDA $4016               ;acc: %00000001 c: 0
+   22  06:D06B  29 03             AND #%00000011  ;acc: %00000001 c: 0
+   23  06:D06D  C9 01             CMP #%00000001  ;acc: %00000001 c: 1
    24                             ;ror shifts everything right one position: carry->bit 7, bit 0-> carry
-   25  06:D060  6E 18 00          ROR gamepad             ;gamepad: %11000000
+   25  06:D06F  6E 18 00          ROR gamepad             ;gamepad: %11000000
    26                             ;eventually, the ROR sends out the 1 instead of all the leading 0s, BCC (branch carry clear) gets the 1 and does not loop
-   27  06:D063  90 F4             BCC ReadControllerABytesLoop
+   27  06:D072  90 F4             BCC ReadControllerABytesLoop
    28                             
    29                             ;;comapre last to current, find the pressed buttons this frame
-   30  06:D065  AD 19 00          LDA gamepadLast
-   31  06:D068  49 FF             EOR #$FF
-   32  06:D06A  2D 18 00          AND gamepad
-   33  06:D06D  8D 1A 00          STA gamepadPressed
+   30  06:D074  AD 19 00          LDA gamepadLast
+   31  06:D077  49 FF             EOR #$FF
+   32  06:D079  2D 18 00          AND gamepad
+   33  06:D07C  8D 1A 00          STA gamepadPressed
    34                             
    35                             
-   36  06:D070  AD 18 00          LDA gamepad
-   37  06:D073  8D 19 00          STA gamepadLast
+   36  06:D07F  AD 18 00          LDA gamepad
+   37  06:D082  8D 19 00          STA gamepadLast
    38                             
    39                             ;return x and y... before resetting them all over again- always good to make sure we're clean
-   40  06:D076  68                PLA
-   41  06:D077  A8                TAY
-   42  06:D078  68                PLA
-   43  06:D079  AA                TAX     
+   40  06:D085  68                PLA
+   41  06:D086  A8                TAY
+   42  06:D087  68                PLA
+   43  06:D088  AA                TAX     
 #[2]   Routines/Common/NMI.asm
    23                       
-   24  06:D07A  20 C1 CA    JSR ProcessPPUString
+   24  06:D089  20 D0 CA    JSR ProcessPPUString
    25                       
    26                       
-   27  06:D07D  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
-   28  06:D07F  8D 05 20    STA PPU_SCROLL
-   29  06:D082  8D 05 20    STA PPU_SCROLL
+   27  06:D08C  A9 00       LDA #$00        ;;tell the ppu there is no background scrolling
+   28  06:D08E  8D 05 20    STA PPU_SCROLL
+   29  06:D091  8D 05 20    STA PPU_SCROLL
    30                       
    31                       ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
    32                       ; enable sprites, enable background, no clipping on left side 
-   33  06:D085  20 DE CB    JSR UpdatePPUControl
+   33  06:D094  20 ED CB    JSR UpdatePPUControl
    34                     
-   35  06:D088            NMIUpdate:
+   35  06:D097            NMIUpdate:
    36                     
-   37  06:D088  20 A5 D0    JSR StateNMIUpdate
+   37  06:D097  20 B4 D0    JSR StateNMIUpdate
    38                       
-   39  06:D08B  AD 1B 00    LDA PPU_Control
-   40  06:D08E  29 FC       AND #$FC
-   41  06:D090  0D 1F 00    ORA PPU_ScrollNT
-   42  06:D093  8D 00 20    STA PPU_CTRL
+   39  06:D09A  AD 1B 00    LDA PPU_Control
+   40  06:D09D  29 FC       AND #$FC
+   41  06:D09F  0D 1F 00    ORA PPU_ScrollNT
+   42  06:D0A2  8D 00 20    STA PPU_CTRL
    43                       
-   44  06:D096  AD 1D 00    LDA PPU_ScrollX     ;;tell the ppu there is no background scrolling
-   45  06:D099  8D 05 20    STA PPU_SCROLL
-   46  06:D09C  AD 1E 00    LDA PPU_ScrollY
-   47  06:D09F  8D 05 20    STA PPU_SCROLL
+   44  06:D0A5  AD 1D 00    LDA PPU_ScrollX     ;;tell the ppu there is no background scrolling
+   45  06:D0A8  8D 05 20    STA PPU_SCROLL
+   46  06:D0AB  AD 1E 00    LDA PPU_ScrollY
+   47  06:D0AE  8D 05 20    STA PPU_SCROLL
    48                     
-   49  06:D0A2  4C B1 D0    JMP WakeUp
+   49  06:D0B1  4C C0 D0    JMP WakeUp
    50                     
-   51  06:D0A5            StateNMIUpdate:
+   51  06:D0B4            StateNMIUpdate:
    52                     
    53                       MACROCallDynamicJump game_mode
                           
-       06:D0A5  AD 0E 00    LDA game_mode
-       06:D0A8  20 23 CA    JSR Dynamic_Jump
+       06:D0B4  AD 0E 00    LDA game_mode
+       06:D0B7  20 32 CA    JSR Dynamic_Jump
                                   
    54                     
-   55  06:D0AB            NMIJumpTable:
+   55  06:D0BA            NMIJumpTable:
    56                     
-   57  06:D0AB  BC D0       .word UpdateTitleNMI
-   58  06:D0AD  C0 D0       .word UpdateGameNMI
-   59  06:D0AF  C1 D0       .word UpdateGameOverNMI
+   57  06:D0BA  CB D0       .word UpdateTitleNMI
+   58  06:D0BC  CF D0       .word UpdateGameNMI
+   59  06:D0BE  D0 D0       .word UpdateGameOverNMI
    60                     
-   61  06:D0B1            WakeUp:
-   62  06:D0B1  A9 00       LDA #$00
-   63  06:D0B3  8D 0C 00    STA sleeping
+   61  06:D0C0            WakeUp:
+   62  06:D0C0  A9 00       LDA #$00
+   63  06:D0C2  8D 0C 00    STA sleeping
    64                       
-   65  06:D0B6  68          PLA             ;restore the registers
-   66  06:D0B7  A8          TAY 
-   67  06:D0B8  68          PLA
-   68  06:D0B9  AA          TAX
-   69  06:D0BA  68          PLA
+   65  06:D0C5  68          PLA             ;restore the registers
+   66  06:D0C6  A8          TAY 
+   67  06:D0C7  68          PLA
+   68  06:D0C8  AA          TAX
+   69  06:D0C9  68          PLA
    70                     
-   71  06:D0BB  40          RTI             ; return from interrupt
+   71  06:D0CA  40          RTI             ; return from interrupt
    72                       
 #[3]   Routines/NMI_States/UpdateTitleNMI.asm
    73                       .include "Routines/NMI_States/UpdateTitleNMI.asm"
-    1  06:D0BC            UpdateTitleNMI:
+    1  06:D0CB            UpdateTitleNMI:
     2                     
     3                       ;;load bank 0 for BG tiles, so we start with the right tile set
     4                       ;JSR ResetMapper
@@ -4169,7 +4185,7 @@
     6                       ;JSR LoadCHRBankB
     7                     
     8                     
-    9  06:D0BC  20 A4 CB    JSR DetectSprite0
+    9  06:D0CB  20 B3 CB    JSR DetectSprite0
    10                     
    11                       ;JSR ResetMapper
    12                       ;LDA #$03
@@ -4177,17 +4193,17 @@
    14                       
    15                     
    16                        
-   17  06:D0BF  60          RTS
+   17  06:D0CE  60          RTS
 #[2]   Routines/Common/NMI.asm
 #[3]   Routines/NMI_States/UpdateGameNMI.asm
    74                       .include "Routines/NMI_States/UpdateGameNMI.asm"
-    1  06:D0C0            UpdateGameNMI:
-    2  06:D0C0  60          RTS
+    1  06:D0CF            UpdateGameNMI:
+    2  06:D0CF  60          RTS
 #[2]   Routines/Common/NMI.asm
 #[3]   Routines/NMI_States/UpdateGameOverNMI.asm
    75                       .include "Routines/NMI_States/UpdateGameOverNMI.asm"
-    1  06:D0C1            UpdateGameOverNMI:
-    2  06:D0C1  60          RTS
+    1  06:D0D0            UpdateGameOverNMI:
+    2  06:D0D0  60          RTS
 #[2]   Routines/Common/NMI.asm
 #[1]   Picross.asm
   104                       
@@ -4375,7 +4391,7 @@
 #[1]   Picross.asm
   116                     
   117           FFFA        .org $FFFA     ;first of the three vectors starts here
-  118  07:FFFA  2E D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
+  118  07:FFFA  3D D0       .dw NMI        ;when an NMI happens (once per frame if enabled) the 
   119                                        ;processor will jump to the label NMI:
   120  07:FFFC  00 C0       .dw RESET      ;when the processor first turns on or is reset, it will jump
   121                                        ;to the label RESET:
