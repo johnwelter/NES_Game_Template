@@ -4,9 +4,12 @@ temp3  			.rs 1
 temp4  			.rs 1
 temp5			.rs 1
 temp6			.rs 1
+temp7			.rs 1
+temp8			.rs 1
 tempx 			.rs 1
 tempy 			.rs 1
 time 			.rs 1
+scaledTime		.rs 1
 sleeping 		.rs 1
 mode_loadFlags  .rs 1
 game_mode  		.rs 1

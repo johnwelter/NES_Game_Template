@@ -1,5 +1,11 @@
 PopulateClues:
-
+  
+  LDY #$00
+  LDA [puzzle_address], y
+  TAX
+  LDA PuzzleSizes, x
+  STA temp1
+  
 .getByte:
   LDY clueTableIndex
   LDA [clues_address], y
@@ -19,7 +25,7 @@ PopulateClues:
   
   INC clueLineIndex
   LDA clueLineIndex
-  CMP #$0F
+  CMP temp1
   ;CMP #$01
   BEQ .leave	;carry will be set
   
@@ -161,11 +167,8 @@ ClearPuzzle:
 
   ;we'll assume clue draw address has been set to the top of the 1st nametable
  
-  MACROGetLabelPointer ClearLineDefTables, table_address
-  LDY #$00
-  JSR GetTableAtIndex
-  
-  
+  MACROGetLabelPointer ClearLineDefs, table_address
+
   LDY clueLineIndex
   LDA [table_address], y
   STA temp1
@@ -284,6 +287,24 @@ DrawImage:
   LDA #$04
   STA temp5
   
+  LDY #$00
+  LDA [puzzle_address], y
+  TAX
+  LDA PuzzleSizes, x
+  STA temp7
+  LDA PuzzleImageSizes, x
+  STA temp8
+  LSR A
+  LSR A
+  STA tempy
+  LDA temp8
+  AND #$03
+  BEQ .skipAdd1
+  INC tempy  
+.skipAdd1:
+  LDA ImageDrawWrapOffsets, x
+  STA tempx
+  
   LDY clueTableIndex
   LDA [clues_address], y
 
@@ -320,9 +341,9 @@ DrawImage:
   ADC #$04
 
   STA clueOffsetShift
-  ;;clue offset shift + 4, check if we went over 15
+  ;;clue offset shift + 4, check if we went over puzle row length
   SEC
-  SBC #15 ;;subtract 15
+  SBC temp7 ;;subtract 15
   BCC .makeStrings
   BEQ .makeStrings
   
@@ -354,7 +375,7 @@ DrawImage:
   
   INC clueLineIndex
   LDA clueLineIndex
-  CMP #225
+  CMP temp8
   BNE .continueLoop
   PLA 
   JMP .leave
@@ -382,7 +403,7 @@ DrawImage:
   ;;loop draw address to next line
   LDA clue_draw_address
   CLC
-  ADC #17
+  ADC tempx
   STA clue_draw_address
   LDA clue_draw_address+1
   ADC #$00
@@ -402,7 +423,7 @@ DrawImage:
   
   INC clueLineIndex
   LDA clueLineIndex
-  CMP #225
+  CMP temp8
   BNE .continueSecondLoop
   
   PLA 
@@ -427,11 +448,21 @@ DrawImage:
   INC clueTableIndex
   RTS
 
-ClearLineDefTables:
+ClearLineDefs:
 
-  .word Clear15x15LineDefs
-
-Clear15x15LineDefs:
   .db $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20
   .db $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D
   .db $20, $20
+  
+PuzzleSizes:
+  
+  .db $05, $0A, $0F
+  
+PuzzleImageSizes:
+
+  ;.db $05, $0A, $0F
+  .db $19, $64, $E1
+  
+ImageDrawWrapOffsets:
+
+ .db $1B, $16, $11

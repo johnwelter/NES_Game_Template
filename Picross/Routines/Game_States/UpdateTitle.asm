@@ -56,11 +56,19 @@ UpdateBankSelection:
   
 .changeModeState:
 
+  ;;load bank
+  
   LDA mouse_index
   STA bank_index
   LDA #$FF
   JSR SetPointerSprite
-  
+   
+  ;;load bank
+  JSR ResetMapper
+  LDA bank_index
+  STA currentPRGBank
+  JSR LoadPRGBank
+
   INC mode_state
 .leave:
   RTS
@@ -144,14 +152,7 @@ UpdateTitleExit:
   LDA #$00
   STA PPU_ScrollX
   STA PPU_ScrollNT
-  
-  ;;load bank
-
-  JSR ResetMapper
-  LDA bank_index
-  STA currentPRGBank
-  JSR LoadPRGBank
-
+ 
   ;; we can also pick out the puzzle index
   ;; we have the mouse indexes - one vert, one hori
   ;; take vert, mult by 9- alternatively, mult by 8, add index 
@@ -167,9 +168,17 @@ UpdateTitleExit:
   STA puzzle_index
 
   JSR TurnOffSprites
+  
+  MACROGetLabelPointer PUZZLE_TABLE, table_address
+  MACROGetDoubleIndex puzzle_index
+  JSR GetTableAtIndex
+  MACROGetPointer table_address, puzzle_address
+
+  LDY #$00
+  LDA [puzzle_address], y
+  TAX
 
   LDA #GAME_IDX
-  LDX #$02
   JSR ChangeGameMode
   
 .leave

@@ -5,11 +5,13 @@
   
   .include "Puzzles/house.asm" 
   .include "Puzzles/test.asm"
+  .include "Puzzles/test5.asm"
+  .include "Puzzles/test10.asm"
 
   .bank 1
   .org $A000
 ;puzzles
-  .word house, test, test, test, test, test, test, test, test
+  .word test5, test10, test, test, test, test, test, test, test
   .word house, test, test, test, test, test, test, test, test
   .word house, test, test, test, test, test, test, test, test
 ;puzzle names

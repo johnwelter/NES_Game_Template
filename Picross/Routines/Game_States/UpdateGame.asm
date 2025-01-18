@@ -6,12 +6,6 @@ HORI_CLUES = $218C
 BANK_LEVEL = $20A8
 TIMER_LOC = $20E5
 
-;;this will change with puzzle sizes
-VERT_MIN = $5A ;12 - 1
-VERT_MAX = $DA
-HORI_MIN = $6A ;14 - 1
-HORI_MAX = $EA
-
 MOUSE_START = $618E
 
 HOLD_TIME = $10
@@ -57,9 +51,15 @@ UpdateGameInit:
   MACROGetLabelPointer MOUSE_START, mouse_location
   
   ;;for clues, we need to get past the header- for a 15x15 puzzle, that's 34 bytes ahead
+  LDY #$00
+  LDA [puzzle_address], y
+  TAX
+  LDA PuzzleHeaderSkips, x
+  STA temp1
+  
   LDA puzzle_address
   CLC
-  ADC #34
+  ADC temp1
   STA clues_address
   LDA #$00
   ADC puzzle_address+1
@@ -145,6 +145,7 @@ UpdateDrawHoriClues:
   ;;reset time
   LDA #$00
   STA time
+  STA scaledTime
   
   INC mode_state
 .leave:
@@ -305,7 +306,14 @@ UpdateGamePlay:
 
   ;;take Y position, mult by 2 to get starting index in puzzle solution
   LDA mouse_index+1
-  ASL A
+;;if the puzzle is a 5x5, we only have one byte per row, so no need to double this
+  STA temp1
+  LDY #$00
+  LDA [puzzle_address], y
+  BEQ .skipDouble
+  ASL temp1
+.skipDouble:
+  LDA temp1
   CLC
   ADC #$04 ;; add to get past header
   STA temp1
@@ -453,6 +461,14 @@ UpdateMoveScreen:
   ;for 15x15, move 5 tiles left and 5 tiles up- let's do 1 at a time
   ;we'll take the lower nibble of the clue line index as our scroll counter, and the higher nibble as the x/y flag
   
+  LDY #$00
+  LDA [puzzle_address], y
+  TAX
+  LDA PuzzleScrollHori, x
+  STA temp1
+  LDA PuzzleScrollVert, x
+  STA temp2
+  
   LDA clueLineIndex
   AND #$10
   BNE .scrollY
@@ -467,7 +483,7 @@ UpdateMoveScreen:
   
   INC clueLineIndex
   LDA clueLineIndex
-  CMP #$06
+  CMP temp1
   BNE .leave
   LDA #$10
   STA clueLineIndex
@@ -485,7 +501,7 @@ UpdateMoveScreen:
   INC clueLineIndex
   LDA clueLineIndex
   AND #$0F
-  CMP #$05
+  CMP temp2
   BNE .leave
   
 .changeModeState:
@@ -518,12 +534,12 @@ UpdateDrawImage:
   ;run it twice for a faster draw
   JSR DrawImage
   LDA clueTableIndex
-  CMP #57
-  BEQ .changeModeState
+  CMP tempy
+  ;BEQ .changeModeState
   
-  JSR DrawImage
-  LDA clueTableIndex
-  CMP #57
+  ;JSR DrawImage
+  ;LDA clueTableIndex
+  ;CMP tempy
   BNE .leave
   
 .changeModeState:
@@ -608,6 +624,9 @@ UpdateWaitInput:
 .changeModeState:
   LDA #$00
   STA time
+  STA scaledTime
+  LDA #GAMEOVER_IDX
+  STA targetGameMode
   INC mode_state
 
 .leave:
@@ -641,7 +660,7 @@ UpdateGameExit:
   STA PPU_ScrollY
   STA PPU_ScrollNT
   
-  LDA #GAMEOVER_IDX
+  LDA targetGameMode
   LDX #$00
   JSR ChangeGameMode
 .leave:
@@ -659,27 +678,46 @@ MoveMouse:
   ASL temp2
   ASL temp2
   
+  LDY #$00
+  LDA [puzzle_address], y ;puzzle size 0 = 5, 1 = 10, 2 = 15  
+  ASL A
+  TAX
+  LDA MouseMinimums, x
+  STA temp3
+  LDA MouseMaximums, x
+  STA temp4
+  TXA
+  PHA
+  
   LDX #SPRITE_XPOS
   LDA SPRITE_DATA, x
   CLC
   ADC temp1
   ;;check against borders
-  CMP #HORI_MIN
-  BEQ .moveVert
-  CMP #HORI_MAX
+  CMP temp3
+  BEQ .moveVert 
+  CMP temp4
   BEQ .moveVert
   STA SPRITE_DATA, x
 
 .moveVert:
+
+  PLA
+  TAX
+  INX
+  LDA MouseMinimums, x
+  STA temp3
+  LDA MouseMaximums, x
+  STA temp4
 
   LDX #SPRITE_YPOS
   LDA SPRITE_DATA, x
   CLC
   ADC temp2
   ;;check against borders
-  CMP #VERT_MIN
+  CMP temp3
   BEQ .leave
-  CMP #VERT_MAX
+  CMP temp4
   BEQ .leave
   STA SPRITE_DATA, x
 
@@ -735,12 +773,12 @@ UpdateMouseScreenPos:
   
 UpdateTimeDisplay:
 
-  LDA time
+  LDA scaledTime
   CMP #60
   BNE .leave
   
   LDA #$00
-  STA time
+  STA scaledTime
   
   INC GameTime
   LDA GameTime
@@ -844,6 +882,8 @@ UpdatePauseScreen:
   STA pauseState
   LDA #$00
   STA time
+  LDA #TITLE_IDX
+  STA targetGameMode
   LDA #$08
   STA mode_state
   
@@ -865,43 +905,24 @@ UpdateUnloadPauseScreen:
 ExitPause:
   RTS
   
+;hori, vert
+MouseMinimums:
+  .db $6A, $5A
+  .db $6A, $5A
+  .db $6A, $5A
+MouseMaximums:
+  .db $9A, $8A
+  .db $C2, $B2
+  .db $EA, $DA
   
-
-
-;;using the line index and a given count based on the direction, 
+PuzzleScrollHori:
+  .db $01, $04, $06
+PuzzleScrollVert:
+  .db $01, $03, $05
   
-;; 	JSR ResetMapper
-;;	INC currentCHRBank
-;;	LDA currentCHRBank
-;;	CMP #$03
-;;	BNE .dontModCHR
-	
-;;	LDA #$00
+PuzzleHeaderSkips:
 
-;;.dontModCHR:
-;;	STA currentCHRBank 
-;;	;4kb switches- all the banks are seqential, so we gotta add 1 and mult by 2 for BG tiles
-;;	ASL A
-;;	CLC 
-;;	ADC #$01
-;;	JSR LoadCHRBankB
-;;	
-;;	JSR ResetMapper
-;;	INC currentPRGBank
-;;	LDA currentPRGBank
-;;	CMP #$03
-;;	BNE .dontModPRG
-	
-;;	LDA #$00
-	
-;;.dontModPRG:
-;;	 STA currentPRGBank
-;;	 JSR LoadPRGBank
- 
-;;	 JSR TestBankA
-;;	 LDA mapperDebugVar
-;;	 STA $6000
-;;	 JMP .noInputDetected
-
+  .db $09, $18, $22
+  
 
   

@@ -52,6 +52,10 @@ Forever:
   BNE .loop
 
   INC time  
+  LDA pauseState
+  BNE .skipScaleUpdate
+  INC scaledTime
+.skipScaleUpdate:
   JSR GameLoop
 
 
