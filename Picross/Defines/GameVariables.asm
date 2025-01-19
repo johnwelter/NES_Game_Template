@@ -23,5 +23,4 @@ currentPaintTile	.rs 1
 pauseState			.rs 1
 pauseInputLock		.rs 1
 holdTimer			.rs 1
-GameTime			.rs 4	;in order - second, ten second, minute, 10 minute - max out at 99 minutes
 targetGameMode		.rs 1

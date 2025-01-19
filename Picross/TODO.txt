@@ -1,11 +1,16 @@
 things left to do
 
-- save solved puzzles
-- mark clues off
-- view solved puzzles?
- 
-- draw image title, centered under image
 - better end screen 
+
+- save solved puzzles (check is clear time is lower?)
+
+- draw image title, centered under image
+
+- mark clues off
+ 
 - music engine
 
-- toggle for mouse
+EXPANDED:
+
+- puzzle spirte representations 
+- toggle for mouse input

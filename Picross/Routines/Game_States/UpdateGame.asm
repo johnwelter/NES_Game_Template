@@ -72,18 +72,17 @@ UpdateGameInit:
   STA clueOffsetShift
   STA mouse_index
   STA mouse_index+1
-  STA GameTime
-  STA GameTime+1
-  STA GameTime+2
-  STA GameTime+3
 
-  
   LDA hasContinue
   BNE .skipSolutionReset
   
   LDA #$00
   STA solutionCount
   STA nonSolutionCount
+  STA GameTime
+  STA GameTime+1
+  STA GameTime+2
+  STA GameTime+3
   
 .skipSolutionReset:	
   
@@ -142,15 +141,15 @@ UpdateDrawHoriClues:
   
   ;;set the timer to 00
   MACROAddPPUStringEntryRawData #HIGH(TIMER_LOC), #LOW(TIMER_LOC), #DRAW_HORIZONTAL, #$05
-  LDA #$00
+  LDA GameTime+3
   JSR WriteToPPUString
-  LDA #$00
+  LDA GameTime+2
   JSR WriteToPPUString
   LDA #$61
   JSR WriteToPPUString
-  LDA #$00
+  LDA GameTime+1
   JSR WriteToPPUString
-  LDA #$00
+  LDA GameTime
   JSR WriteToPPUString
   
   ;;reset time
@@ -464,7 +463,34 @@ UpdateGamePlay:
   STA clue_draw_address+1
   
   INC mode_state
+  
+  ;;the puzzle is solved, store the time and solved bit in memory
+  ;;if the puzzle was solved before, only update the time
+  
+  MACROGetLabelPointer PuzzleSaveLocations, table_address
+  LDA bank_index
+  ASL A
+  TAY
+  JSR GetTableAtIndex
+  
+  LDA puzzle_index
+  ASL A
+  ASL A
+  TAY
+  LDA GameTime
+  ORA #$80
+  STA [table_address], y
+  INY
+  LDA GameTime+1
+  STA [table_address], y
+  INY
+  LDA GameTime+2
+  STA [table_address], y
+  INY
+  LDA GameTime+3
+  STA [table_address],y
 
+  
 .leave:
  
   RTS
@@ -1012,6 +1038,9 @@ PuzzleScrollVert:
 PuzzleHeaderSkips:
 
   .db $09, $18, $22
+  
+PuzzleSaveLocations:
+  .word puzzle_clear_bank0, puzzle_clear_bank1, puzzle_clear_bank2
 
   
 PAUSE_YES = $60
