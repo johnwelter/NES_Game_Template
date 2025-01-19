@@ -49,7 +49,7 @@ UpdateGameInit:
   JSR GetTableAtIndex
   MACROGetPointer table_address, puzzle_address
   MACROGetLabelPointer MOUSE_START, mouse_location
-  
+
   ;;for clues, we need to get past the header- for a 15x15 puzzle, that's 34 bytes ahead
   LDY #$00
   LDA [puzzle_address], y
@@ -72,16 +72,27 @@ UpdateGameInit:
   STA clueOffsetShift
   STA mouse_index
   STA mouse_index+1
-  STA solutionCount
-  STA nonSolutionCount
   STA GameTime
   STA GameTime+1
   STA GameTime+2
   STA GameTime+3
-	
+
+  
+  LDA hasContinue
+  BNE .skipSolutionReset
+  
+  LDA #$00
+  STA solutionCount
+  STA nonSolutionCount
+  
+.skipSolutionReset:	
+  
   LDA #$20
   STA clueDrawAdd
-   
+
+  LDA #$00
+  STA hasContinue  
+  
   MACROGetLabelPointer VERT_CLUES, clue_start_address
   JSR ResetClueDrawAddress
   
@@ -416,13 +427,16 @@ UpdateGamePlay:
   LDA temp1
   JSR WriteToPPUString
   
-  ;;also copy to ... copy
-  LDA clue_draw_address
+  ;;also copy to save copy
+  LDA mouse_location
   STA copy_address
-  LDA clue_draw_address+1
+  LDA mouse_location+1
   AND #$0F
   ORA #$60
+  CLC
+  ADC #$08
   STA copy_address+1
+  
   LDA temp1
   LDY #$00
   STA [copy_address],y
@@ -943,6 +957,8 @@ UpdatePauseScreen:
    
 .quit:
 
+  LDA #$01
+  STA hasContinue
   LDA #$00
   STA pauseState
   LDA #$00
@@ -996,6 +1012,7 @@ PuzzleScrollVert:
 PuzzleHeaderSkips:
 
   .db $09, $18, $22
+
   
 PAUSE_YES = $60
 PAUSE_NO = $88

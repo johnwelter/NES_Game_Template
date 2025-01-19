@@ -34,10 +34,14 @@ LoadFullBackgroundFromTable:
 	AND #$01
 	BNE .copyScreenB
 	MACROGetLabelPointer Screen_Copy, pointer_address
+	MACROGetLabelPointer SaveScreen_Copy, pointerB_address
 	JMP .setCounters
 	
 .copyScreenB:
 	MACROGetLabelPointer ScreenB_Copy, pointer_address
+	LDA mode_loadFlags
+	AND $%11011111
+	STA mode_loadFlags ;kill the copy flag, just in case
 	
 	;;set pointer
 	;; set counters
@@ -54,12 +58,20 @@ LoadFullBackgroundFromTable:
 	LDA [table_address], y
 	STA PPU_DATA
 	STA [pointer_address],y
+    LDA mode_loadFlags
+    AND #%00100000	;check copy flag
+	BEQ .skipSaveCopy
+    LDA [table_address], y
+	STA [pointerB_address],y
+
+.skipSaveCopy:
 	INY
 	CPY #$00
 	BNE .innerloop
 
 	INC pointer_address+1
 	INC table_address+1
+	INC pointerB_address+1
 	
 	INX
 	CPX #$04

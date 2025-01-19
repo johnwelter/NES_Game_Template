@@ -54,6 +54,13 @@ LoadGameModeBackground:
   JSR LoadFullPaletteFromTable
 	
   LDY temp1
+  LDA mode_loadFlags
+  AND #%01000000 ; copy from saved screen
+  BEQ .dontUseSaveCopy
+  MACROGetLabelPointer SaveScreen_Copy, table_address
+  JMP .loadTable
+  
+.dontUseSaveCopy:
   MACROGetLabelPointer NameTables, table_address
   JSR GetTableAtIndex
   LDA mode_loadFlags
@@ -62,6 +69,7 @@ LoadGameModeBackground:
   TAY
   JSR GetTableAtIndex
 	
+.loadTable:
   LDA #$00
   JSR LoadFullBackgroundFromTable
   

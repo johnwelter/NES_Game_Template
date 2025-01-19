@@ -2,6 +2,7 @@ PUZZLE_TABLE = $A000
 NAMES_TABLE = $A01B
 SPRITES_TABLE = $A036
 
+tempBank			.rs 1
 puzzle_address		.rs 2
 clues_address		.rs 2
 pause_address		.rs 2
@@ -19,8 +20,6 @@ clueParity 			.rs 1
 mouse_location		.rs 2
 mouse_index			.rs 2
 currentPaintTile	.rs 1
-solutionCount		.rs 1
-nonSolutionCount	.rs 1
 pauseState			.rs 1
 pauseInputLock		.rs 1
 holdTimer			.rs 1

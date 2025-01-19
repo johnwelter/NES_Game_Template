@@ -12,11 +12,15 @@ time 			.rs 1
 scaledTime		.rs 1
 sleeping 		.rs 1
 mode_loadFlags  .rs 1
+;;0rcb xxxx
+;;r = read from save copy 
+;;c = write to save copy
 game_mode  		.rs 1
 mode_state		.rs 1
 NMI_locks 		.rs 1
 game_locks 		.rs 1
 pointer_address .rs 2
+pointerB_address .rs 2
 table_address  	.rs 2
 jump_address  	.rs 2
 

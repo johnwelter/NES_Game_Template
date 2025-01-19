@@ -35,6 +35,12 @@ UpdateTitleInit:
 
   JSR TurnOnSprites
   
+  LDA hasContinue
+  BEQ .skipContinueText
+  MACROAddPPUStringEntryTable #$2B, #$4D, #DRAW_HORIZONTAL, ContinueText
+  
+.skipContinueText:
+  
   LDA #$00
   STA mouse_index
   LDA #$00
@@ -55,22 +61,31 @@ UpdateBankSelection:
   BEQ .leave
   
 .changeModeState:
-
-  ;;load bank
   
   LDA mouse_index
-  STA bank_index
+  CMP #$03
+  BNE .setBank
+  
+  INC mode_state
+  INC mode_state
+  INC mode_state
+  
+  ;;load bank
+  JSR LoadBank
+  
+  JMP .goToNext
+  
+.setBank:
+  STA tempBank
   LDA #$FF
   LDX #$01
   JSR SetSpriteImage
-   
-  ;;load bank
-  JSR ResetMapper
-  LDA bank_index
-  STA currentPRGBank
-  JSR LoadPRGBank
 
+.goToNext:
   INC mode_state
+  JMP .leave
+
+
 .leave:
   RTS
   
@@ -156,12 +171,27 @@ UpdateTitleExit:
   LDA #$00
   STA PPU_ScrollX
   STA PPU_ScrollNT
- 
+  
+  LDA #%00100000
+  STA temp1
+  
+  LDA mouse_index
+  CMP #$03
+  BNE .loadPuzzle
+  
+  ASL temp1
+  JMP .setupPuzzle
+  
+.loadPuzzle:
   ;; we can also pick out the puzzle index
   ;; we have the mouse indexes - one vert, one hori
   ;; take vert, mult by 9- alternatively, mult by 8, add index 
   ;; IE - ind = 1, mult 8 = 8, add 1 = 9
   ;; add X index
+  LDA tempBank
+  STA bank_index
+  JSR LoadBank
+  
   LDA mouse_index
   ASL A
   ASL A
@@ -170,9 +200,11 @@ UpdateTitleExit:
   ADC mouse_index
   ADC mouse_index+1
   STA puzzle_index
+  LDA #$00
+  STA hasContinue
 
-  JSR TurnOffSprites
-  
+
+.setupPuzzle:
   MACROGetLabelPointer PUZZLE_TABLE, table_address
   MACROGetDoubleIndex puzzle_index
   JSR GetTableAtIndex
@@ -180,7 +212,10 @@ UpdateTitleExit:
 
   LDY #$00
   LDA [puzzle_address], y
+  ORA temp1
+  
   TAX
+  
 
   LDA #GAME_IDX
   JSR ChangeGameMode
@@ -292,6 +327,14 @@ UpdateBankPointer:
   LDA #$00
   STA temp1
   
+  LDA #$02
+  STA temp2
+  
+  LDA hasContinue
+  BEQ .parseInputs
+  LDA #$03
+  STA temp2
+  
 .parseInputs:
   LDA gamepadPressed
   AND #GAMEPAD_VERT
@@ -311,7 +354,7 @@ UpdateBankPointer:
   LDA mouse_index
   CLC
   ADC temp1
-  CMP #$02
+  CMP temp2
   BEQ .skipMod
   BCC .skipMod
   LDA #$00
@@ -408,3 +451,16 @@ UpdatePuzzlePointer:
 .leave:
   
   RTS
+
+LoadBank:
+
+  ;;load bank
+  JSR ResetMapper
+  LDA bank_index
+  STA currentPRGBank
+  JSR LoadPRGBank
+  RTS
+  
+ContinueText:
+
+  .db $08, $0C, $18, $17, $1D, $12, $17, $1E, $0E
