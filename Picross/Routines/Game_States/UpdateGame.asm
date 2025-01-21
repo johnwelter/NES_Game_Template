@@ -72,7 +72,8 @@ UpdateGameInit:
   STA clueOffsetShift
   STA mouse_index
   STA mouse_index+1
-
+  STA pauseInputLock 
+ 
   LDA hasContinue
   BNE .skipSolutionReset
   
@@ -473,6 +474,11 @@ UpdateGamePlay:
   TAY
   JSR GetTableAtIndex
   
+  JSR CheckNewBestTime
+  
+  LDA recordSet
+  BEQ .leave
+  
   LDA puzzle_index
   ASL A
   ASL A
@@ -489,7 +495,7 @@ UpdateGamePlay:
   INY
   LDA GameTime+3
   STA [table_address],y
-
+  JMP .leave
   
 .leave:
  
@@ -701,6 +707,19 @@ UpdateGameFadeOut:
   LDA #$00
   STA time
   INC mode_state
+  
+  ;;don't need to turn all the sprites off, just need to
+  ;;clear them out   
+  LDA #$FF
+  LDX #$00
+  JSR SetSpriteImage
+  
+  LDA #$FF
+  LDX #$01
+  JSR SetSpriteImage
+  
+  JSR TurnOnSprites	;turn sprite rendering back on
+  
 .leave:
   RTS  
 
@@ -863,21 +882,14 @@ UpdateTimeDisplay:
   
   LDA #$00
   STA GameTime+3
+    
   
 .printTime:
 
-  MACROAddPPUStringEntryRawData #HIGH(TIMER_LOC), #LOW(TIMER_LOC), #DRAW_HORIZONTAL, #$05
-  LDA GameTime+3
-  JSR WriteToPPUString
-  LDA GameTime+2
-  JSR WriteToPPUString
-  LDA #$61
-  JSR WriteToPPUString
-  LDA GameTime+1
-  JSR WriteToPPUString
-  LDA GameTime
-  JSR WriteToPPUString
-  
+  LDA #HIGH(TIMER_LOC)
+  LDX #LOW(TIMER_LOC)
+
+  JSR ApplyGameTimeToPPUString
   
   
 .leave: 
@@ -949,7 +961,7 @@ UpdatePauseScreen:
 .loadNo:
   LDA #PAUSE_NO
 
-.setPosition
+.setPosition:
   
   LDX #$01
   JSR SetSpriteXPosition  
@@ -982,14 +994,14 @@ UpdatePauseScreen:
   BEQ .unPause
    
 .quit:
-
+	
   LDA #$01
   STA hasContinue
   LDA #$00
   STA pauseState
   LDA #$00
   STA time
-  LDA #TITLE_IDX
+  LDA #GAMEOVER_IDX
   STA targetGameMode
   LDA #$08
   STA mode_state
@@ -1020,6 +1032,56 @@ UpdateUnloadPauseScreen:
 ExitPause:
   RTS
   
+CheckNewBestTime:
+
+  ;let's say we already have the save data in the table address
+  LDA #$00
+  STA recordSet
+  
+  
+  LDA puzzle_index
+  ASL A
+  ASL A
+  TAY
+  LDA [table_address], y
+  AND #$80
+  BEQ .updateTime
+  ;MACROGetLabelPointer PuzzleSaveLocations, table_address
+  ;LDA bank_index
+  ;ASL A
+  ;TAY
+  ;JSR GetTableAtIndex
+
+  INY 
+  INY
+  INY 	;start at highest time loc
+  LDA GameTime+3
+  CMP [table_address], y
+  BCC .updateTime
+  DEY
+  LDA GameTime+2
+  CMP [table_address], y
+  BCC .updateTime
+  DEY
+  LDA GameTime+1
+  CMP [table_address], y
+  BCC .updateTime
+  DEY
+  LDA [table_address], y
+  AND #$0F
+  STA temp1
+  LDA GameTime
+  CMP temp1
+  BCC .updateTime
+  JMP .leave
+  
+.updateTime:
+
+  INC recordSet
+  
+.leave:
+  RTS
+    
 ;hori, vert
 MouseMinimums:
   .db $6A, $5A

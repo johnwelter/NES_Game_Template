@@ -105,6 +105,8 @@ UpdateScroll:
   JSR SetSpriteImage
   JSR InitPuzzlePointer
   INC mode_state
+  LDA #$FF
+  STA tempPuzz
 .leave:
   RTS
   
@@ -112,6 +114,21 @@ UpdatePuzzleSelection:
 
   JSR UpdatePuzzlePointer
   
+  LDA mouse_index
+  ASL A
+  ASL A
+  ASL A
+  CLC
+  ADC mouse_index
+  ADC mouse_index+1
+  CMP tempPuzz
+  BEQ .checkButtonPresses	;no change
+  STA tempPuzz
+  
+  JSR UpdatePuzzleInfo
+  
+.checkButtonPresses:
+
   LDA gamepadPressed
   AND #GAMEPAD_B
   BNE .changeToScrollBack
@@ -192,13 +209,7 @@ UpdateTitleExit:
   STA bank_index
   JSR LoadBank
   
-  LDA mouse_index
-  ASL A
-  ASL A
-  ASL A
-  CLC
-  ADC mouse_index
-  ADC mouse_index+1
+  LDA tempPuzz
   STA puzzle_index
   LDA #$00
   STA hasContinue
@@ -459,6 +470,58 @@ LoadBank:
   LDA bank_index
   STA currentPRGBank
   JSR LoadPRGBank
+  RTS
+  
+UpdatePuzzleInfo:
+
+  MACROGetLabelPointer PuzzleSaveLocations, table_address
+  LDA tempBank
+  ASL A
+  TAY
+  JSR GetTableAtIndex
+  
+  ;;load title/time
+  ;;time first, we haven't done titles
+  LDX #$00
+  LDA SelectDefaultTime,x
+  STA temp2
+  INX
+  LDA SelectDefaultTime,x
+  STA temp1
+  
+  LDA tempPuzz
+  ASL A
+  ASL A
+  TAY
+  LDA [table_address], y
+  BPL .loadDefaultTime
+  
+  ;;time exists!
+  AND #$0F
+  STA temp3
+  INY
+  INY
+  INY
+  MACROAddPPUStringEntryRawData temp1, temp2, #DRAW_HORIZONTAL, #$05
+  LDA [table_address], y
+  JSR WriteToPPUString
+  DEY
+  LDA [table_address], y
+  JSR WriteToPPUString
+  LDA #$61
+  JSR WriteToPPUString
+  DEY
+  LDA [table_address], y
+  JSR WriteToPPUString
+  DEY
+  LDA temp3
+  JSR WriteToPPUString
+  JMP .leave
+ 
+.loadDefaultTime:
+  
+  MACROAddPPUStringEntryTable temp1, temp2, #DRAW_HORIZONTAL, DefaultTimeString
+.leave:
   RTS
   
 ContinueText:

@@ -72,4 +72,21 @@ MACROAddPPUStringEntryTable .macro
  
   .endm
 
+MACROAddPPUStringEntryTablePtr .macro
+ 
+  LDA #$01
+  STA PPU_PendingWrite
+  LDA \1
+  JSR WriteToPPUString
+  LDA \2
+  JSR WriteToPPUString
+  LDA #$20
+  ORA \3
+  JSR WriteToPPUString
+  LDA \4
+  JSR WriteToPPUString
+  LDA \4+1
+  JSR WriteToPPUString
+ 
+  .endm
 

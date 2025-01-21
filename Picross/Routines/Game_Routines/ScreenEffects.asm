@@ -447,6 +447,25 @@ DrawImage:
 .leave:
   INC clueTableIndex
   RTS
+  
+ApplyGameTimeToPPUString:
+
+  STA temp1
+  STX temp2
+
+  MACROAddPPUStringEntryRawData temp1, temp2, #DRAW_HORIZONTAL, #$05
+  LDA GameTime+3
+  JSR WriteToPPUString
+  LDA GameTime+2
+  JSR WriteToPPUString
+  LDA #$61
+  JSR WriteToPPUString
+  LDA GameTime+1
+  JSR WriteToPPUString
+  LDA GameTime
+  JSR WriteToPPUString
+  
+  RTS
 
 ClearLineDefs:
 

@@ -47,4 +47,4 @@ Game_Sprites:
 	.db $5F,$FF,$00,$60
 GameOver_Sprites:
 	.db $01
-	.db $00,$00,$00,$00
+	.db $67,$FF,$00,$58

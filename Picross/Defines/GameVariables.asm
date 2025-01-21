@@ -3,6 +3,7 @@ NAMES_TABLE = $A01B
 SPRITES_TABLE = $A036
 
 tempBank			.rs 1
+tempPuzz 			.rs 1
 puzzle_address		.rs 2
 clues_address		.rs 2
 pause_address		.rs 2
@@ -24,3 +25,5 @@ pauseState			.rs 1
 pauseInputLock		.rs 1
 holdTimer			.rs 1
 targetGameMode		.rs 1
+targetScreenLoad	.rs 1
+recordSet			.rs 1
