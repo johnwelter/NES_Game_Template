@@ -45,7 +45,8 @@ NMIUpdate:
   STA PPU_SCROLL
   LDA PPU_ScrollY
   STA PPU_SCROLL
-
+  
+  jsr sound_play_frame 
   JMP WakeUp
 
 StateNMIUpdate:

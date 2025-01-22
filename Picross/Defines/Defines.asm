@@ -7,6 +7,9 @@
   .include "Defines/MapperVars.asm"
   .include "Defines/TitleVariables.asm"
   .include "Defines/GameVariables.asm"
+sound_ptr .rs 2
+sound_ptr2 .rs 2
+current_song .rs 1
 ;; 0100 is the stack
 ;; 0200 is sprite ram
   .rsset $0300

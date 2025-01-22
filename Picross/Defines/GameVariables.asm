@@ -1,14 +1,16 @@
 PUZZLE_TABLE = $A000
-NAMES_TABLE = $A01B
-SPRITES_TABLE = $A036
+NAMES_TABLE = $A036
+SPRITES_TABLE = $A06C
 
 tempBank			.rs 1
 tempPuzz 			.rs 1
 puzzle_address		.rs 2
 clues_address		.rs 2
+title_address		.rs 2
 pause_address		.rs 2
 copy_address	    .rs 2
 pause_draw_address  .rs 2
+title_draw_address	.rs 2
 clue_start_address	.rs 2
 clue_draw_address 	.rs 2
 clueTableIndex 		.rs 1

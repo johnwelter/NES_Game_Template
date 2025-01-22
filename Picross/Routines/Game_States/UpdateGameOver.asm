@@ -105,8 +105,9 @@ UpdateGameOverWaitInput:
   BEQ .checkOption
   
   LDA gamepadPressed
-  BEQ .leave
-  JMP .loadTitle
+  BNE .loadTitle
+.leaveEarly:
+  RTS
   
 .checkOption:
   LDA gamepadPressed
@@ -118,7 +119,7 @@ UpdateGameOverWaitInput:
   LDA gamepadPressed
   AND #GAMEPAD_HORI
   ;;binary system- left and right don't really matter, we'll just toggle the position
-  BEQ .leave
+  BEQ .leaveEarly
   
   LDA #SPRITE_XPOS
   LDX #$00
@@ -171,6 +172,11 @@ UpdateGameOverWaitInput:
   MACROGetDoubleIndex puzzle_index
   JSR GetTableAtIndex
   MACROGetPointer table_address, puzzle_address
+  
+  MACROGetLabelPointer NAMES_TABLE, table_address
+  MACROGetDoubleIndex puzzle_index
+  JSR GetTableAtIndex
+  MACROGetPointer table_address, title_address
 
   LDA #GAME_IDX
   STA targetGameMode

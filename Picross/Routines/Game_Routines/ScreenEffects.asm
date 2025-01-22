@@ -83,6 +83,12 @@ WriteClueByteToPPUString:
   LDA temp1
   LDY #$00
   STA [copy_address],y
+  LDA copy_address+1
+  CLC
+  ADC #$08
+  STA copy_address+1
+  LDA temp1
+  STA [copy_address],y
   
   LDA clueDrawAdd
   JSR SubFromClueDrawAddress
@@ -448,6 +454,28 @@ DrawImage:
   INC clueTableIndex
   RTS
   
+DrawTitle:
+
+  ;; title draw address is stored ahead of time, along with title address
+  ;; we can use temp1 - 8 to handle this
+  LDY #$00
+  LDA [title_address],y
+  LSR A
+  STA tempy
+  
+  LDA title_draw_address
+  SEC 
+  SBC tempy
+  STA title_draw_address
+  LDA title_draw_address+1
+  SBC #$00
+  STA title_draw_address+1
+  
+  MACROAddPPUStringEntryTablePtr title_draw_address+1, title_draw_address, #DRAW_HORIZONTAL, title_address
+  
+.leave:
+  RTS
+  
 ApplyGameTimeToPPUString:
 
   STA temp1
@@ -484,4 +512,8 @@ PuzzleImageSizes:
   
 ImageDrawWrapOffsets:
 
- .db $1B, $16, $11
+  .db $1B, $16, $11
+ 
+ImageTitleLowerHalfPos:
+ 
+  .word $2270, $2313, $23B5

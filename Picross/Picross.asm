@@ -33,6 +33,13 @@
 
   .include "Routines/Common/Init.asm"
 
+  jsr sound_init
+    
+  lda #$01
+  sta current_song
+  lda current_song
+  jsr sound_load
+
   LDA #TITLE_IDX
   LDX #$00
   JSR ChangeGameMode
@@ -102,6 +109,10 @@ GameLoopJumpTable:
 
   .include "Routines/Common/NMI.asm"
   
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;    AUDIO                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    .include "External/sound_engine.asm"
 ;;**************************;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;       PRG ROM DATA       ;;

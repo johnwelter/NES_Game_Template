@@ -43,6 +43,19 @@ UpdateGameJumpTable:
 
 UpdateGameInit:
 
+  ;;start bank song
+
+  LDA bank_index
+  BNE .skipMusicSet
+  ;LDX #$F0
+  ;LDY #$A0
+
+  ;lda #1 ; NTSC
+  ;jsr famistudio_init
+  ;lda #0
+  ;jsr famistudio_music_play
+  
+.skipMusicSet:
   ;; get the puzzle table in the puzzle address
   MACROGetLabelPointer PUZZLE_TABLE, table_address
   MACROGetDoubleIndex puzzle_index
@@ -72,6 +85,8 @@ UpdateGameInit:
   STA clueOffsetShift
   STA mouse_index
   STA mouse_index+1
+  
+  LDA #$01
   STA pauseInputLock 
  
   LDA hasContinue
@@ -89,10 +104,7 @@ UpdateGameInit:
   
   LDA #$20
   STA clueDrawAdd
-
-  LDA #$00
-  STA hasContinue  
-  
+ 
   MACROGetLabelPointer VERT_CLUES, clue_start_address
   JSR ResetClueDrawAddress
   
@@ -110,7 +122,10 @@ UpdateGameInit:
 
 UpdateDrawVertClues:
   
+  LDA hasContinue
+  BNE .changeModeState
   JSR PopulateClues
+  
   BCC .leave
   
 .changeModeState:
@@ -134,7 +149,11 @@ UpdateDrawVertClues:
   
 UpdateDrawHoriClues:
 
+  LDA hasContinue
+  BNE .changeModeState
   JSR PopulateClues
+  LDA clueTableIndex
+  STA image_table_offset
   BCC .leave
 
 .changeModeState:
@@ -157,6 +176,11 @@ UpdateDrawHoriClues:
   LDA #$00
   STA time
   STA scaledTime
+  
+  ;;clear has continue
+  LDA #$00
+  STA hasContinue 
+  
   
   INC mode_state
 .leave:
@@ -330,89 +354,36 @@ UpdateGamePlay:
   
 .setTile:
   
-  ;;take Y position, mult by 2 to get starting index in puzzle solution
-  LDA mouse_index+1
-;;if the puzzle is a 5x5, we only have one byte per row, so no need to double this
-  STA temp1
-  LDY #$00
-  LDA [puzzle_address], y
-  BEQ .skipDouble
-  ASL temp1
-.skipDouble:
-  LDA temp1
-  CLC
-  ADC #$04 ;; add to get past header
-  STA temp1
-  
-  ;;div X position by 8 to get the byte index
   LDA mouse_index
-  LSR A
-  LSR A
-  LSR A
-  BEQ .getMask
+  ORA mouse_index+1
+  AND #$10
+  BEQ .getPuzzleTile
   
-  INC temp1
+  LDA gamepadPressed ; only draw on click
+  AND #GAMEPAD_AB
+  BEQ .leaveEarly
   
-.getMask:
-  
-  LDA mouse_index
-  AND #$07
-  TAX
-  LDA #$80
-  CPX #$00
-  BEQ .storeMask
-
-.maskLoop:
-  LSR A
-  DEX
-  BNE .maskLoop
-.storeMask:
-  STA temp2
-
-  LDY temp1
-  LDA [puzzle_address], y
-  AND temp2
-  STA temp1	;get the 0/non zero solution flag 
-
   LDY #$00
   LDA [mouse_location], y
+  CMP #$40
+  BCC .leaveEarly
+  CMP #$5F
+  BEQ .toggleClue
+  BCS .leaveEarly
+
+.toggleClue:
   STA temp3
   AND #$F0
-  CMP currentPaintTile
-  BNE .diffTiles
-  RTS
-  
-.diffTiles:
-  ;;tiles are different- check if the current tile is marked as a solution tile
-  CMP #$70
-  BNE .checkNewMark
-  ;;if erasing a mark, check if the tile was part of the solution
-  LDA temp1
-  BNE .antiMark
-  DEC nonSolutionCount
+  EOR #$10
+  STA currentPaintTile
   JMP .overwriteTile
   
-.checkNewMark:
-
-  LDA currentPaintTile
-  CMP #$70
-  BNE .overwriteTile
-  
-  LDA temp1
-  BNE .proMark
-  INC nonSolutionCount 
-  JMP .overwriteTile  
-  
-.antiMark:
-  DEC solutionCount
-  JMP .overwriteTile
-.proMark:   
-  
-  INC solutionCount
+.getPuzzleTile:
+  JSR CheckAgainstSolution
   
 .overwriteTile:
   ;;overwrite tile
-  LDA temp3
+  LDA temp3		;tile taken from current mouse location
   AND #$0F
   ORA currentPaintTile
   LDY #$00
@@ -574,7 +545,7 @@ UpdateMoveScreen:
   
   LDA clues_address
   CLC
-  ADC clueTableIndex
+  ADC image_table_offset
   STA clues_address
   LDA clues_address+1
   ADC #$00
@@ -596,12 +567,9 @@ UpdateDrawImage:
   JSR DrawImage
   LDA clueTableIndex
   CMP tempy
-  ;BEQ .changeModeState
-  
-  ;JSR DrawImage
-  ;LDA clueTableIndex
-  ;CMP tempy
-  BNE .leave
+
+  BEQ .changeModeState
+  RTS
   
 .changeModeState:
 
@@ -670,6 +638,17 @@ UpdateDrawImage:
   CPX #$04
   BNE .copyLoop
   
+  LDY #$00
+  LDA [puzzle_address], y
+  ASL A
+  TAX
+  LDA ImageTitleLowerHalfPos, x
+  STA title_draw_address
+  INX
+  LDA ImageTitleLowerHalfPos, x
+  STA title_draw_address+1
+  
+  JSR DrawTitle
   
   INC mode_state
 
@@ -725,6 +704,7 @@ UpdateGameFadeOut:
 
 UpdateGameExit:
 
+  ;JSR famistudio_music_stop
   LDA time
   AND #$0F
   BNE .leave
@@ -742,26 +722,48 @@ UpdateGameExit:
   
 MoveMouse:
 
-  LDA temp1
+  LDA temp1				;horizontal move 
   ASL temp1
   ASL temp1
   ASL temp1
   
-  LDA temp2
+  LDA temp2				;vertical move
   ASL temp2 
   ASL temp2
   ASL temp2
+  
   
   LDY #$00
   LDA [puzzle_address], y ;puzzle size 0 = 5, 1 = 10, 2 = 15  
   ASL A
   TAX
+
+  LDA mouse_index+1		;horizontal index
+  AND #$10				;check clue flag
+  STA tempy				;store clue flag
+  LDA mouse_index		;horizontal index
+  AND #$10				;check clue flag
+  STA tempx				;store clue flag
+  
+  BEQ .puzzleHoriMin
+  LDA #HORI_CLUE_MIN
+  STA temp3 
+  LDA #HORI_CLUE_MAX
+  STA temp4
+  JMP .checkHoriBorder
+  
+.puzzleHoriMin:
   LDA MouseMinimums, x
-  STA temp3
+  STA temp3 
   LDA MouseMaximums, x
   STA temp4
+  
+.checkHoriBorder:
   TXA
   PHA
+  
+  LDA #$00
+  STA temp7
   
   LDX #SPRITE_XPOS
   LDA SPRITE_DATA, x
@@ -769,9 +771,31 @@ MoveMouse:
   ADC temp1
   ;;check against borders
   CMP temp3
-  BEQ .moveVert 
+  BNE .checkHoriMax
+  ;;equal - check if mouse index is in clue area
+  STA temp6
+  LDA tempx
+  ORA tempy
+  BNE .moveVert
+  INC temp7
+  LDA temp6
+  CLC
+  ADC temp1
+  JMP .moveSpriteHori
+  
+.checkHoriMax:
   CMP temp4
+  BNE .moveSpriteHori
+  
+  STA temp6
+  LDA tempx
   BEQ .moveVert
+  INC temp7
+  LDA temp6
+  CLC
+  ADC temp1
+  
+.moveSpriteHori:
   STA SPRITE_DATA, x
 
 .moveVert:
@@ -779,10 +803,26 @@ MoveMouse:
   PLA
   TAX
   INX
+  
+  LDA tempy
+  BEQ .puzzleVertMin
+  LDA #VERT_CLUE_MIN
+  STA temp3 
+  LDA #VERT_CLUE_MAX
+  STA temp4
+  JMP .checkVertBorder
+  
+.puzzleVertMin:
   LDA MouseMinimums, x
   STA temp3
   LDA MouseMaximums, x
   STA temp4
+
+
+.checkVertBorder:
+
+  LDA #$00
+  STA temp8
 
   LDX #SPRITE_YPOS
   LDA SPRITE_DATA, x
@@ -790,9 +830,30 @@ MoveMouse:
   ADC temp2
   ;;check against borders
   CMP temp3
-  BEQ .leave
+  BNE .checkVertMax
+  ;;equal - check if mouse index is in clue area
+  STA temp6
+  LDA tempy
+  ORA tempx
+  BNE .leave
+  INC temp8
+  LDA temp6
+  CLC
+  ADC temp2
+  JMP .moveSpriteVert
+  
+.checkVertMax:
   CMP temp4
+  BNE .moveSpriteVert
+  STA temp6
+  LDA tempy
   BEQ .leave
+  INC temp8
+  LDA temp6
+  CLC
+  ADC temp2
+  
+.moveSpriteVert:
   STA SPRITE_DATA, x
 
 .leave:
@@ -800,13 +861,32 @@ MoveMouse:
 	
 UpdateMouseScreenPos:
 
+  LDA temp7
+  BEQ .skipHoriFlip
+  
+  LDA tempx
+  EOR #$10
+  STA tempx
+  
+.skipHoriFlip:
+
+  LDA temp8
+  BEQ .skipVertFlip
+
+  LDA tempy
+  EOR #$10
+  STA tempy
+
+.skipVertFlip:
+
+
   LDX #$00
   LDA SPRITE_DATA, x;ypos	;yyyy y...
   LSR A						;0yyy yy..
   LSR A						;00yy yyy.
   LSR A						;000y yyyy
   STA temp1
-  STA mouse_index+1
+  STA mouse_index+1			;vertical
   INX
   INX
   INX	
@@ -821,16 +901,18 @@ UpdateMouseScreenPos:
   ROR temp2			 ;		;  yyyx xxxx
   LDA temp2
   AND #$1F
-  STA mouse_index
+  STA mouse_index			;horizontal
   
   LDA mouse_index
   SEC 
   SBC #$0E
+  ORA tempx
   STA mouse_index
   
   LDA mouse_index+1
   SEC 
   SBC #$0C
+  ORA tempy
   STA mouse_index+1
   
   ;subtract starting offsets for mouse index
@@ -1082,6 +1164,90 @@ CheckNewBestTime:
 .leave:
   RTS
     
+
+CheckAgainstSolution:
+  ;;take Y position, mult by 2 to get starting index in puzzle solution
+  LDA mouse_index+1
+;;if the puzzle is a 5x5, we only have one byte per row, so no need to double this
+  STA temp1
+  LDY #$00
+  LDA [puzzle_address], y
+  BEQ .skipDouble
+  ASL temp1
+.skipDouble:
+  LDA temp1
+  CLC
+  ADC #$04 ;; add to get past header
+  STA temp1
+  
+  ;;div X position by 8 to get the byte index
+  LDA mouse_index
+  LSR A
+  LSR A
+  LSR A
+  BEQ .getMask
+  
+  INC temp1
+  
+.getMask:
+  
+  LDA mouse_index
+  AND #$07
+  TAX
+  LDA #$80
+  CPX #$00
+  BEQ .storeMask
+
+.maskLoop:
+  LSR A
+  DEX
+  BNE .maskLoop
+.storeMask:
+  STA temp2
+
+  LDY temp1
+  LDA [puzzle_address], y
+  AND temp2
+  STA temp1	;get the 0/non zero solution flag 
+
+  LDY #$00
+  LDA [mouse_location], y
+  STA temp3
+  AND #$F0
+  CMP currentPaintTile
+  BNE .diffTiles
+  RTS
+  
+.diffTiles:
+  ;;tiles are different- check if the current tile is marked as a solution tile
+  CMP #$70
+  BNE .checkNewMark
+  ;;if erasing a mark, check if the tile was part of the solution
+  LDA temp1
+  BNE .antiMark
+  DEC nonSolutionCount
+  JMP .leave
+  
+.checkNewMark:
+
+  LDA currentPaintTile
+  CMP #$70
+  BNE .leave
+  
+  LDA temp1
+  BNE .proMark
+  INC nonSolutionCount 
+  JMP .leave 
+  
+.antiMark:
+  DEC solutionCount
+  JMP .leave
+.proMark:   
+  
+  INC solutionCount
+.leave:
+  RTS	
+
 ;hori, vert
 MouseMinimums:
   .db $6A, $5A
@@ -1091,6 +1257,11 @@ MouseMaximums:
   .db $9A, $8A
   .db $C2, $B2
   .db $EA, $DA
+  
+VERT_CLUE_MIN = $12
+HORI_CLUE_MIN = $22
+HORI_CLUE_MAX = $6A
+VERT_CLUE_MAX = $5A
   
 PuzzleScrollHori:
   .db $01, $04, $06

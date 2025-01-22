@@ -220,6 +220,11 @@ UpdateTitleExit:
   MACROGetDoubleIndex puzzle_index
   JSR GetTableAtIndex
   MACROGetPointer table_address, puzzle_address
+  
+  MACROGetLabelPointer NAMES_TABLE, table_address
+  MACROGetDoubleIndex puzzle_index
+  JSR GetTableAtIndex
+  MACROGetPointer table_address, title_address
 
   LDY #$00
   LDA [puzzle_address], y
@@ -474,6 +479,7 @@ LoadBank:
   
 UpdatePuzzleInfo:
 
+
   MACROGetLabelPointer PuzzleSaveLocations, table_address
   LDA tempBank
   ASL A
@@ -515,12 +521,30 @@ UpdatePuzzleInfo:
   JSR WriteToPPUString
   DEY
   LDA temp3
-  JSR WriteToPPUString
-  JMP .leave
- 
+  JSR WriteToPPUString  
+  JMP .drawTitle
+
 .loadDefaultTime:
   
+  MACROAddPPUStringEntryRepeat #$26, #$47, #DRAW_HORIZONTAL, #$10, #$63
   MACROAddPPUStringEntryTable temp1, temp2, #DRAW_HORIZONTAL, DefaultTimeString
+  JMP .leave
+
+.drawTitle:
+  MACROAddPPUStringEntryRepeat #$26, #$47, #DRAW_HORIZONTAL, #$10, #$24
+  
+  MACROGetLabelPointer NAMES_TABLE, table_address
+  MACROGetDoubleIndex tempPuzz
+  JSR GetTableAtIndex
+  MACROGetPointer table_address, title_address
+
+  ;draw title at 264F
+  LDA #$4F 
+  STA title_draw_address
+  LDA #$26
+  STA title_draw_address+1
+  
+  JSR DrawTitle
 .leave:
   RTS
   

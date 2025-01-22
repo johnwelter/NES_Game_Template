@@ -1,15 +1,19 @@
 things left to do
 
-- better end screen 
-
-- save solved puzzles (check is clear time is lower?)
-
-- draw image title, centered under image
-
-- mark clues off
- 
-- music engine
-
+- songs
+  - title
+  - bank 1
+  - bank 2
+  - bank 3
+  - puzzle solved - draw image
+  - puzzle solved fanfare
+  - end screen ambience
+-sfx
+  - cursor
+  - place marker
+  - erase marker
+  - place x
+  - image draw
 EXPANDED:
 
 - puzzle spirte representations 
