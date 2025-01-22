@@ -35,11 +35,6 @@
 
   jsr sound_init
     
-  lda #$01
-  sta current_song
-  lda current_song
-  jsr sound_load
-
   LDA #TITLE_IDX
   LDX #$00
   JSR ChangeGameMode

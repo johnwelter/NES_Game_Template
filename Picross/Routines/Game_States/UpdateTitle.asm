@@ -33,6 +33,11 @@ UpdateTitleJumpTable:
 
 UpdateTitleInit:
 
+  lda #$00
+  sta current_song
+  lda current_song
+  jsr sound_load
+
   JSR TurnOnSprites
   
   LDA hasContinue
@@ -60,6 +65,8 @@ UpdateBankSelection:
   AND #GAMEPAD_A
   BEQ .leave
   
+  JSR PlayMenuCursorSound
+  
 .changeModeState:
   
   LDA mouse_index
@@ -72,7 +79,6 @@ UpdateBankSelection:
   
   ;;load bank
   JSR LoadBank
-  
   JMP .goToNext
   
 .setBank:
@@ -159,6 +165,8 @@ UpdatePuzzleSelection:
   STA PPU_ScrollNT
   
   INC mode_state
+  
+  JSR PlayMenuCursorSound
 .leave:
   RTS
   
@@ -183,7 +191,12 @@ UpdateScrollBack:
   RTS
   
 UpdateTitleExit:
-
+  
+  lda #$00
+  sta current_song
+  lda current_song
+  jsr sound_load
+  
   ;;reset screen scroll
   LDA #$00
   STA PPU_ScrollX
@@ -387,6 +400,8 @@ SetBankPointerFromIndex:
   ADC #$A0
   LDX #$01
   JSR SetSpriteYPosition
+  
+  JSR PlayMenuCursorSound
 
 .leave:
   
@@ -463,6 +478,7 @@ UpdatePuzzlePointer:
   ADC #$10
   LDX #$01
   JSR SetSpriteXPosition
+  JSR PlayMenuCursorSound
   
 .leave:
   
@@ -547,7 +563,19 @@ UpdatePuzzleInfo:
   JSR DrawTitle
 .leave:
   RTS
-  
+
+PlayMenuCursorSound:
+    
+  LDA #$04
+  STA current_song
+  JSR sound_load
+  RTS 
+
+PlayPuzzleCursorSound:
+  LDA #$05
+  STA current_song
+  JSR sound_load
+  RTS 
 ContinueText:
 
   .db $08, $0C, $18, $17, $1D, $12, $17, $1E, $0E

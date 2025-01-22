@@ -425,26 +425,22 @@ NUM_SONGS = $09 ;if you add a new song, change this number.
 
 ;this is our pointer table.  Each entry is a pointer to a song header                
 song_headers:
-    .word song0_header  ;this is a silence song.  See song0.i for more details
-    .word song1_header  ;The Guardian Legend Boss song
-    .word song2_header  ;a sound effect.  Try playing it over the other songs.
-    .word song3_header  ;Dragon Warrior overland song
-    .word song4_header  ;a new song taking advantage of note lengths and rests
-    .word song5_header  ;another sound effect played at a very fast tempo.
-    .word song6_header
-    .word song7_header
-    .word song8_header
+	
+    .word song0_header
+	.word bank0_header
+	.word menu_header
+    .word drawImg_header  ;The Guardian Legend Boss song
+	.word menuCursor_header
+	.word puzzleCursor_header
+
     
     .include "External/sound_opcodes.asm"    ;our opcode subroutines, jump table and aliases
     .include "External/note_table.i" ;period lookup table for notes
     .include "External/note_length_table.i"
     .include "External/vol_envelopes.i"
     .include "External/song0.i"  ;holds the data for song 0 (header and data streams)
-    .include "External/song1.i"  ;holds the data for song 1
-    .include "External/song2.i"
-    .include "External/song3.i"
-    .include "External/song4.i"
-    .include "External/song5.i"
-    .include "External/song6.i"
-    .include "External/song7.i"
-    .include "External/song8.i"
+	.include "Music/Bank0.i"  ;holds the data for song 1
+	.include "Music/Menu.i"  ;holds the data for song 1
+    .include "Music/puzzleSolvedDrawImage.i"  ;holds the data for song 1
+	.include "SFX/menuCursor.i"  ;holds the data for song 1
+	.include "SFX/puzzleCursor.i"  ;holds the data for song 1

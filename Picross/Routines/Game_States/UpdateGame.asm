@@ -44,18 +44,12 @@ UpdateGameJumpTable:
 UpdateGameInit:
 
   ;;start bank song
-
-  LDA bank_index
-  BNE .skipMusicSet
-  ;LDX #$F0
-  ;LDY #$A0
-
-  ;lda #1 ; NTSC
-  ;jsr famistudio_init
-  ;lda #0
-  ;jsr famistudio_music_play
   
-.skipMusicSet:
+  lda #$01
+  sta current_song
+  lda current_song
+  jsr sound_load
+  
   ;; get the puzzle table in the puzzle address
   MACROGetLabelPointer PUZZLE_TABLE, table_address
   MACROGetDoubleIndex puzzle_index
@@ -436,6 +430,11 @@ UpdateGamePlay:
   
   INC mode_state
   
+  lda #$00
+  sta current_song
+  lda current_song
+  jsr sound_load
+  
   ;;the puzzle is solved, store the time and solved bit in memory
   ;;if the puzzle was solved before, only update the time
   
@@ -466,10 +465,11 @@ UpdateGamePlay:
   INY
   LDA GameTime+3
   STA [table_address],y
-  JMP .leave
+
+ 
   
 .leave:
- 
+
   RTS
   
 UpdateClearPuzzle:
@@ -721,6 +721,8 @@ UpdateGameExit:
   RTS
   
 MoveMouse:
+
+  JSR PlayPuzzleCursorSound
 
   LDA temp1				;horizontal move 
   ASL temp1
@@ -1029,6 +1031,8 @@ UpdatePauseScreen:
   AND #GAMEPAD_HORI
   ;;binary system- left and right don't really matter, we'll just toggle the position
   BEQ .leave
+  
+  JSR PlayMenuCursorSound
   
   LDA #SPRITE_XPOS
   LDX #$01

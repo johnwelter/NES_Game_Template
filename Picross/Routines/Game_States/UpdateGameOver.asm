@@ -27,6 +27,10 @@ UpdateGameOverInit:
 
   ;load the hasContinue flag
   ;choose the message to print based on the flag
+  lda #$00
+  sta current_song
+  lda current_song
+  jsr sound_load
   
   MACROGetLabelPointer EndScreens, table_address
   LDA hasContinue
@@ -120,7 +124,7 @@ UpdateGameOverWaitInput:
   AND #GAMEPAD_HORI
   ;;binary system- left and right don't really matter, we'll just toggle the position
   BEQ .leaveEarly
-  
+  JSR PlayMenuCursorSound
   LDA #SPRITE_XPOS
   LDX #$00
   JSR GetSpriteData

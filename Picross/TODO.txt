@@ -9,12 +9,12 @@ things left to do
   - puzzle solved fanfare
   - end screen ambience
 -sfx
-  - cursor
   - place marker
   - erase marker
   - place x
   - image draw
+
 EXPANDED:
 
 - puzzle spirte representations 
-- toggle for mouse input
+- toggle for mouse input (need mouse/ console)
