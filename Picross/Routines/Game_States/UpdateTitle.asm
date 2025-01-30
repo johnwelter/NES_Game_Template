@@ -79,16 +79,20 @@ UpdateBankSelection:
   
   ;;load bank
   JSR LoadBank
-  JMP .goToNext
   
 .setBank:
   STA tempBank
   LDA #$FF
   LDX #$01
   JSR SetSpriteImage
+  
+  JSR ResetMapper
+  LDA tempBank
+  JSR LoadPRGBank
 
 .goToNext:
   INC mode_state
+
   JMP .leave
 
 
