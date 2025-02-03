@@ -79,6 +79,7 @@ UpdateBankSelection:
   
   ;;load bank
   JSR LoadBank
+  JMP .goToNext
   
 .setBank:
   STA tempBank
@@ -156,7 +157,7 @@ UpdatePuzzleSelection:
   LDX #$01
   JSR SetSpriteImage
   JSR InitBankPointer
-  LDA bank_index
+  LDA tempBank
   STA mouse_index
   JSR SetBankPointerFromIndex
   
