@@ -377,7 +377,14 @@ UpdateGamePlay:
   
 .overwriteTile:
   ;;overwrite tile
+   
   LDA temp3		;tile taken from current mouse location
+  AND #$F0
+  CMP currentPaintTile
+  BEQ .skipSound
+  JSR PlayMenuCursorSound
+.skipSound:
+  LDA temp3
   AND #$0F
   ORA currentPaintTile
   LDY #$00
@@ -564,11 +571,15 @@ UpdateMoveScreen:
 UpdateDrawImage:
 
   ;run it twice for a faster draw
+  LDA time
+  AND #$01
+  BNE .leaveEarly
   JSR DrawImage
   LDA clueTableIndex
   CMP tempy
 
   BEQ .changeModeState
+.leaveEarly:
   RTS
   
 .changeModeState:
@@ -1144,14 +1155,17 @@ CheckNewBestTime:
   LDA GameTime+3
   CMP [table_address], y
   BCC .updateTime
+  BCS .leave
   DEY
   LDA GameTime+2
   CMP [table_address], y
   BCC .updateTime
+  BCS .leave
   DEY
   LDA GameTime+1
   CMP [table_address], y
   BCC .updateTime
+  BCS .leave
   DEY
   LDA [table_address], y
   AND #$0F

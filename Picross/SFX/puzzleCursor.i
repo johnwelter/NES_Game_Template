@@ -1,7 +1,7 @@
 puzzleCursor_header:
     .byte $01           ;1 stream
     
-    .byte SFX_1         ;which stream
+    .byte SFX_2         ;which stream
     .byte $01           ;status byte (stream enabled)
     .byte TRIANGLE      ;which channel
     .byte $80           ;on

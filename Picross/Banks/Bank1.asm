@@ -42,7 +42,8 @@
   .db $00, $00, $00, $00
   .db $00, $00, $00, $00
   .db $00, $00, $00, $00
-  
+  ;bank song, A0D8
+  .include "Music/Bank1.i"  ;holds the data for bank song
   
   .org $BFFA     ;first of the three vectors starts here
   .dw NMI        ;when an NMI happens (once per frame if enabled) the 

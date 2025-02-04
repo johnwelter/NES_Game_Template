@@ -571,16 +571,25 @@ UpdatePuzzleInfo:
 
 PlayMenuCursorSound:
     
-  LDA #$04
+  LDA #$05
   STA current_song
   JSR sound_load
   RTS 
 
 PlayPuzzleCursorSound:
-  LDA #$05
+  LDA #$06
   STA current_song
   JSR sound_load
   RTS 
+  
+PlayNoiseBlipSound:
+ 
+  LDA #$07
+  STA current_song
+  JSR sound_load
+  RTS 
+  
+
 ContinueText:
 
   .db $08, $0C, $18, $17, $1D, $12, $17, $1E, $0E

@@ -10,6 +10,8 @@ volume_envelopes:
     .word se_battlekid_soft_long
     .word se_drum_decay
 	.word se_hiHat_decay
+	.word se_long_decay
+	.word se_tinyDecy
     
 se_ve_1:
     .byte $0F, $0E, $0D, $0C, $09, $05, $00
@@ -57,6 +59,20 @@ se_hiHat_decay:
     .byte $0E, $06, $02, $00
 	.byte $FF
     
+se_long_decay:
+    .byte $0E, $0F, $0F, $0F, $0E, $0E, $0E, $0D, $0D, $0D
+    .byte $0C, $0C, $0C, $0B, $0B, $0B, $0A, $0A, $0A
+	.byte $09, $09, $09, $08, $08, $08, $07, $07, $07
+	.byte $06, $06, $06, $05, $05, $05, $04, $04, $04
+	.byte $03, $03, $03, $02, $02, $02, $01, $01, $01
+    .byte $00
+    .byte $FF
+	
+se_tinyDecy:
+	.byte $0F, $00
+	.byte $FF
+
+
 	
 ve_short_staccato = $00
 ve_fade_in = $01
@@ -69,3 +85,5 @@ ve_battlekid_2 = $07
 ve_battlekid_2b = $08
 ve_drum_decay = $09
 ve_hiHat_decay = $0A
+ve_long_decay = $0B
+ve_tinyDecy = $0C

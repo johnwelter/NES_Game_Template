@@ -13,6 +13,12 @@ d_whole = $8A   ;don't forget we are counting in hex
 t_quarter = $8B
 five_eighths =$8C
 five_sixteenths=$8D
+d_half_d_eight = $8E
+whole_quarter_sixteenth = $8F
+d_half_eighth = $90
+whole_sixteenth = $91
+sixtyfourth = $92
+
 
 note_length_table:
     .byte $01   ;32nd note
@@ -30,4 +36,9 @@ note_length_table:
               ;---other
     .byte $07   ;modified quarter to fit after d_sixteenth triplets
     .byte $14   ;2 quarters plus an 8th
-    .byte $0A
+    .byte $0A	
+	.byte $1E	;dotted half + dotted eighth
+	.byte $2A
+	.byte $1C
+	.byte $22
+	.byte $00

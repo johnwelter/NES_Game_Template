@@ -451,6 +451,7 @@ DrawImage:
   STA clue_draw_address+1
   
 .leave:
+  JSR PlayNoiseBlipSound
   INC clueTableIndex
   RTS
   

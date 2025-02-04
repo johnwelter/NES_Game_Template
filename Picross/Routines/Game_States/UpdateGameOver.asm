@@ -27,7 +27,7 @@ UpdateGameOverInit:
 
   ;load the hasContinue flag
   ;choose the message to print based on the flag
-  lda #$00
+  lda #$04
   sta current_song
   lda current_song
   jsr sound_load
