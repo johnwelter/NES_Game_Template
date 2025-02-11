@@ -28,6 +28,7 @@ stream_ptr_HI .rs 6         ;high byte of pointer to data stream
 stream_ve .rs 6             ;current volume envelope
 stream_ve_index .rs 6       ;current position within the volume envelope
 stream_vol_duty .rs 6       ;stream volume/duty settings
+stream_note_idx .rs 6
 stream_note_LO .rs 6        ;low 8 bits of period for the current note on a stream
 stream_note_HI .rs 6        ;high 3 bits of period for the current note on a stream 
 stream_tempo .rs 6          ;the value to add to our ticker total each frame
@@ -36,6 +37,13 @@ stream_note_length_counter .rs 6
 stream_note_length .rs 6
 stream_loop1 .rs 6          ;loop counter
 stream_note_offset .rs 6
+stream_pe .rs 6             ;current volume envelope
+stream_pe_index .rs 6       ;current position within the volume envelope
+stream_pe_offset .rs 6
+stream_pe_delay .rs 6
+stream_arp .rs 6
+stream_arp_index .rs 6
+stream_arp_offset .rs 6
     
 sound_init:
     lda #$0F
@@ -102,6 +110,13 @@ sound_load:
     lda [sound_ptr], y
     sta stream_ve, x
     iny
+	
+	;temp solution
+	lda #pe_none
+	sta stream_pe, x
+	
+	lda #arp_none
+	sta stream_arp, x
     
     lda [sound_ptr], y      ;pointer to stream data.  Little endian, so low byte first
     sta stream_ptr_LO, x
@@ -122,6 +137,8 @@ sound_load:
     
     lda #$00
     sta stream_ve_index, x
+	sta stream_pe_index, x
+	sta stream_arp_index, x
     sta stream_loop1, x
     sta stream_note_offset, x
 .next_stream:
@@ -222,6 +239,7 @@ se_fetch_byte:
     adc stream_note_offset, x   ;add note offset
     asl a
     tay
+	sta stream_note_idx, x
     lda note_table, y
     sta stream_note_LO, x
     lda note_table+1, y
@@ -233,6 +251,9 @@ se_fetch_byte:
 .reset_ve:    
     lda #$00
     sta stream_ve_index, x  
+	sta stream_pe_index, x
+	sta stream_pe_delay, x
+	sta stream_arp_index,x
 .update_pointer:
     iny
     tya
@@ -306,16 +327,29 @@ se_set_temp_ports:
     tay
     
     jsr se_set_stream_volume
+	
     
     lda #$08
     sta soft_apu_ports+1, y     ;sweep
     
+	
+	LDA stream_arp, x
+	BEQ .updatePitch
+	
+	JSR se_set_stream_arpeggio
+	JMP .leaveTempSet
+	
+.updatePitch:
     lda stream_note_LO, x
     sta soft_apu_ports+2, y     ;period LO
     
     lda stream_note_HI, x
     sta soft_apu_ports+3, y     ;period HI
+	
 
+	jsr se_set_stream_pitch
+
+.leaveTempSet:
     rts    
 
 ;----------------------------------
@@ -374,7 +408,172 @@ se_set_stream_volume:
     sta soft_apu_ports, y
 .done:
     rts   
+	
+;---------------------------------------
+;
+se_set_stream_arpeggio:
     
+	lda stream_status, x
+    and #%00000010
+	beq .continue
+	rts
+	
+.continue:
+    sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+    
+    lda stream_arp, x            ;which volume envelope?
+    asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+    tay
+    lda arpeggios, y     ;get the low byte of the address from the pointer table
+    sta sound_ptr               ;put it into our pointer variable
+    lda	arpeggios+1, y   ;get the high byte of the address
+    sta sound_ptr+1
+    
+.read_arp:
+    ldy stream_arp_index, x      ;our current position within the volume envelope.
+    lda [sound_ptr], y          ;grab the value.
+    cmp #$FF
+    bne .set_arp                ;if not FF, set the volume
+	LDA #$00
+    STA stream_arp_index, x      ;else if FF, go back one and read again
+    jmp .read_arp                ;  FF essentially tells us to repeat the last
+                                ;  volume value for the remainder of the note
+.set_arp:
+    STA sound_temp2             ;save our new volume value (about to destroy A)
+	LDA stream_note_idx, x
+	CLC
+	ADC sound_temp2
+	STA sound_temp2
+	
+	
+	LDY sound_temp1
+	STX sound_temp1
+	TAX 
+
+	LDA note_table, x
+	STA soft_apu_ports+2, y
+	LDA note_table+1, x
+	STA soft_apu_ports+3, y
+	
+	LDX sound_temp1
+	
+    inc stream_arp_index, x      ;set our volume envelop index to the next position
+	
+	TYA
+	STA sound_temp1
+
+    rts 
+;--------------------------------------
+;
+se_set_stream_pitch:
+    sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+    
+    lda stream_pe, x            ;which volume envelope?
+    asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+    tay
+    lda pitch_envelopes, y     ;get the low byte of the address from the pointer table
+    sta sound_ptr               ;put it into our pointer variable
+    lda pitch_envelopes+1, y   ;get the high byte of the address
+    sta sound_ptr+1
+	
+	LDA stream_pe_delay, x
+	;if not 0, decrement
+	AND #$7F			;check if, without minus flag, the delay is 0
+	BEQ .read_pe
+	DEC stream_pe_delay, x
+	RTS
+    
+.read_pe:
+    ldy stream_pe_index, x      ;our current position within the volume envelope.
+    lda [sound_ptr], y          ;grab the value.
+    cmp #pe_loopLast
+	BNE .notLoopLast
+	dec stream_pe_index, x      ;else if loop last, go back one and read again
+	jmp .read_pe 
+
+.notLoopLast:
+	cmp #pe_loopAll
+	BNE .notLoopAll
+	LDA #$00
+	STA stream_pe_index, x
+	jmp .read_pe
+	
+.notLoopAll:
+	cmp #pe_loopPart
+	BNE .notLoopPart
+	iny
+	lda stream_pe_index, x
+	SEC
+	SBC [sound_ptr], y
+	STA stream_pe_index, x
+	jmp .read_pe
+
+.notLoopPart:
+	cmp #pe_delay
+	BNE .notLoopDelay
+	LDA stream_pe_delay, x
+	BMI .delayUsed	;negative, delay was already used this time
+	iny
+	lda [sound_ptr], y
+	ORA #$80
+	STA stream_pe_delay, x
+	inc stream_pe_index, x
+	jmp .finish_pitchShift
+.delayUsed:
+	inc stream_pe_index, x
+	inc stream_pe_index, x
+	jmp .read_pe
+	
+.notLoopDelay:
+.set_pitch:
+
+    sta stream_pe_offset, x      ;get current vol/duty settings
+	STA sound_temp2
+	LDY sound_temp1
+	LDA sound_temp2
+	BPL .add_pitch
+	
+.sub_pitch:
+	
+	EOR #$FF	;flip bits
+	CLC
+	ADC #$01	;add one - two's compliment
+	STA sound_temp2
+	
+	LDA soft_apu_ports+2, y       
+	SEC
+	SBC sound_temp2
+	STA soft_apu_ports+2, y
+	LDA soft_apu_ports+3, y
+	SBC #$00
+	STA soft_apu_ports+3, y
+	
+	JMP .finish_pitchShift
+
+.add_pitch:
+
+    LDA soft_apu_ports+2, y       
+	CLC
+	ADC sound_temp2
+	STA soft_apu_ports+2, y
+	LDA soft_apu_ports+3, y
+	ADC #$00
+	STA soft_apu_ports+3, y
+	
+.finish_pitchShift:
+    inc stream_pe_index, x      ;set our volume envelop index to the next position
+
+.rest_check:
+    ;check the rest flag. if set, overwrite volume with silence value 
+    lda stream_status, x
+    and #%00000010
+    beq .done                   ;if clear, no rest, so quit
+   
+    LDA #$00
+	STA stream_pe_offset, x
+.done:
+    rts    
+
 ;--------------------------
 ; se_set_apu copies the temporary RAM ports to the APU ports
 se_set_apu:
@@ -440,6 +639,8 @@ song_headers:
     .include "External/note_table.i" ;period lookup table for notes
     .include "External/note_length_table.i"
     .include "External/vol_envelopes.i"
+	.include "External/pitch_envelopes.i"
+	.include "External/arpeggios.i"
     .include "External/song0.i"  ;holds the data for song 0 (header and data streams)
 	.include "Music/Menu.i"  ;holds the data for song 1
     .include "Music/puzzleSolvedDrawImage.i"  ;holds the data for song 1

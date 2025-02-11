@@ -8,6 +8,8 @@ loop1 = $A5
 set_note_offset = $A6
 adjust_note_offset = $A7
 transpose = $A8
+pitch_envelope = $A9
+arpeggio = $AA
 
 ;-----------------------------------------------------------------------
 ;this is our JUMP TABLE!
@@ -21,6 +23,8 @@ sound_opcodes:
     .word se_op_set_note_offset     ;$A6
     .word se_op_adjust_note_offset  ;$A7
     .word se_op_transpose           ;$A8
+	.word se_op_change_pe			;$A9
+	.word se_op_change_arp
     ;etc, 1 entry per subroutine
 
     
@@ -116,3 +120,18 @@ se_op_transpose:
     
     ldy sound_temp1             ;restore Y
     rts
+	
+se_op_change_pe:
+    lda [sound_ptr], y      ;read the argument
+    sta stream_pe, x        ;store it in our volume envelope variable
+    lda #$00
+    sta stream_pe_index, x  ;reset volume envelope index to the beginning
+	sta stream_pe_delay, x
+    rts
+	
+se_op_change_arp:
+	lda [sound_ptr], y
+	sta stream_arp, x
+	lda #$00
+	sta stream_arp_index, x
+	rts

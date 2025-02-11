@@ -37,6 +37,7 @@ bank0_header:
 bank0_square1:
 
 	.byte volume_envelope, ve_long_decay 
+	.byte pitch_envelope, pe_mod
     .byte quarter, rest
 	.byte d_eighth, D5
 	.byte d_half_d_eight, C5
@@ -342,10 +343,12 @@ bank0_square2:
 	.byte d_eighth, E4, E4
 	.byte volume_envelope, ve_tgl_2
 	.byte eighth, Fs4
-	.byte volume_envelope, ve_tgl_1
+	.byte volume_envelope, ve_long_decay 
 	.byte d_quarter, rest
-	.byte thirtysecond, C5, E4, C5, E4, C5, E4, C5, E4, C5, E4
-	.byte C5, E4, C5, E4, C5, E4, C5, E4, C5, E4
+	.byte arpeggio, arp_lowerThird
+	.byte five_eighths, C5
+	.byte volume_envelope, ve_tgl_1
+	.byte arpeggio, arp_none
 	.byte sixteenth, rest
 	.byte eighth, Fs2, G2, Gs2
 	.byte sixteenth, A2
