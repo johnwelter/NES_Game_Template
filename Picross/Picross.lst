@@ -153,12 +153,63 @@
    30           00D0      targetScreenLoad        .rs 1
    31           00D1      recordSet                       .rs 1
 #[2]   Defines/Defines.asm
-   10           00D2      sound_ptr .rs 2
-   11           00D4      sound_ptr2 .rs 2
-   12           00D6      current_song .rs 1
-   13                     ;; 0100 is the stack
-   14                     ;; 0200 is sprite ram
-   15           0300        .rsset $0300
+#[3]   External/SoundVariables_ZP.asm
+   10                       .include "External/SoundVariables_ZP.asm"
+    1           00D2      sound_ptr .rs 2
+    2           00D4      sound_ptr2 .rs 2
+    3           00D6      current_song .rs 1
+#[2]   Defines/Defines.asm
+   11                     
+   12                     ;; 0100 is the stack
+   13                     ;; 0200 is sprite ram
+   14           0300        .rsset $0300
+#[3]   External/SoundVariables.asm
+   15                       .include "External/SoundVariables.asm"
+    1           0000      SQUARE_1 = $00 ;these are channel constants
+    2           0001      SQUARE_2 = $01
+    3           0002      TRIANGLE = $02
+    4           0003      NOISE = $03
+    5                     
+    6           0000      MUSIC_SQ1 = $00 ;these are stream # constants
+    7           0001      MUSIC_SQ2 = $01 ;stream # is used to index into variables
+    8           0002      MUSIC_TRI = $02
+    9           0003      MUSIC_NOI = $03
+   10           0004      SFX_1     = $04
+   11           0005      SFX_2     = $05
+   12                         
+   13           0300      sound_disable_flag  .rs 1   ;a flag variable that keeps track of whether the sound engine is disabled or not. 
+   14           0301      sound_temp1 .rs 1           ;temporary variables
+   15           0302      sound_temp2 .rs 1
+   16           0303      sound_sq1_old .rs 1  ;the last value written to $4003
+   17           0304      sound_sq2_old .rs 1  ;the last value written to $4007
+   18           0305      soft_apu_ports .rs 16
+   19                     
+   20                     ;reserve 6 bytes, one for each stream
+   21           0315      stream_curr_sound .rs 6     ;current song/sfx loaded
+   22           031B      stream_status .rs 6         ;status byte.   bit0: (1: stream enabled; 0: stream disabled)
+   23           0321      stream_channel .rs 6        ;what channel is this stream playing on?
+   24           0327      stream_ptr_LO .rs 6         ;low byte of pointer to data stream
+   25           032D      stream_ptr_HI .rs 6         ;high byte of pointer to data stream
+   26           0333      stream_ve .rs 6             ;current volume envelope
+   27           0339      stream_ve_index .rs 6       ;current position within the volume envelope
+   28           033F      stream_vol_duty .rs 6       ;stream volume/duty settings
+   29           0345      stream_note_idx .rs 6
+   30           034B      stream_note_LO .rs 6        ;low 8 bits of period for the current note on a stream
+   31           0351      stream_note_HI .rs 6        ;high 3 bits of period for the current note on a stream 
+   32           0357      stream_tempo .rs 6          ;the value to add to our ticker total each frame
+   33           035D      stream_ticker_total .rs 6   ;our running ticker total.
+   34           0363      stream_note_length_counter .rs 6
+   35           0369      stream_note_length .rs 6
+   36           036F      stream_loop1 .rs 6          ;loop counter
+   37           0375      stream_note_offset .rs 6
+   38           037B      stream_pe .rs 6             ;current volume envelope
+   39           0381      stream_pe_index .rs 6       ;current position within the volume envelope
+   40           0387      stream_pe_offset .rs 6
+   41           038D      stream_pe_delay .rs 6
+   42           0393      stream_arp .rs 6
+   43           0399      stream_arp_index .rs 6
+   44           039F      stream_arp_offset .rs 6
+#[2]   Defines/Defines.asm
    16           0400        .rsset $0400
    17           0500        .rsset $0500
    18           0600        .rsset $0600
@@ -6839,645 +6890,823 @@
   109                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 #[2]   External/sound_engine.asm
   110                         .include "External/sound_engine.asm"
-    1           0000      SQUARE_1 = $00 ;these are channel constants
-    2           0001      SQUARE_2 = $01
-    3           0002      TRIANGLE = $02
-    4           0003      NOISE = $03
-    5                     
-    6           0000      MUSIC_SQ1 = $00 ;these are stream # constants
-    7           0001      MUSIC_SQ2 = $01 ;stream # is used to index into variables
-    8           0002      MUSIC_TRI = $02
-    9           0003      MUSIC_NOI = $03
-   10           0004      SFX_1     = $04
-   11           0005      SFX_2     = $05
-   12                     
-   13           0300          .rsset $0300 ;sound engine variables will be on the $0300 page of RAM
-   14                         
-   15           0300      sound_disable_flag  .rs 1   ;a flag variable that keeps track of whether the sound engine is disabled or not. 
-   16           0301      sound_temp1 .rs 1           ;temporary variables
-   17           0302      sound_temp2 .rs 1
-   18           0303      sound_sq1_old .rs 1  ;the last value written to $4003
-   19           0304      sound_sq2_old .rs 1  ;the last value written to $4007
-   20           0305      soft_apu_ports .rs 16
-   21                     
-   22                     ;reserve 6 bytes, one for each stream
-   23           0315      stream_curr_sound .rs 6     ;current song/sfx loaded
-   24           031B      stream_status .rs 6         ;status byte.   bit0: (1: stream enabled; 0: stream disabled)
-   25           0321      stream_channel .rs 6        ;what channel is this stream playing on?
-   26           0327      stream_ptr_LO .rs 6         ;low byte of pointer to data stream
-   27           032D      stream_ptr_HI .rs 6         ;high byte of pointer to data stream
-   28           0333      stream_ve .rs 6             ;current volume envelope
-   29           0339      stream_ve_index .rs 6       ;current position within the volume envelope
-   30           033F      stream_vol_duty .rs 6       ;stream volume/duty settings
-   31           0345      stream_note_idx .rs 6
-   32           034B      stream_note_LO .rs 6        ;low 8 bits of period for the current note on a stream
-   33           0351      stream_note_HI .rs 6        ;high 3 bits of period for the current note on a stream 
-   34           0357      stream_tempo .rs 6          ;the value to add to our ticker total each frame
-   35           035D      stream_ticker_total .rs 6   ;our running ticker total.
-   36           0363      stream_note_length_counter .rs 6
-   37           0369      stream_note_length .rs 6
-   38           036F      stream_loop1 .rs 6          ;loop counter
-   39           0375      stream_note_offset .rs 6
-   40           037B      stream_pe .rs 6             ;current volume envelope
-   41           0381      stream_pe_index .rs 6       ;current position within the volume envelope
-   42           0387      stream_pe_offset .rs 6
-   43           038D      stream_pe_delay .rs 6
-   44           0393      stream_arp .rs 6
-   45           0399      stream_arp_index .rs 6
-   46           039F      stream_arp_offset .rs 6
-   47                         
-   48  06:D715            sound_init:
-   49  06:D715  A9 0F         lda #$0F
-   50  06:D717  8D 15 40      sta $4015   ;enable Square 1, Square 2, Triangle and Noise channels
-   51                         
-   52  06:D71A  A9 00         lda #$00
-   53  06:D71C  8D 00 03      sta sound_disable_flag  ;clear disable flag
-   54                         ;later, if we have other variables we want to initialize, we will do that here.
-   55  06:D71F  A9 FF         lda #$FF
-   56  06:D721  8D 03 03      sta sound_sq1_old   ;initializing these to $FF ensures that the first notes of the first song isn't skipped
-   57  06:D724  8D 04 03      sta sound_sq2_old
-   58  06:D727            se_silence:
-   59  06:D727  A9 30         lda #$30
-   60  06:D729  8D 05 03      sta soft_apu_ports      ;set Square 1 volume to 0
-   61  06:D72C  8D 09 03      sta soft_apu_ports+4    ;set Square 2 volume to 0
-   62  06:D72F  8D 11 03      sta soft_apu_ports+12   ;set Noise volume to 0
-   63  06:D732  A9 80         lda #$80
-   64  06:D734  8D 0D 03      sta soft_apu_ports+8     ;silence Triangle
-   65                     
-   66  06:D737  60            rts
-   67                         
-   68  06:D738            sound_disable:
-   69  06:D738  A9 00         lda #$00
-   70  06:D73A  8D 15 40      sta $4015   ;disable all channels
-   71  06:D73D  A9 01         lda #$01
-   72  06:D73F  8D 00 03      sta sound_disable_flag  ;set disable flag
-   73  06:D742  60            rts
-   74                         
-   75                     ;-------------------------------------
-   76                     ; load_sound will prepare the sound engine to play a song or sfx.
-   77                     ;   input:
-   78                     ;       A: song/sfx number to play
-   79  06:D743            sound_load:
-   80  06:D743  8D 01 03      sta sound_temp1         ;save song number
-   81  06:D746  0A            asl a                   ;multiply by 2.  We are indexing into a table of pointers (words)
-   82  06:D747  A8            tay
-   83  06:D748  B9 BB DA      lda song_headers, y     ;setup the pointer to our song header
-   84  06:D74B  8D D2 00      sta sound_ptr
-   85  06:D74E  B9 BC DA      lda song_headers+1, y
-   86  06:D751  8D D3 00      sta sound_ptr+1
+    1  06:D715            sound_init:
+    2  06:D715  A9 0F         lda #$0F
+    3  06:D717  8D 15 40      sta $4015   ;enable Square 1, Square 2, Triangle and Noise channels
+    4                         
+    5  06:D71A  A9 00         lda #$00
+    6  06:D71C  8D 00 03      sta sound_disable_flag  ;clear disable flag
+    7                         ;later, if we have other variables we want to initialize, we will do that here.
+    8  06:D71F  A9 FF         lda #$FF
+    9  06:D721  8D 03 03      sta sound_sq1_old   ;initializing these to $FF ensures that the first notes of the first song isn't skipped
+   10  06:D724  8D 04 03      sta sound_sq2_old
+   11  06:D727            se_silence:
+   12  06:D727  A9 30         lda #$30
+   13  06:D729  8D 05 03      sta soft_apu_ports      ;set Square 1 volume to 0
+   14  06:D72C  8D 09 03      sta soft_apu_ports+4    ;set Square 2 volume to 0
+   15  06:D72F  8D 11 03      sta soft_apu_ports+12   ;set Noise volume to 0
+   16  06:D732  A9 80         lda #$80
+   17  06:D734  8D 0D 03      sta soft_apu_ports+8     ;silence Triangle
+   18                     
+   19  06:D737  60            rts
+   20                         
+   21  06:D738            sound_disable:
+   22  06:D738  A9 00         lda #$00
+   23  06:D73A  8D 15 40      sta $4015   ;disable all channels
+   24  06:D73D  A9 01         lda #$01
+   25  06:D73F  8D 00 03      sta sound_disable_flag  ;set disable flag
+   26  06:D742  60            rts
+   27                         
+   28                     ;-------------------------------------
+   29                     ; load_sound will prepare the sound engine to play a song or sfx.
+   30                     ;   input:
+   31                     ;       A: song/sfx number to play
+   32  06:D743            sound_load:
+   33  06:D743  8D 01 03      sta sound_temp1         ;save song number
+   34  06:D746  0A            asl a                   ;multiply by 2.  We are indexing into a table of pointers (words)
+   35  06:D747  A8            tay
+   36  06:D748  B9 BB DA      lda song_headers, y     ;setup the pointer to our song header
+   37  06:D74B  8D D2 00      sta sound_ptr
+   38  06:D74E  B9 BC DA      lda song_headers+1, y
+   39  06:D751  8D D3 00      sta sound_ptr+1
+   40                         
+   41  06:D754  A0 00         ldy #$00
+   42  06:D756  B1 D2         lda [sound_ptr], y      ;read the first byte: # streams
+   43  06:D758  8D 02 03      sta sound_temp2         ;store in a temp variable.  We will use this as a loop counter: how many streams to read stream headers for
+   44  06:D75B  C8            iny
+   45  06:D75C            .loop:
+   46  06:D75C  B1 D2         lda [sound_ptr], y      ;stream number
+   47  06:D75E  AA            tax                     ;stream number acts as our variable index
+   48  06:D75F  C8            iny
+   49                         
+   50  06:D760  B1 D2         lda [sound_ptr], y      ;status byte.  1= enable, 0=disable
+   51  06:D762  9D 1B 03      sta stream_status, x
+   52  06:D765  F0 49         beq .next_stream        ;if status byte is 0, stream disabled, so we are done
+   53  06:D767  C8            iny
+   54                         
+   55  06:D768  B1 D2         lda [sound_ptr], y      ;channel number
+   56  06:D76A  9D 21 03      sta stream_channel, x
+   57  06:D76D  C8            iny
+   58                         
+   59  06:D76E  B1 D2         lda [sound_ptr], y      ;initial duty and volume settings
+   60  06:D770  9D 3F 03      sta stream_vol_duty, x
+   61  06:D773  C8            iny
+   62                         
+   63  06:D774  B1 D2         lda [sound_ptr], y
+   64  06:D776  9D 33 03      sta stream_ve, x
+   65  06:D779  C8            iny
+   66                             
+   67                             ;temp solution
+   68  06:D77A  A9 00             lda #pe_none
+   69  06:D77C  9D 7B 03          sta stream_pe, x
+   70                             
+   71  06:D77F  A9 00             lda #arp_none
+   72  06:D781  9D 93 03          sta stream_arp, x
+   73                         
+   74  06:D784  B1 D2         lda [sound_ptr], y      ;pointer to stream data.  Little endian, so low byte first
+   75  06:D786  9D 27 03      sta stream_ptr_LO, x
+   76  06:D789  C8            iny
+   77                         
+   78  06:D78A  B1 D2         lda [sound_ptr], y
+   79  06:D78C  9D 2D 03      sta stream_ptr_HI, x
+   80  06:D78F  C8            iny
+   81                         
+   82  06:D790  B1 D2         lda [sound_ptr], y
+   83  06:D792  9D 57 03      sta stream_tempo, x
+   84                         
+   85  06:D795  A9 A0         lda #$A0
+   86  06:D797  9D 5D 03      sta stream_ticker_total, x
    87                         
-   88  06:D754  A0 00         ldy #$00
-   89  06:D756  B1 D2         lda [sound_ptr], y      ;read the first byte: # streams
-   90  06:D758  8D 02 03      sta sound_temp2         ;store in a temp variable.  We will use this as a loop counter: how many streams to read stream headers for
-   91  06:D75B  C8            iny
-   92  06:D75C            .loop:
-   93  06:D75C  B1 D2         lda [sound_ptr], y      ;stream number
-   94  06:D75E  AA            tax                     ;stream number acts as our variable index
-   95  06:D75F  C8            iny
-   96                         
-   97  06:D760  B1 D2         lda [sound_ptr], y      ;status byte.  1= enable, 0=disable
-   98  06:D762  9D 1B 03      sta stream_status, x
-   99  06:D765  F0 49         beq .next_stream        ;if status byte is 0, stream disabled, so we are done
-  100  06:D767  C8            iny
-  101                         
-  102  06:D768  B1 D2         lda [sound_ptr], y      ;channel number
-  103  06:D76A  9D 21 03      sta stream_channel, x
-  104  06:D76D  C8            iny
-  105                         
-  106  06:D76E  B1 D2         lda [sound_ptr], y      ;initial duty and volume settings
-  107  06:D770  9D 3F 03      sta stream_vol_duty, x
-  108  06:D773  C8            iny
-  109                         
-  110  06:D774  B1 D2         lda [sound_ptr], y
-  111  06:D776  9D 33 03      sta stream_ve, x
-  112  06:D779  C8            iny
-  113                             
-  114                             ;temp solution
-  115  06:D77A  A9 00             lda #pe_none
-  116  06:D77C  9D 7B 03          sta stream_pe, x
-  117                             
-  118  06:D77F  A9 00             lda #arp_none
-  119  06:D781  9D 93 03          sta stream_arp, x
+   88  06:D79A  A9 01         lda #$01
+   89  06:D79C  9D 63 03      sta stream_note_length_counter,x
+   90                         
+   91  06:D79F  A9 00         lda #$00
+   92  06:D7A1  9D 39 03      sta stream_ve_index, x
+   93  06:D7A4  9D 81 03          sta stream_pe_index, x
+   94  06:D7A7  9D 99 03          sta stream_arp_index, x
+   95  06:D7AA  9D 6F 03      sta stream_loop1, x
+   96  06:D7AD  9D 75 03      sta stream_note_offset, x
+   97  06:D7B0            .next_stream:
+   98  06:D7B0  C8            iny
+   99                         
+  100  06:D7B1  AD 01 03      lda sound_temp1         ;song number
+  101  06:D7B4  9D 15 03      sta stream_curr_sound, x
+  102                         
+  103  06:D7B7  CE 02 03      dec sound_temp2         ;our loop counter
+  104  06:D7BA  D0 A0         bne .loop
+  105  06:D7BC  60            rts
+  106                     
+  107                     ;--------------------------
+  108                     ; sound_play_frame advances the sound engine by one frame
+  109  06:D7BD            sound_play_frame:
+  110  06:D7BD  AD 00 03      lda sound_disable_flag
+  111  06:D7C0  D0 31         bne .done   ;if disable flag is set, don't advance a frame
+  112                     
+  113  06:D7C2  20 27 D7      jsr se_silence  ;silence all channels.  se_set_apu will set volume later for all channels that are enabled.
+  114                                         ;the purpose of this subroutine call is to silence channels that aren't used by any streams.
+  115  06:D7C5  A2 00         ldx #$00
+  116  06:D7C7            .loop:
+  117  06:D7C7  BD 1B 03      lda stream_status, x
+  118  06:D7CA  29 01         and #$01    ;check whether the stream is active
+  119  06:D7CC  F0 1D         beq .endloop  ;if the stream isn't active, skip it
   120                         
-  121  06:D784  B1 D2         lda [sound_ptr], y      ;pointer to stream data.  Little endian, so low byte first
-  122  06:D786  9D 27 03      sta stream_ptr_LO, x
-  123  06:D789  C8            iny
-  124                         
-  125  06:D78A  B1 D2         lda [sound_ptr], y
-  126  06:D78C  9D 2D 03      sta stream_ptr_HI, x
-  127  06:D78F  C8            iny
-  128                         
-  129  06:D790  B1 D2         lda [sound_ptr], y
-  130  06:D792  9D 57 03      sta stream_tempo, x
-  131                         
-  132  06:D795  A9 A0         lda #$A0
-  133  06:D797  9D 5D 03      sta stream_ticker_total, x
+  121                         ;add the tempo to the ticker total.  If there is a FF-> 0 transition, there is a tick
+  122  06:D7CE  BD 5D 03      lda stream_ticker_total, x
+  123  06:D7D1  18            clc
+  124  06:D7D2  7D 57 03      adc stream_tempo, x
+  125  06:D7D5  9D 5D 03      sta stream_ticker_total, x
+  126  06:D7D8  90 0E         bcc .set_buffer    ;carry clear = no tick.  if no tick, we are done with this stream
+  127                         
+  128  06:D7DA  DE 63 03      dec stream_note_length_counter, x   ;else there is a tick. decrement the note length counter
+  129  06:D7DD  D0 09         bne .set_buffer    ;if counter is non-zero, our note isn't finished playing yet
+  130  06:D7DF  BD 69 03      lda stream_note_length, x   ;else our note is finished. reload the note length counter
+  131  06:D7E2  9D 63 03      sta stream_note_length_counter, x
+  132                         
+  133  06:D7E5  20 F4 D7      jsr se_fetch_byte   ;read the next byte from the data stream
   134                         
-  135  06:D79A  A9 01         lda #$01
-  136  06:D79C  9D 63 03      sta stream_note_length_counter,x
-  137                         
-  138  06:D79F  A9 00         lda #$00
-  139  06:D7A1  9D 39 03      sta stream_ve_index, x
-  140  06:D7A4  9D 81 03          sta stream_pe_index, x
-  141  06:D7A7  9D 99 03          sta stream_arp_index, x
-  142  06:D7AA  9D 6F 03      sta stream_loop1, x
-  143  06:D7AD  9D 75 03      sta stream_note_offset, x
-  144  06:D7B0            .next_stream:
-  145  06:D7B0  C8            iny
-  146                         
-  147  06:D7B1  AD 01 03      lda sound_temp1         ;song number
-  148  06:D7B4  9D 15 03      sta stream_curr_sound, x
-  149                         
-  150  06:D7B7  CE 02 03      dec sound_temp2         ;our loop counter
-  151  06:D7BA  D0 A0         bne .loop
-  152  06:D7BC  60            rts
-  153                     
-  154                     ;--------------------------
-  155                     ; sound_play_frame advances the sound engine by one frame
-  156  06:D7BD            sound_play_frame:
-  157  06:D7BD  AD 00 03      lda sound_disable_flag
-  158  06:D7C0  D0 31         bne .done   ;if disable flag is set, don't advance a frame
-  159                     
-  160  06:D7C2  20 27 D7      jsr se_silence  ;silence all channels.  se_set_apu will set volume later for all channels that are enabled.
-  161                                         ;the purpose of this subroutine call is to silence channels that aren't used by any streams.
-  162  06:D7C5  A2 00         ldx #$00
-  163  06:D7C7            .loop:
-  164  06:D7C7  BD 1B 03      lda stream_status, x
-  165  06:D7CA  29 01         and #$01    ;check whether the stream is active
-  166  06:D7CC  F0 1D         beq .endloop  ;if the stream isn't active, skip it
-  167                         
-  168                         ;add the tempo to the ticker total.  If there is a FF-> 0 transition, there is a tick
-  169  06:D7CE  BD 5D 03      lda stream_ticker_total, x
-  170  06:D7D1  18            clc
-  171  06:D7D2  7D 57 03      adc stream_tempo, x
-  172  06:D7D5  9D 5D 03      sta stream_ticker_total, x
-  173  06:D7D8  90 0E         bcc .set_buffer    ;carry clear = no tick.  if no tick, we are done with this stream
-  174                         
-  175  06:D7DA  DE 63 03      dec stream_note_length_counter, x   ;else there is a tick. decrement the note length counter
-  176  06:D7DD  D0 09         bne .set_buffer    ;if counter is non-zero, our note isn't finished playing yet
-  177  06:D7DF  BD 69 03      lda stream_note_length, x   ;else our note is finished. reload the note length counter
-  178  06:D7E2  9D 63 03      sta stream_note_length_counter, x
-  179                         
-  180  06:D7E5  20 F4 D7      jsr se_fetch_byte   ;read the next byte from the data stream
-  181                         
-  182  06:D7E8            .set_buffer:
-  183  06:D7E8  20 C1 D8      jsr se_set_temp_ports   ;copy the current stream's sound data for the current frame into our temporary APU vars (soft_apu_ports)
-  184  06:D7EB            .endloop:
-  185  06:D7EB  E8            inx
-  186  06:D7EC  E0 06         cpx #$06
-  187  06:D7EE  D0 D7         bne .loop
-  188  06:D7F0  20 56 DA      jsr se_set_apu      ;copy the temporary APU variables (soft_apu_ports) to the real APU ports ($4000, $4001, etc)
-  189  06:D7F3            .done:
-  190  06:D7F3  60            rts
-  191                     
-  192                     ;--------------------------
-  193                     ; se_fetch_byte reads one byte from a sound data stream and handles it
-  194                     ;   input: 
-  195                     ;       X: stream number    
-  196  06:D7F4            se_fetch_byte:
-  197  06:D7F4  BD 27 03      lda stream_ptr_LO, x
-  198  06:D7F7  8D D2 00      sta sound_ptr
-  199  06:D7FA  BD 2D 03      lda stream_ptr_HI, x
-  200  06:D7FD  8D D3 00      sta sound_ptr+1
+  135  06:D7E8            .set_buffer:
+  136  06:D7E8  20 C1 D8      jsr se_set_temp_ports   ;copy the current stream's sound data for the current frame into our temporary APU vars (soft_apu_ports)
+  137  06:D7EB            .endloop:
+  138  06:D7EB  E8            inx
+  139  06:D7EC  E0 06         cpx #$06
+  140  06:D7EE  D0 D7         bne .loop
+  141  06:D7F0  20 56 DA      jsr se_set_apu      ;copy the temporary APU variables (soft_apu_ports) to the real APU ports ($4000, $4001, etc)
+  142  06:D7F3            .done:
+  143  06:D7F3  60            rts
+  144                     
+  145                     ;--------------------------
+  146                     ; se_fetch_byte reads one byte from a sound data stream and handles it
+  147                     ;   input: 
+  148                     ;       X: stream number    
+  149  06:D7F4            se_fetch_byte:
+  150  06:D7F4  BD 27 03      lda stream_ptr_LO, x
+  151  06:D7F7  8D D2 00      sta sound_ptr
+  152  06:D7FA  BD 2D 03      lda stream_ptr_HI, x
+  153  06:D7FD  8D D3 00      sta sound_ptr+1
+  154                         
+  155  06:D800  A0 00         ldy #$00
+  156  06:D802            .fetch:
+  157  06:D802  B1 D2         lda [sound_ptr], y
+  158  06:D804  10 26         bpl .note                ;if < #$80, it's a Note
+  159  06:D806  C9 A0         cmp #$A0
+  160  06:D808  90 0C         bcc .note_length         ;else if < #$A0, it's a Note Length
+  161  06:D80A            .opcode:                     ;else it's an opcode
+  162                         ;do Opcode stuff
+  163  06:D80A  20 A6 D8      jsr se_opcode_launcher
+  164  06:D80D  C8            iny                      ;next position in the data stream
+  165  06:D80E  BD 1B 03      lda stream_status, x
+  166  06:D811  29 01         and #%00000001
+  167  06:D813  D0 ED         bne .fetch               ;after our opcode is done, grab another byte unless the stream is disabled
+  168  06:D815  60            rts                      ; in which case we quit  (explained below)
+  169  06:D816            .note_length:
+  170                         ;do note length stuff
+  171  06:D816  29 7F         and #%01111111          ;chop off bit7
+  172  06:D818  8C 01 03      sty sound_temp1         ;save Y because we are about to destroy it
+  173  06:D81B  A8            tay
+  174  06:D81C  B9 0B DD      lda note_length_table, y    ;get the note length count value
+  175  06:D81F  9D 69 03      sta stream_note_length, x
+  176  06:D822  9D 63 03      sta stream_note_length_counter, x   ;stick it in our note length counter
+  177  06:D825  AC 01 03      ldy sound_temp1         ;restore Y
+  178  06:D828  C8            iny                     ;set index to next byte in the stream
+  179  06:D829  4C 02 D8      jmp .fetch              ;fetch another byte
+  180  06:D82C            .note:
+  181                         ;do Note stuff
+  182  06:D82C  8D 02 03      sta sound_temp2
+  183  06:D82F  BD 21 03      lda stream_channel, x
+  184  06:D832  C9 03         cmp #NOISE
+  185  06:D834  D0 06         bne .not_noise
+  186  06:D836  20 7A D8      jsr se_do_noise
+  187  06:D839  4C 5D D8      jmp .reset_ve
+  188  06:D83C            .not_noise:
+  189  06:D83C  AD 02 03      lda sound_temp2
+  190  06:D83F  8C 01 03      sty sound_temp1     ;save our index into the data stream
+  191  06:D842  18            clc
+  192  06:D843  7D 75 03      adc stream_note_offset, x   ;add note offset
+  193  06:D846  0A            asl a
+  194  06:D847  A8            tay
+  195  06:D848  9D 45 03          sta stream_note_idx, x
+  196  06:D84B  B9 4D DC      lda note_table, y
+  197  06:D84E  9D 4B 03      sta stream_note_LO, x
+  198  06:D851  B9 4E DC      lda note_table+1, y
+  199  06:D854  9D 51 03      sta stream_note_HI, x
+  200  06:D857  AC 01 03      ldy sound_temp1     ;restore data stream index
   201                         
-  202  06:D800  A0 00         ldy #$00
-  203  06:D802            .fetch:
-  204  06:D802  B1 D2         lda [sound_ptr], y
-  205  06:D804  10 26         bpl .note                ;if < #$80, it's a Note
-  206  06:D806  C9 A0         cmp #$A0
-  207  06:D808  90 0C         bcc .note_length         ;else if < #$A0, it's a Note Length
-  208  06:D80A            .opcode:                     ;else it's an opcode
-  209                         ;do Opcode stuff
-  210  06:D80A  20 A6 D8      jsr se_opcode_launcher
-  211  06:D80D  C8            iny                      ;next position in the data stream
-  212  06:D80E  BD 1B 03      lda stream_status, x
-  213  06:D811  29 01         and #%00000001
-  214  06:D813  D0 ED         bne .fetch               ;after our opcode is done, grab another byte unless the stream is disabled
-  215  06:D815  60            rts                      ; in which case we quit  (explained below)
-  216  06:D816            .note_length:
-  217                         ;do note length stuff
-  218  06:D816  29 7F         and #%01111111          ;chop off bit7
-  219  06:D818  8C 01 03      sty sound_temp1         ;save Y because we are about to destroy it
-  220  06:D81B  A8            tay
-  221  06:D81C  B9 3C DC      lda note_length_table, y    ;get the note length count value
-  222  06:D81F  9D 69 03      sta stream_note_length, x
-  223  06:D822  9D 63 03      sta stream_note_length_counter, x   ;stick it in our note length counter
-  224  06:D825  AC 01 03      ldy sound_temp1         ;restore Y
-  225  06:D828  C8            iny                     ;set index to next byte in the stream
-  226  06:D829  4C 02 D8      jmp .fetch              ;fetch another byte
-  227  06:D82C            .note:
-  228                         ;do Note stuff
-  229  06:D82C  8D 02 03      sta sound_temp2
-  230  06:D82F  BD 21 03      lda stream_channel, x
-  231  06:D832  C9 03         cmp #NOISE
-  232  06:D834  D0 06         bne .not_noise
-  233  06:D836  20 7A D8      jsr se_do_noise
-  234  06:D839  4C 5D D8      jmp .reset_ve
-  235  06:D83C            .not_noise:
-  236  06:D83C  AD 02 03      lda sound_temp2
-  237  06:D83F  8C 01 03      sty sound_temp1     ;save our index into the data stream
-  238  06:D842  18            clc
-  239  06:D843  7D 75 03      adc stream_note_offset, x   ;add note offset
-  240  06:D846  0A            asl a
-  241  06:D847  A8            tay
-  242  06:D848  9D 45 03          sta stream_note_idx, x
-  243  06:D84B  B9 7E DB      lda note_table, y
-  244  06:D84E  9D 4B 03      sta stream_note_LO, x
-  245  06:D851  B9 7F DB      lda note_table+1, y
-  246  06:D854  9D 51 03      sta stream_note_HI, x
-  247  06:D857  AC 01 03      ldy sound_temp1     ;restore data stream index
-  248                         
-  249                         ;check if it's a rest and modify the status flag appropriately
-  250  06:D85A  20 90 D8      jsr se_check_rest
-  251  06:D85D            .reset_ve:    
-  252  06:D85D  A9 00         lda #$00
-  253  06:D85F  9D 39 03      sta stream_ve_index, x  
-  254  06:D862  9D 81 03          sta stream_pe_index, x
-  255  06:D865  9D 8D 03          sta stream_pe_delay, x
-  256  06:D868  9D 99 03          sta stream_arp_index,x
-  257  06:D86B            .update_pointer:
-  258  06:D86B  C8            iny
-  259  06:D86C  98            tya
-  260  06:D86D  18            clc
-  261  06:D86E  7D 27 03      adc stream_ptr_LO, x
-  262  06:D871  9D 27 03      sta stream_ptr_LO, x
-  263  06:D874  90 03         bcc .end
-  264  06:D876  FE 2D 03      inc stream_ptr_HI, x
-  265  06:D879            .end:
-  266  06:D879  60            rts
-  267                     
-  268  06:D87A            se_do_noise:
-  269  06:D87A  AD 02 03      lda sound_temp2
-  270  06:D87D  29 10         and #%00010000
-  271  06:D87F  F0 08         beq .mode0
-  272  06:D881  AD 02 03      lda sound_temp2
-  273  06:D884  09 80         ora #%10000000      ;set bit 7 to set mode1
-  274  06:D886  8D 02 03      sta sound_temp2
-  275  06:D889            .mode0:
-  276  06:D889  AD 02 03      lda sound_temp2
-  277  06:D88C  9D 4B 03      sta stream_note_LO, x
-  278  06:D88F  60            rts
-  279                     ;--------------------------------------------------
-  280                     ; se_check_rest will read a byte from the data stream and
-  281                     ;       determine if it is a rest or not.  It will set or clear the current
-  282                     ;       stream's rest flag accordingly.
-  283                     ;       input:
-  284                     ;           X: stream number
-  285                     ;           Y: data stream index
-  286  06:D890            se_check_rest:
-  287  06:D890  B1 D2         lda [sound_ptr], y  ;read the note byte again
-  288  06:D892  C9 5E         cmp #rest
-  289  06:D894  D0 07         bne .not_rest
-  290  06:D896  BD 1B 03      lda stream_status, x
-  291  06:D899  09 02         ora #%00000010  ;set the rest bit in the status byte
-  292  06:D89B  D0 05         bne .store  ;this will always branch.  bne is cheaper than a jmp.
-  293  06:D89D            .not_rest:
-  294  06:D89D  BD 1B 03      lda stream_status, x
-  295  06:D8A0  29 FD         and #%11111101  ;clear the rest bit in the status byte
-  296  06:D8A2            .store:
-  297  06:D8A2  9D 1B 03      sta stream_status, x
-  298  06:D8A5  60            rts
-  299                         
-  300                     ;-----------------------------------------
-  301                     ; se_opcode_launcher will read an address from the opcode jump table and indirect jump there.
-  302                     ;    input: A: opcode byte
-  303                     ;               Y: data stream position
-  304                     ;               X: stream number
-  305  06:D8A6            se_opcode_launcher:
-  306  06:D8A6  8C 01 03      sty sound_temp1         ;save y register, because we are about to destroy it
-  307  06:D8A9  38            sec
-  308  06:D8AA  E9 A0         sbc #$A0                ;turn our opcode byte into a table index by subtracting $A0
-  309  06:D8AC  0A            asl a                   ;multiply by 2 because we index into a table of addresses (words)
-  310  06:D8AD  A8            tay
-  311  06:D8AE  B9 CB DA      lda sound_opcodes, y    ;get low byte of subroutine address
-  312  06:D8B1  8D D4 00      sta sound_ptr2
-  313  06:D8B4  B9 CC DA      lda sound_opcodes+1, y  ;get high byte
-  314  06:D8B7  8D D5 00      sta sound_ptr2+1
-  315  06:D8BA  AC 01 03      ldy sound_temp1         ;restore our y register
-  316  06:D8BD  C8            iny                     ;set to next position in data stream (assume an argument)
-  317  06:D8BE  6C D4 00      jmp [sound_ptr2]           ;indirect jump to our opcode subroutine    
-  318                         
-  319                     ;----------------------------------------------------
-  320                     ; se_set_temp_ports will copy a stream's sound data to the temporary apu variables
-  321                     ;      input:
-  322                     ;           X: stream number
-  323  06:D8C1            se_set_temp_ports:
-  324  06:D8C1  BD 21 03      lda stream_channel, x
-  325  06:D8C4  0A            asl a
-  326  06:D8C5  0A            asl a
-  327  06:D8C6  A8            tay
-  328                         
-  329  06:D8C7  20 EA D8      jsr se_set_stream_volume
-  330                             
+  202                         ;check if it's a rest and modify the status flag appropriately
+  203  06:D85A  20 90 D8      jsr se_check_rest
+  204  06:D85D            .reset_ve:    
+  205  06:D85D  A9 00         lda #$00
+  206  06:D85F  9D 39 03      sta stream_ve_index, x  
+  207  06:D862  9D 81 03          sta stream_pe_index, x
+  208  06:D865  9D 8D 03          sta stream_pe_delay, x
+  209  06:D868  9D 99 03          sta stream_arp_index,x
+  210  06:D86B            .update_pointer:
+  211  06:D86B  C8            iny
+  212  06:D86C  98            tya
+  213  06:D86D  18            clc
+  214  06:D86E  7D 27 03      adc stream_ptr_LO, x
+  215  06:D871  9D 27 03      sta stream_ptr_LO, x
+  216  06:D874  90 03         bcc .end
+  217  06:D876  FE 2D 03      inc stream_ptr_HI, x
+  218  06:D879            .end:
+  219  06:D879  60            rts
+  220                     
+  221  06:D87A            se_do_noise:
+  222  06:D87A  AD 02 03      lda sound_temp2
+  223  06:D87D  29 10         and #%00010000
+  224  06:D87F  F0 08         beq .mode0
+  225  06:D881  AD 02 03      lda sound_temp2
+  226  06:D884  09 80         ora #%10000000      ;set bit 7 to set mode1
+  227  06:D886  8D 02 03      sta sound_temp2
+  228  06:D889            .mode0:
+  229  06:D889  AD 02 03      lda sound_temp2
+  230  06:D88C  9D 4B 03      sta stream_note_LO, x
+  231  06:D88F  60            rts
+  232                     ;--------------------------------------------------
+  233                     ; se_check_rest will read a byte from the data stream and
+  234                     ;       determine if it is a rest or not.  It will set or clear the current
+  235                     ;       stream's rest flag accordingly.
+  236                     ;       input:
+  237                     ;           X: stream number
+  238                     ;           Y: data stream index
+  239  06:D890            se_check_rest:
+  240  06:D890  B1 D2         lda [sound_ptr], y  ;read the note byte again
+  241  06:D892  C9 5E         cmp #rest
+  242  06:D894  D0 07         bne .not_rest
+  243  06:D896  BD 1B 03      lda stream_status, x
+  244  06:D899  09 02         ora #%00000010  ;set the rest bit in the status byte
+  245  06:D89B  D0 05         bne .store  ;this will always branch.  bne is cheaper than a jmp.
+  246  06:D89D            .not_rest:
+  247  06:D89D  BD 1B 03      lda stream_status, x
+  248  06:D8A0  29 FD         and #%11111101  ;clear the rest bit in the status byte
+  249  06:D8A2            .store:
+  250  06:D8A2  9D 1B 03      sta stream_status, x
+  251  06:D8A5  60            rts
+  252                         
+  253                     ;-----------------------------------------
+  254                     ; se_opcode_launcher will read an address from the opcode jump table and indirect jump there.
+  255                     ;    input: A: opcode byte
+  256                     ;               Y: data stream position
+  257                     ;               X: stream number
+  258  06:D8A6            se_opcode_launcher:
+  259  06:D8A6  8C 01 03      sty sound_temp1         ;save y register, because we are about to destroy it
+  260  06:D8A9  38            sec
+  261  06:D8AA  E9 A0         sbc #$A0                ;turn our opcode byte into a table index by subtracting $A0
+  262  06:D8AC  0A            asl a                   ;multiply by 2 because we index into a table of addresses (words)
+  263  06:D8AD  A8            tay
+  264  06:D8AE  B9 9A DB      lda sound_opcodes, y    ;get low byte of subroutine address
+  265  06:D8B1  8D D4 00      sta sound_ptr2
+  266  06:D8B4  B9 9B DB      lda sound_opcodes+1, y  ;get high byte
+  267  06:D8B7  8D D5 00      sta sound_ptr2+1
+  268  06:D8BA  AC 01 03      ldy sound_temp1         ;restore our y register
+  269  06:D8BD  C8            iny                     ;set to next position in data stream (assume an argument)
+  270  06:D8BE  6C D4 00      jmp [sound_ptr2]           ;indirect jump to our opcode subroutine    
+  271                         
+  272                     ;----------------------------------------------------
+  273                     ; se_set_temp_ports will copy a stream's sound data to the temporary apu variables
+  274                     ;      input:
+  275                     ;           X: stream number
+  276  06:D8C1            se_set_temp_ports:
+  277  06:D8C1  BD 21 03      lda stream_channel, x
+  278  06:D8C4  0A            asl a
+  279  06:D8C5  0A            asl a
+  280  06:D8C6  A8            tay
+  281                         
+  282  06:D8C7  20 EA D8      jsr se_set_stream_volume
+  283                             
+  284                         
+  285  06:D8CA  A9 08         lda #$08
+  286  06:D8CC  99 06 03      sta soft_apu_ports+1, y     ;sweep
+  287                         
+  288                             
+  289  06:D8CF  BD 93 03          LDA stream_arp, x
+  290  06:D8D2  F0 06             BEQ .updatePitch
+  291                             
+  292  06:D8D4  20 46 D9          JSR se_set_stream_arpeggio
+  293  06:D8D7  4C E9 D8          JMP .leaveTempSet
+  294                             
+  295  06:D8DA            .updatePitch:
+  296  06:D8DA  BD 4B 03      lda stream_note_LO, x
+  297  06:D8DD  99 07 03      sta soft_apu_ports+2, y     ;period LO
+  298                         
+  299  06:D8E0  BD 51 03      lda stream_note_HI, x
+  300  06:D8E3  99 08 03      sta soft_apu_ports+3, y     ;period HI
+  301                             
+  302                     
+  303  06:D8E6  20 9E D9          jsr se_set_stream_pitch
+  304                     
+  305  06:D8E9            .leaveTempSet:
+  306  06:D8E9  60            rts    
+  307                     
+  308                     ;----------------------------------
+  309                     ;    
+  310  06:D8EA            se_set_stream_volume:
+  311  06:D8EA  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+  312                         
+  313  06:D8ED  BD 33 03      lda stream_ve, x            ;which volume envelope?
+  314  06:D8F0  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+  315  06:D8F1  A8            tay
+  316  06:D8F2  B9 1E DD      lda volume_envelopes, y     ;get the low byte of the address from the pointer table
+  317  06:D8F5  8D D2 00      sta sound_ptr               ;put it into our pointer variable
+  318  06:D8F8  B9 1F DD      lda volume_envelopes+1, y   ;get the high byte of the address
+  319  06:D8FB  8D D3 00      sta sound_ptr+1
+  320                         
+  321  06:D8FE            .read_ve:
+  322  06:D8FE  BC 39 03      ldy stream_ve_index, x      ;our current position within the volume envelope.
+  323  06:D901  B1 D2         lda [sound_ptr], y          ;grab the value.
+  324  06:D903  C9 FF         cmp #$FF
+  325  06:D905  D0 06         bne .set_vol                ;if not FF, set the volume
+  326  06:D907  DE 39 03      dec stream_ve_index, x      ;else if FF, go back one and read again
+  327  06:D90A  4C FE D8      jmp .read_ve                ;  FF essentially tells us to repeat the last
+  328                                                     ;  volume value for the remainder of the note
+  329  06:D90D            .set_vol:
+  330  06:D90D  8D 02 03      sta sound_temp2             ;save our new volume value (about to destroy A)
   331                         
-  332  06:D8CA  A9 08         lda #$08
-  333  06:D8CC  99 06 03      sta soft_apu_ports+1, y     ;sweep
-  334                         
-  335                             
-  336  06:D8CF  BD 93 03          LDA stream_arp, x
-  337  06:D8D2  F0 06             BEQ .updatePitch
-  338                             
-  339  06:D8D4  20 46 D9          JSR se_set_stream_arpeggio
-  340  06:D8D7  4C E9 D8          JMP .leaveTempSet
-  341                             
-  342  06:D8DA            .updatePitch:
-  343  06:D8DA  BD 4B 03      lda stream_note_LO, x
-  344  06:D8DD  99 07 03      sta soft_apu_ports+2, y     ;period LO
-  345                         
-  346  06:D8E0  BD 51 03      lda stream_note_HI, x
-  347  06:D8E3  99 08 03      sta soft_apu_ports+3, y     ;period HI
-  348                             
-  349                     
-  350  06:D8E6  20 9E D9          jsr se_set_stream_pitch
-  351                     
-  352  06:D8E9            .leaveTempSet:
-  353  06:D8E9  60            rts    
-  354                     
-  355                     ;----------------------------------
-  356                     ;    
-  357  06:D8EA            se_set_stream_volume:
-  358  06:D8EA  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
-  359                         
-  360  06:D8ED  BD 33 03      lda stream_ve, x            ;which volume envelope?
-  361  06:D8F0  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
-  362  06:D8F1  A8            tay
-  363  06:D8F2  B9 4F DC      lda volume_envelopes, y     ;get the low byte of the address from the pointer table
-  364  06:D8F5  8D D2 00      sta sound_ptr               ;put it into our pointer variable
-  365  06:D8F8  B9 50 DC      lda volume_envelopes+1, y   ;get the high byte of the address
-  366  06:D8FB  8D D3 00      sta sound_ptr+1
-  367                         
-  368  06:D8FE            .read_ve:
-  369  06:D8FE  BC 39 03      ldy stream_ve_index, x      ;our current position within the volume envelope.
-  370  06:D901  B1 D2         lda [sound_ptr], y          ;grab the value.
-  371  06:D903  C9 FF         cmp #$FF
-  372  06:D905  D0 06         bne .set_vol                ;if not FF, set the volume
-  373  06:D907  DE 39 03      dec stream_ve_index, x      ;else if FF, go back one and read again
-  374  06:D90A  4C FE D8      jmp .read_ve                ;  FF essentially tells us to repeat the last
-  375                                                     ;  volume value for the remainder of the note
-  376  06:D90D            .set_vol:
-  377  06:D90D  8D 02 03      sta sound_temp2             ;save our new volume value (about to destroy A)
-  378                         
-  379  06:D910  E0 02         cpx #TRIANGLE               
-  380  06:D912  D0 09         bne .squares                ;if not triangle channel, go ahead
-  381  06:D914  AD 02 03      lda sound_temp2
-  382  06:D917  D0 04         bne .squares                ;else if volume not zero, go ahead (treat same as squares)
-  383  06:D919  A9 80         lda #$80
-  384  06:D91B  30 08         bmi .store_vol              ;else silence the channel with #$80
-  385  06:D91D            .squares:
-  386  06:D91D  BD 3F 03      lda stream_vol_duty, x      ;get current vol/duty settings
-  387  06:D920  29 F0         and #$F0                    ;zero out the old volume
-  388  06:D922  0D 02 03      ora sound_temp2             ;OR our new volume in.
-  389                     
-  390  06:D925            .store_vol:
-  391  06:D925  AC 01 03      ldy sound_temp1             ;get our index into soft_apu_ports
-  392  06:D928  99 05 03      sta soft_apu_ports, y       ;store the volume in our temp port
-  393  06:D92B  FE 39 03      inc stream_ve_index, x      ;set our volume envelop index to the next position
-  394                     
-  395  06:D92E            .rest_check:
-  396                         ;check the rest flag. if set, overwrite volume with silence value 
-  397  06:D92E  BD 1B 03      lda stream_status, x
-  398  06:D931  29 02         and #%00000010
-  399  06:D933  F0 10         beq .done                   ;if clear, no rest, so quit
-  400  06:D935  BD 21 03      lda stream_channel, x
-  401  06:D938  C9 02         cmp #TRIANGLE               ;if triangle, silence with #$80
-  402  06:D93A  F0 04         beq .tri                    ;else, silence with #$30
-  403  06:D93C  A9 30         lda #$30        
-  404  06:D93E  D0 02         bne .store                  ;this always branches.  bne is cheaper than a jmp
-  405  06:D940            .tri:
-  406  06:D940  A9 80         lda #$80
-  407  06:D942            .store:    
-  408  06:D942  99 05 03      sta soft_apu_ports, y
-  409  06:D945            .done:
-  410  06:D945  60            rts   
-  411                             
-  412                     ;---------------------------------------
-  413                     ;
-  414  06:D946            se_set_stream_arpeggio:
-  415                         
-  416  06:D946  BD 1B 03          lda stream_status, x
-  417  06:D949  29 02         and #%00000010
-  418  06:D94B  F0 01             beq .continue
-  419  06:D94D  60                rts
-  420                             
-  421  06:D94E            .continue:
-  422  06:D94E  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+  332  06:D910  E0 02         cpx #TRIANGLE               
+  333  06:D912  D0 09         bne .squares                ;if not triangle channel, go ahead
+  334  06:D914  AD 02 03      lda sound_temp2
+  335  06:D917  D0 04         bne .squares                ;else if volume not zero, go ahead (treat same as squares)
+  336  06:D919  A9 80         lda #$80
+  337  06:D91B  30 08         bmi .store_vol              ;else silence the channel with #$80
+  338  06:D91D            .squares:
+  339  06:D91D  BD 3F 03      lda stream_vol_duty, x      ;get current vol/duty settings
+  340  06:D920  29 F0         and #$F0                    ;zero out the old volume
+  341  06:D922  0D 02 03      ora sound_temp2             ;OR our new volume in.
+  342                     
+  343  06:D925            .store_vol:
+  344  06:D925  AC 01 03      ldy sound_temp1             ;get our index into soft_apu_ports
+  345  06:D928  99 05 03      sta soft_apu_ports, y       ;store the volume in our temp port
+  346  06:D92B  FE 39 03      inc stream_ve_index, x      ;set our volume envelop index to the next position
+  347                     
+  348  06:D92E            .rest_check:
+  349                         ;check the rest flag. if set, overwrite volume with silence value 
+  350  06:D92E  BD 1B 03      lda stream_status, x
+  351  06:D931  29 02         and #%00000010
+  352  06:D933  F0 10         beq .done                   ;if clear, no rest, so quit
+  353  06:D935  BD 21 03      lda stream_channel, x
+  354  06:D938  C9 02         cmp #TRIANGLE               ;if triangle, silence with #$80
+  355  06:D93A  F0 04         beq .tri                    ;else, silence with #$30
+  356  06:D93C  A9 30         lda #$30        
+  357  06:D93E  D0 02         bne .store                  ;this always branches.  bne is cheaper than a jmp
+  358  06:D940            .tri:
+  359  06:D940  A9 80         lda #$80
+  360  06:D942            .store:    
+  361  06:D942  99 05 03      sta soft_apu_ports, y
+  362  06:D945            .done:
+  363  06:D945  60            rts   
+  364                             
+  365                     ;---------------------------------------
+  366                     ;
+  367  06:D946            se_set_stream_arpeggio:
+  368                         
+  369  06:D946  BD 1B 03          lda stream_status, x
+  370  06:D949  29 02         and #%00000010
+  371  06:D94B  F0 01             beq .continue
+  372  06:D94D  60                rts
+  373                             
+  374  06:D94E            .continue:
+  375  06:D94E  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+  376                         
+  377  06:D951  BD 93 03      lda stream_arp, x            ;which volume envelope?
+  378  06:D954  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+  379  06:D955  A8            tay
+  380  06:D956  B9 5B DE      lda arpeggios, y     ;get the low byte of the address from the pointer table
+  381  06:D959  8D D2 00      sta sound_ptr               ;put it into our pointer variable
+  382  06:D95C  B9 5C DE      lda arpeggios+1, y   ;get the high byte of the address
+  383  06:D95F  8D D3 00      sta sound_ptr+1
+  384                         
+  385  06:D962            .read_arp:
+  386  06:D962  BC 99 03      ldy stream_arp_index, x      ;our current position within the volume envelope.
+  387  06:D965  B1 D2         lda [sound_ptr], y          ;grab the value.
+  388  06:D967  C9 FF         cmp #$FF
+  389  06:D969  D0 08         bne .set_arp                ;if not FF, set the volume
+  390  06:D96B  A9 00             LDA #$00
+  391  06:D96D  9D 99 03      STA stream_arp_index, x      ;else if FF, go back one and read again
+  392  06:D970  4C 62 D9      jmp .read_arp                ;  FF essentially tells us to repeat the last
+  393                                                     ;  volume value for the remainder of the note
+  394  06:D973            .set_arp:
+  395  06:D973  8D 02 03      STA sound_temp2             ;save our new volume value (about to destroy A)
+  396  06:D976  BD 45 03          LDA stream_note_idx, x
+  397  06:D979  18                CLC
+  398  06:D97A  6D 02 03          ADC sound_temp2
+  399  06:D97D  8D 02 03          STA sound_temp2
+  400                             
+  401                             
+  402  06:D980  AC 01 03          LDY sound_temp1
+  403  06:D983  8E 01 03          STX sound_temp1
+  404  06:D986  AA                TAX 
+  405                     
+  406  06:D987  BD 4D DC          LDA note_table, x
+  407  06:D98A  99 07 03          STA soft_apu_ports+2, y
+  408  06:D98D  BD 4E DC          LDA note_table+1, x
+  409  06:D990  99 08 03          STA soft_apu_ports+3, y
+  410                             
+  411  06:D993  AE 01 03          LDX sound_temp1
+  412                             
+  413  06:D996  FE 99 03      inc stream_arp_index, x      ;set our volume envelop index to the next position
+  414                             
+  415  06:D999  98                TYA
+  416  06:D99A  8D 01 03          STA sound_temp1
+  417                     
+  418  06:D99D  60            rts 
+  419                     ;--------------------------------------
+  420                     ;
+  421  06:D99E            se_set_stream_pitch:
+  422  06:D99E  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
   423                         
-  424  06:D951  BD 93 03      lda stream_arp, x            ;which volume envelope?
-  425  06:D954  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
-  426  06:D955  A8            tay
-  427  06:D956  B9 8C DD      lda arpeggios, y     ;get the low byte of the address from the pointer table
-  428  06:D959  8D D2 00      sta sound_ptr               ;put it into our pointer variable
-  429  06:D95C  B9 8D DD      lda arpeggios+1, y   ;get the high byte of the address
-  430  06:D95F  8D D3 00      sta sound_ptr+1
-  431                         
-  432  06:D962            .read_arp:
-  433  06:D962  BC 99 03      ldy stream_arp_index, x      ;our current position within the volume envelope.
-  434  06:D965  B1 D2         lda [sound_ptr], y          ;grab the value.
-  435  06:D967  C9 FF         cmp #$FF
-  436  06:D969  D0 08         bne .set_arp                ;if not FF, set the volume
-  437  06:D96B  A9 00             LDA #$00
-  438  06:D96D  9D 99 03      STA stream_arp_index, x      ;else if FF, go back one and read again
-  439  06:D970  4C 62 D9      jmp .read_arp                ;  FF essentially tells us to repeat the last
-  440                                                     ;  volume value for the remainder of the note
-  441  06:D973            .set_arp:
-  442  06:D973  8D 02 03      STA sound_temp2             ;save our new volume value (about to destroy A)
-  443  06:D976  BD 45 03          LDA stream_note_idx, x
-  444  06:D979  18                CLC
-  445  06:D97A  6D 02 03          ADC sound_temp2
-  446  06:D97D  8D 02 03          STA sound_temp2
-  447                             
-  448                             
-  449  06:D980  AC 01 03          LDY sound_temp1
-  450  06:D983  8E 01 03          STX sound_temp1
-  451  06:D986  AA                TAX 
-  452                     
-  453  06:D987  BD 7E DB          LDA note_table, x
-  454  06:D98A  99 07 03          STA soft_apu_ports+2, y
-  455  06:D98D  BD 7F DB          LDA note_table+1, x
-  456  06:D990  99 08 03          STA soft_apu_ports+3, y
-  457                             
-  458  06:D993  AE 01 03          LDX sound_temp1
-  459                             
-  460  06:D996  FE 99 03      inc stream_arp_index, x      ;set our volume envelop index to the next position
-  461                             
-  462  06:D999  98                TYA
-  463  06:D99A  8D 01 03          STA sound_temp1
-  464                     
-  465  06:D99D  60            rts 
-  466                     ;--------------------------------------
-  467                     ;
-  468  06:D99E            se_set_stream_pitch:
-  469  06:D99E  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
-  470                         
-  471  06:D9A1  BD 7B 03      lda stream_pe, x            ;which volume envelope?
-  472  06:D9A4  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
-  473  06:D9A5  A8            tay
-  474  06:D9A6  B9 51 DD      lda pitch_envelopes, y     ;get the low byte of the address from the pointer table
-  475  06:D9A9  8D D2 00      sta sound_ptr               ;put it into our pointer variable
-  476  06:D9AC  B9 52 DD      lda pitch_envelopes+1, y   ;get the high byte of the address
-  477  06:D9AF  8D D3 00      sta sound_ptr+1
-  478                             
-  479  06:D9B2  BD 8D 03          LDA stream_pe_delay, x
-  480                             ;if not 0, decrement
-  481  06:D9B5  29 7F             AND #$7F                        ;check if, without minus flag, the delay is 0
-  482  06:D9B7  F0 04             BEQ .read_pe
-  483  06:D9B9  DE 8D 03          DEC stream_pe_delay, x
-  484  06:D9BC  60                RTS
-  485                         
-  486  06:D9BD            .read_pe:
-  487  06:D9BD  BC 81 03      ldy stream_pe_index, x      ;our current position within the volume envelope.
-  488  06:D9C0  B1 D2         lda [sound_ptr], y          ;grab the value.
-  489  06:D9C2  C9 80         cmp #pe_loopLast
-  490  06:D9C4  D0 06             BNE .notLoopLast
-  491  06:D9C6  DE 81 03          dec stream_pe_index, x      ;else if loop last, go back one and read again
-  492  06:D9C9  4C BD D9          jmp .read_pe 
-  493                     
-  494  06:D9CC            .notLoopLast:
-  495  06:D9CC  C9 81             cmp #pe_loopAll
-  496  06:D9CE  D0 08             BNE .notLoopAll
-  497  06:D9D0  A9 00             LDA #$00
-  498  06:D9D2  9D 81 03          STA stream_pe_index, x
-  499  06:D9D5  4C BD D9          jmp .read_pe
-  500                             
-  501  06:D9D8            .notLoopAll:
-  502  06:D9D8  C9 82             cmp #pe_loopPart
-  503  06:D9DA  D0 0D             BNE .notLoopPart
-  504  06:D9DC  C8                iny
-  505  06:D9DD  BD 81 03          lda stream_pe_index, x
-  506  06:D9E0  38                SEC
-  507  06:D9E1  F1 D2             SBC [sound_ptr], y
-  508  06:D9E3  9D 81 03          STA stream_pe_index, x
-  509  06:D9E6  4C BD D9          jmp .read_pe
-  510                     
-  511  06:D9E9            .notLoopPart:
-  512  06:D9E9  C9 83             cmp #pe_delay
-  513  06:D9EB  D0 1C             BNE .notLoopDelay
-  514  06:D9ED  BD 8D 03          LDA stream_pe_delay, x
-  515  06:D9F0  30 0E             BMI .delayUsed  ;negative, delay was already used this time
-  516  06:D9F2  C8                iny
-  517  06:D9F3  B1 D2             lda [sound_ptr], y
-  518  06:D9F5  09 80             ORA #$80
-  519  06:D9F7  9D 8D 03          STA stream_pe_delay, x
-  520  06:D9FA  FE 81 03          inc stream_pe_index, x
-  521  06:D9FD  4C 46 DA          jmp .finish_pitchShift
-  522  06:DA00            .delayUsed:
-  523  06:DA00  FE 81 03          inc stream_pe_index, x
-  524  06:DA03  FE 81 03          inc stream_pe_index, x
-  525  06:DA06  4C BD D9          jmp .read_pe
-  526                             
-  527  06:DA09            .notLoopDelay:
-  528  06:DA09            .set_pitch:
+  424  06:D9A1  BD 7B 03      lda stream_pe, x            ;which volume envelope?
+  425  06:D9A4  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+  426  06:D9A5  A8            tay
+  427  06:D9A6  B9 20 DE      lda pitch_envelopes, y     ;get the low byte of the address from the pointer table
+  428  06:D9A9  8D D2 00      sta sound_ptr               ;put it into our pointer variable
+  429  06:D9AC  B9 21 DE      lda pitch_envelopes+1, y   ;get the high byte of the address
+  430  06:D9AF  8D D3 00      sta sound_ptr+1
+  431                             
+  432  06:D9B2  BD 8D 03          LDA stream_pe_delay, x
+  433                             ;if not 0, decrement
+  434  06:D9B5  29 7F             AND #$7F                        ;check if, without minus flag, the delay is 0
+  435  06:D9B7  F0 04             BEQ .read_pe
+  436  06:D9B9  DE 8D 03          DEC stream_pe_delay, x
+  437  06:D9BC  60                RTS
+  438                         
+  439  06:D9BD            .read_pe:
+  440  06:D9BD  BC 81 03      ldy stream_pe_index, x      ;our current position within the volume envelope.
+  441  06:D9C0  B1 D2         lda [sound_ptr], y          ;grab the value.
+  442  06:D9C2  C9 80         cmp #pe_loopLast
+  443  06:D9C4  D0 06             BNE .notLoopLast
+  444  06:D9C6  DE 81 03          dec stream_pe_index, x      ;else if loop last, go back one and read again
+  445  06:D9C9  4C BD D9          jmp .read_pe 
+  446                     
+  447  06:D9CC            .notLoopLast:
+  448  06:D9CC  C9 81             cmp #pe_loopAll
+  449  06:D9CE  D0 08             BNE .notLoopAll
+  450  06:D9D0  A9 00             LDA #$00
+  451  06:D9D2  9D 81 03          STA stream_pe_index, x
+  452  06:D9D5  4C BD D9          jmp .read_pe
+  453                             
+  454  06:D9D8            .notLoopAll:
+  455  06:D9D8  C9 82             cmp #pe_loopPart
+  456  06:D9DA  D0 0D             BNE .notLoopPart
+  457  06:D9DC  C8                iny
+  458  06:D9DD  BD 81 03          lda stream_pe_index, x
+  459  06:D9E0  38                SEC
+  460  06:D9E1  F1 D2             SBC [sound_ptr], y
+  461  06:D9E3  9D 81 03          STA stream_pe_index, x
+  462  06:D9E6  4C BD D9          jmp .read_pe
+  463                     
+  464  06:D9E9            .notLoopPart:
+  465  06:D9E9  C9 83             cmp #pe_delay
+  466  06:D9EB  D0 1C             BNE .notLoopDelay
+  467  06:D9ED  BD 8D 03          LDA stream_pe_delay, x
+  468  06:D9F0  30 0E             BMI .delayUsed  ;negative, delay was already used this time
+  469  06:D9F2  C8                iny
+  470  06:D9F3  B1 D2             lda [sound_ptr], y
+  471  06:D9F5  09 80             ORA #$80
+  472  06:D9F7  9D 8D 03          STA stream_pe_delay, x
+  473  06:D9FA  FE 81 03          inc stream_pe_index, x
+  474  06:D9FD  4C 46 DA          jmp .finish_pitchShift
+  475  06:DA00            .delayUsed:
+  476  06:DA00  FE 81 03          inc stream_pe_index, x
+  477  06:DA03  FE 81 03          inc stream_pe_index, x
+  478  06:DA06  4C BD D9          jmp .read_pe
+  479                             
+  480  06:DA09            .notLoopDelay:
+  481  06:DA09            .set_pitch:
+  482                     
+  483  06:DA09  9D 87 03      sta stream_pe_offset, x      ;get current vol/duty settings
+  484  06:DA0C  8D 02 03          STA sound_temp2
+  485  06:DA0F  AC 01 03          LDY sound_temp1
+  486  06:DA12  AD 02 03          LDA sound_temp2
+  487  06:DA15  10 1D             BPL .add_pitch
+  488                             
+  489  06:DA17            .sub_pitch:
+  490                             
+  491  06:DA17  49 FF             EOR #$FF        ;flip bits
+  492  06:DA19  18                CLC
+  493  06:DA1A  69 01             ADC #$01        ;add one - two's compliment
+  494  06:DA1C  8D 02 03          STA sound_temp2
+  495                             
+  496  06:DA1F  B9 07 03          LDA soft_apu_ports+2, y       
+  497  06:DA22  38                SEC
+  498  06:DA23  ED 02 03          SBC sound_temp2
+  499  06:DA26  99 07 03          STA soft_apu_ports+2, y
+  500  06:DA29  B9 08 03          LDA soft_apu_ports+3, y
+  501  06:DA2C  E9 00             SBC #$00
+  502  06:DA2E  99 08 03          STA soft_apu_ports+3, y
+  503                             
+  504  06:DA31  4C 46 DA          JMP .finish_pitchShift
+  505                     
+  506  06:DA34            .add_pitch:
+  507                     
+  508  06:DA34  B9 07 03      LDA soft_apu_ports+2, y       
+  509  06:DA37  18                CLC
+  510  06:DA38  6D 02 03          ADC sound_temp2
+  511  06:DA3B  99 07 03          STA soft_apu_ports+2, y
+  512  06:DA3E  B9 08 03          LDA soft_apu_ports+3, y
+  513  06:DA41  69 00             ADC #$00
+  514  06:DA43  99 08 03          STA soft_apu_ports+3, y
+  515                             
+  516  06:DA46            .finish_pitchShift:
+  517  06:DA46  FE 81 03      inc stream_pe_index, x      ;set our volume envelop index to the next position
+  518                     
+  519  06:DA49            .rest_check:
+  520                         ;check the rest flag. if set, overwrite volume with silence value 
+  521  06:DA49  BD 1B 03      lda stream_status, x
+  522  06:DA4C  29 02         and #%00000010
+  523  06:DA4E  F0 05         beq .done                   ;if clear, no rest, so quit
+  524                        
+  525  06:DA50  A9 00         LDA #$00
+  526  06:DA52  9D 87 03          STA stream_pe_offset, x
+  527  06:DA55            .done:
+  528  06:DA55  60            rts    
   529                     
-  530  06:DA09  9D 87 03      sta stream_pe_offset, x      ;get current vol/duty settings
-  531  06:DA0C  8D 02 03          STA sound_temp2
-  532  06:DA0F  AC 01 03          LDY sound_temp1
-  533  06:DA12  AD 02 03          LDA sound_temp2
-  534  06:DA15  10 1D             BPL .add_pitch
-  535                             
-  536  06:DA17            .sub_pitch:
-  537                             
-  538  06:DA17  49 FF             EOR #$FF        ;flip bits
-  539  06:DA19  18                CLC
-  540  06:DA1A  69 01             ADC #$01        ;add one - two's compliment
-  541  06:DA1C  8D 02 03          STA sound_temp2
-  542                             
-  543  06:DA1F  B9 07 03          LDA soft_apu_ports+2, y       
-  544  06:DA22  38                SEC
-  545  06:DA23  ED 02 03          SBC sound_temp2
-  546  06:DA26  99 07 03          STA soft_apu_ports+2, y
-  547  06:DA29  B9 08 03          LDA soft_apu_ports+3, y
-  548  06:DA2C  E9 00             SBC #$00
-  549  06:DA2E  99 08 03          STA soft_apu_ports+3, y
-  550                             
-  551  06:DA31  4C 46 DA          JMP .finish_pitchShift
-  552                     
-  553  06:DA34            .add_pitch:
-  554                     
-  555  06:DA34  B9 07 03      LDA soft_apu_ports+2, y       
-  556  06:DA37  18                CLC
-  557  06:DA38  6D 02 03          ADC sound_temp2
-  558  06:DA3B  99 07 03          STA soft_apu_ports+2, y
-  559  06:DA3E  B9 08 03          LDA soft_apu_ports+3, y
-  560  06:DA41  69 00             ADC #$00
-  561  06:DA43  99 08 03          STA soft_apu_ports+3, y
-  562                             
-  563  06:DA46            .finish_pitchShift:
-  564  06:DA46  FE 81 03      inc stream_pe_index, x      ;set our volume envelop index to the next position
-  565                     
-  566  06:DA49            .rest_check:
-  567                         ;check the rest flag. if set, overwrite volume with silence value 
-  568  06:DA49  BD 1B 03      lda stream_status, x
-  569  06:DA4C  29 02         and #%00000010
-  570  06:DA4E  F0 05         beq .done                   ;if clear, no rest, so quit
-  571                        
-  572  06:DA50  A9 00         LDA #$00
-  573  06:DA52  9D 87 03          STA stream_pe_offset, x
-  574  06:DA55            .done:
-  575  06:DA55  60            rts    
-  576                     
-  577                     ;--------------------------
-  578                     ; se_set_apu copies the temporary RAM ports to the APU ports
-  579  06:DA56            se_set_apu:
-  580  06:DA56            .square1:
-  581  06:DA56  AD 05 03      lda soft_apu_ports+0
-  582  06:DA59  8D 00 40      sta $4000
-  583  06:DA5C  AD 06 03      lda soft_apu_ports+1
-  584  06:DA5F  8D 01 40      sta $4001
-  585  06:DA62  AD 07 03      lda soft_apu_ports+2
-  586  06:DA65  8D 02 40      sta $4002
-  587  06:DA68  AD 08 03      lda soft_apu_ports+3
-  588  06:DA6B  CD 03 03      cmp sound_sq1_old       ;compare to last write
-  589  06:DA6E  F0 06         beq .square2            ;don't write this frame if they were equal
-  590  06:DA70  8D 03 40      sta $4003
-  591  06:DA73  8D 03 03      sta sound_sq1_old       ;save the value we just wrote to $4003
-  592  06:DA76            .square2:
-  593  06:DA76  AD 09 03      lda soft_apu_ports+4
-  594  06:DA79  8D 04 40      sta $4004
-  595  06:DA7C  AD 0A 03      lda soft_apu_ports+5
-  596  06:DA7F  8D 05 40      sta $4005
-  597  06:DA82  AD 0B 03      lda soft_apu_ports+6
-  598  06:DA85  8D 06 40      sta $4006
-  599  06:DA88  AD 0C 03      lda soft_apu_ports+7
-  600  06:DA8B  CD 04 03      cmp sound_sq2_old
-  601  06:DA8E  F0 06         beq .triangle
-  602  06:DA90  8D 07 40      sta $4007
-  603  06:DA93  8D 04 03      sta sound_sq2_old       ;save the value we just wrote to $4007
-  604  06:DA96            .triangle:
-  605  06:DA96  AD 0D 03      lda soft_apu_ports+8
-  606  06:DA99  8D 08 40      sta $4008
-  607  06:DA9C  AD 0F 03      lda soft_apu_ports+10   ;there is no $4009, so we skip it
-  608  06:DA9F  8D 0A 40      sta $400A
-  609  06:DAA2  AD 10 03      lda soft_apu_ports+11
-  610  06:DAA5  8D 0B 40      sta $400B
-  611  06:DAA8            .noise:
-  612  06:DAA8  AD 11 03      lda soft_apu_ports+12
-  613  06:DAAB  8D 0C 40      sta $400C
-  614  06:DAAE  AD 13 03      lda soft_apu_ports+14   ;there is no $400D, so we skip it
-  615  06:DAB1  8D 0E 40      sta $400E
-  616  06:DAB4  AD 14 03      lda soft_apu_ports+15
-  617  06:DAB7  8D 0F 40      sta $400F
-  618  06:DABA  60            rts
-  619                         
-  620                         
-  621           0009      NUM_SONGS = $09 ;if you add a new song, change this number.    
-  622                                     ;the main asm file checks this number in its song_up and song_down subroutines
-  623                                     ;to determine when to wrap around.
-  624                     
-  625                     ;this is our pointer table.  Each entry is a pointer to a song header                
-  626  06:DABB            song_headers:
-  627                             
-  628  06:DABB  97 DD         .word song0_header
-  629  06:DABD  D8 A0             .word $A0D8
-  630  06:DABF  A4 DD             .word menu_header
-  631  06:DAC1  A7 DD         .word drawImg_header  ;The Guardian Legend Boss song
-  632  06:DAC3  AA DD             .word endScreen_header
-  633  06:DAC5  42 DE             .word menuCursor_header
-  634  06:DAC7  4E DE             .word puzzleCursor_header
-  635  06:DAC9  5A DE             .word noiseBlip_header
-  636                     
-  637                         
+  530                     ;--------------------------
+  531                     ; se_set_apu copies the temporary RAM ports to the APU ports
+  532  06:DA56            se_set_apu:
+  533  06:DA56            .square1:
+  534  06:DA56  AD 05 03      lda soft_apu_ports+0
+  535  06:DA59  8D 00 40      sta $4000
+  536  06:DA5C  AD 06 03      lda soft_apu_ports+1
+  537  06:DA5F  8D 01 40      sta $4001
+  538  06:DA62  AD 07 03      lda soft_apu_ports+2
+  539  06:DA65  8D 02 40      sta $4002
+  540  06:DA68  AD 08 03      lda soft_apu_ports+3
+  541  06:DA6B  CD 03 03      cmp sound_sq1_old       ;compare to last write
+  542  06:DA6E  F0 06         beq .square2            ;don't write this frame if they were equal
+  543  06:DA70  8D 03 40      sta $4003
+  544  06:DA73  8D 03 03      sta sound_sq1_old       ;save the value we just wrote to $4003
+  545  06:DA76            .square2:
+  546  06:DA76  AD 09 03      lda soft_apu_ports+4
+  547  06:DA79  8D 04 40      sta $4004
+  548  06:DA7C  AD 0A 03      lda soft_apu_ports+5
+  549  06:DA7F  8D 05 40      sta $4005
+  550  06:DA82  AD 0B 03      lda soft_apu_ports+6
+  551  06:DA85  8D 06 40      sta $4006
+  552  06:DA88  AD 0C 03      lda soft_apu_ports+7
+  553  06:DA8B  CD 04 03      cmp sound_sq2_old
+  554  06:DA8E  F0 06         beq .triangle
+  555  06:DA90  8D 07 40      sta $4007
+  556  06:DA93  8D 04 03      sta sound_sq2_old       ;save the value we just wrote to $4007
+  557  06:DA96            .triangle:
+  558  06:DA96  AD 0D 03      lda soft_apu_ports+8
+  559  06:DA99  8D 08 40      sta $4008
+  560  06:DA9C  AD 0F 03      lda soft_apu_ports+10   ;there is no $4009, so we skip it
+  561  06:DA9F  8D 0A 40      sta $400A
+  562  06:DAA2  AD 10 03      lda soft_apu_ports+11
+  563  06:DAA5  8D 0B 40      sta $400B
+  564  06:DAA8            .noise:
+  565  06:DAA8  AD 11 03      lda soft_apu_ports+12
+  566  06:DAAB  8D 0C 40      sta $400C
+  567  06:DAAE  AD 13 03      lda soft_apu_ports+14   ;there is no $400D, so we skip it
+  568  06:DAB1  8D 0E 40      sta $400E
+  569  06:DAB4  AD 14 03      lda soft_apu_ports+15
+  570  06:DAB7  8D 0F 40      sta $400F
+  571  06:DABA  60            rts
+  572                         
+  573                         
+  574           0009      NUM_SONGS = $09 ;if you add a new song, change this number.    
+  575                                     ;the main asm file checks this number in its song_up and song_down subroutines
+  576                                     ;to determine when to wrap around.
+  577                     
+#[3]   External/sound_SongTable.asm
+  578                             .include "External/sound_SongTable.asm"    ;our opcode subroutines, jump table and aliases
+    1                     ;this is our pointer table.  Each entry is a pointer to a song header                
+    2  06:DABB            song_headers:
+    3                             
+    4  06:DABB  CB DA         .word song0_header
+    5  06:DABD  D8 A0             .word $A0D8
+    6  06:DABF  D8 DA             .word menu_header
+    7  06:DAC1  DB DA         .word drawImg_header  ;The Guardian Legend Boss song
+    8  06:DAC3  DE DA             .word endScreen_header
+    9  06:DAC5  76 DB             .word menuCursor_header
+   10  06:DAC7  82 DB             .word puzzleCursor_header
+   11  06:DAC9  8E DB             .word noiseBlip_header
+   12                                     
+#[4]   External/song0.i
+   13                         .include "External/song0.i"  ;holds the data for song 0 (header and data streams)
+    1                     ;silence song.  disables all streams
+    2                     
+    3  06:DACB            song0_header:
+    4  06:DACB  06            .byte 6          ;6 streams
+    5                         
+    6  06:DACC  00            .byte MUSIC_SQ1
+    7  06:DACD  00            .byte $00
+    8                             
+    9  06:DACE  01                .byte MUSIC_SQ2
+   10  06:DACF  00                .byte $00
+   11                             
+   12  06:DAD0  02                .byte MUSIC_TRI
+   13  06:DAD1  00                .byte $00
+   14                             
+   15  06:DAD2  03                .byte MUSIC_NOI
+   16  06:DAD3  00                .byte $00
+   17                             
+   18  06:DAD4  04                .byte SFX_1
+   19  06:DAD5  00                .byte $00
+   20                             
+   21  06:DAD6  05                .byte SFX_2
+   22  06:DAD7  00                .byte $00
+#[3]   External/sound_SongTable.asm
+#[4]   Music/Menu.i
+   14                             .include "Music/Menu.i"  ;holds the data for song 1
+    1  06:DAD8            menu_header:
+    2  06:DAD8  01            .byte $01           ;4 streams
+    3                         
+    4  06:DAD9  00            .byte MUSIC_SQ1     ;which stream
+    5  06:DADA  00            .byte $00           ;status byte (stream enabled)
+#[3]   External/sound_SongTable.asm
+#[4]   Music/puzzleSolvedDrawImage.i
+   15                         .include "Music/puzzleSolvedDrawImage.i"  ;holds the data for song 1
+    1  06:DADB            drawImg_header:
+    2  06:DADB  01            .byte $01         ;1 streams
+    3                         
+    4  06:DADC  00            .byte MUSIC_SQ1     ;which stream
+    5  06:DADD  00            .byte $00           ;status byte (stream enabled)
+#[3]   External/sound_SongTable.asm
+#[4]   Music/EndScreen.i
+   16                             .include "Music/EndScreen.i"
+    1  06:DADE            endScreen_header:
+    2  06:DADE  04            .byte $04           ;4 streams
+    3                         
+    4  06:DADF  00            .byte MUSIC_SQ1     ;which stream
+    5  06:DAE0  01            .byte $01           ;status byte (stream enabled)
+    6  06:DAE1  00            .byte SQUARE_1      ;which channel
+    7  06:DAE2  70            .byte $70           ;initial duty (01)
+    8  06:DAE3  02            .byte ve_blip_echo  ;volume envelope
+    9  06:DAE4  FF DA         .word endScreen_square1 ;pointer to stream
+   10  06:DAE6  3A            .byte $3A           ;tempo
+   11                         
+   12  06:DAE7  01            .byte MUSIC_SQ2     ;which stream
+   13  06:DAE8  01            .byte $01           ;status byte (stream enabled)
+   14  06:DAE9  01            .byte SQUARE_2      ;which channel
+   15  06:DAEA  B0            .byte $B0           ;initial duty (10)
+   16  06:DAEB  02            .byte ve_blip_echo  ;volume envelope
+   17  06:DAEC  20 DB         .word endScreen_square2 ;pointer to stream
+   18  06:DAEE  3A            .byte $3A           ;tempo
+   19                         
+   20  06:DAEF  02            .byte MUSIC_TRI     ;which stream
+   21  06:DAF0  01            .byte $01           ;status byte (stream enabled)
+   22  06:DAF1  02            .byte TRIANGLE      ;which channel
+   23  06:DAF2  80            .byte $80           ;initial volume (on)
+   24  06:DAF3  03            .byte ve_tgl_1      ;volume envelope
+   25  06:DAF4  41 DB         .word endScreen_tri     ;pointer to stream
+   26  06:DAF6  3A            .byte $3A           ;tempo
+   27                         
+   28  06:DAF7  03            .byte MUSIC_NOI     ;which stream
+   29  06:DAF8  01            .byte $01           ;enabled
+   30  06:DAF9  03            .byte NOISE     
+   31  06:DAFA  30            .byte $30           ;initial duty_vol
+   32  06:DAFB  0A            .byte ve_hiHat_decay ;volume envelope
+   33  06:DAFC  68 DB         .word endScreen_noise   ;pointer to stream
+   34  06:DAFE  3A            .byte $3A           ;tempo
+   35                     
+   36                         
+   37  06:DAFF            endScreen_square1:
+   38                     
+   39  06:DAFF  83            .byte quarter
+   40  06:DB00  23                .byte Gs4
+   41  06:DB01  82                .byte eighth
+   42  06:DB02  23 21             .byte Gs4, Fs4
+   43  06:DB04  84 5E             .byte half, rest
+   44  06:DB06  83                .byte quarter
+   45  06:DB07  1F                .byte E4
+   46  06:DB08  82                .byte eighth
+   47  06:DB09  1F 21             .byte E4, Fs4
+   48  06:DB0B  84 5E             .byte half, rest
+   49                             
+   50  06:DB0D  83                .byte quarter
+   51  06:DB0E  25                .byte As4
+   52  06:DB0F  82                .byte eighth
+   53  06:DB10  25 23             .byte As4, Gs4
+   54  06:DB12  84 5E             .byte half, rest
+   55  06:DB14  82                .byte eighth
+   56  06:DB15  21 23 21          .byte Fs4, Gs4, Fs4, F4
+       06:DB18  20        
+   57  06:DB19  10 17 20          .byte Cs3, Gs3, F4, Gs4
+       06:DB1C  23        
+   58                             
+   59                         
+   60  06:DB1D  A1            .byte loop                              ;infinite loop
+   61  06:DB1E  FF DA         .word endScreen_square1
+   62                     
+   63                         
+   64  06:DB20            endScreen_square2:
+   65                     
+   66  06:DB20  82            .byte eighth
+   67  06:DB21  20 17 20          .byte F4, Gs3, F4, Ds4
+       06:DB24  1E        
+   68  06:DB25  84 5E             .byte half, rest
+   69  06:DB27  82                .byte eighth
+   70  06:DB28  1C 15 1C          .byte Cs4, Fs3, Cs4, Ds4
+       06:DB2B  1E        
+   71  06:DB2C  84 5E             .byte half, rest
+   72                     
+   73  06:DB2E  82                .byte eighth
+   74  06:DB2F  28 21 28          .byte Cs5, Fs4, Cs5, B4
+       06:DB32  26        
+   75  06:DB33  84 5E             .byte half, rest
+   76  06:DB35  82                .byte eighth
+   77  06:DB36  24 26 24          .byte A4, B4, A4, Gs4
+       06:DB39  23        
+   78  06:DB3A  17 1E 23          .byte Gs3, Ds4, Gs4, C5
+       06:DB3D  27        
+   79  06:DB3E  A1            .byte loop
+   80  06:DB3F  20 DB         .word endScreen_square2
+   81                         
+   82  06:DB41            endScreen_tri:
+   83                     
+   84  06:DB41  83                .byte quarter
+   85  06:DB42  1C                .byte Cs4
+   86  06:DB43  82                .byte eighth
+   87  06:DB44  1C 1A 5E          .byte Cs4, B3, rest
+   88  06:DB47  0E 1A 0E          .byte B2, B3, B2
+   89  06:DB4A  83                .byte quarter
+   90  06:DB4B  18                .byte A3
+   91  06:DB4C  82                .byte eighth
+   92  06:DB4D  18 1A 5E          .byte A3, B3, rest
+   93  06:DB50  0E 1A 0E          .byte B2, B3, B2
+   94                             
+   95  06:DB53  83                .byte quarter
+   96  06:DB54  1E                .byte Ds4
+   97  06:DB55  82                .byte eighth
+   98  06:DB56  1E 1C 5E          .byte Ds4, Cs4, rest
+   99  06:DB59  10 1C 10          .byte Cs3, Cs4, Cs3
+  100  06:DB5C  83                .byte quarter
+  101  06:DB5D  1A                .byte B3
+  102  06:DB5E  82                .byte eighth
+  103  06:DB5F  1A 1C 5E          .byte B3, Cs4, rest
+  104  06:DB62  10 1C 10          .byte Cs3, Cs4, Cs3
+  105                             
+  106  06:DB65  A1                .byte loop
+  107  06:DB66  41 DB         .word endScreen_tri
+  108                         
+  109  06:DB68            endScreen_noise:
+  110                     
+  111  06:DB68  82 04 04      .byte eighth, $04, $04
+  112  06:DB6B  A2 09             .byte volume_envelope, ve_drum_decay 
+  113  06:DB6D  82 04         .byte eighth, $04
+  114  06:DB6F  A2 0A             .byte volume_envelope, ve_hiHat_decay
+  115  06:DB71  82 04             .byte eighth, $04
+  116                     
+  117  06:DB73  A1            .byte loop
+  118  06:DB74  68 DB         .word endScreen_noise
+#[3]   External/sound_SongTable.asm
+#[4]   SFX/menuCursor.i
+   17                             .include "SFX/menuCursor.i"  ;holds the data for song 1
+    1  06:DB76            menuCursor_header:
+    2  06:DB76  01            .byte $01           ;1 stream
+    3                         
+    4  06:DB77  04            .byte SFX_1         ;which stream
+    5  06:DB78  01            .byte $01           ;status byte (stream enabled)
+    6  06:DB79  01            .byte SQUARE_2      ;which channel
+    7  06:DB7A  70            .byte $70           ;duty (01)
+    8  06:DB7B  0A            .byte ve_hiHat_decay  ;volume envelope
+    9  06:DB7C  7F DB         .word menuCursor_square2 ;pointer to stream
+   10  06:DB7E  80            .byte $80           ;tempo
+   11                         
+   12                         
+   13  06:DB7F            menuCursor_square2:
+   14  06:DB7F  81 33         .byte sixteenth, C6
+   15  06:DB81  A0            .byte endsound
+#[3]   External/sound_SongTable.asm
+#[4]   SFX/puzzleCursor.i
+   18                             .include "SFX/puzzleCursor.i"  ;holds the data for song 1
+    1  06:DB82            puzzleCursor_header:
+    2  06:DB82  01            .byte $01           ;1 stream
+    3                         
+    4  06:DB83  05            .byte SFX_2         ;which stream
+    5  06:DB84  01            .byte $01           ;status byte (stream enabled)
+    6  06:DB85  02            .byte TRIANGLE      ;which channel
+    7  06:DB86  80            .byte $80           ;on
+    8  06:DB87  0A            .byte ve_hiHat_decay  ;volume envelope
+    9  06:DB88  8B DB         .word puzzleCursor_square2 ;pointer to stream
+   10  06:DB8A  80            .byte $80           ;tempo
+   11                         
+   12                         
+   13  06:DB8B            puzzleCursor_square2:
+   14  06:DB8B  81 33         .byte sixteenth, C6
+   15  06:DB8D  A0            .byte endsound
+#[3]   External/sound_SongTable.asm
+#[4]   SFX/noiseBlip.i
+   19                             .include "SFX/noiseBlip.i" 
+    1  06:DB8E            noiseBlip_header:
+    2  06:DB8E  01            .byte $01           ;1 stream
+    3                         
+    4  06:DB8F  05                .byte SFX_2     ;which stream
+    5  06:DB90  01            .byte $01           ;enabled
+    6  06:DB91  03            .byte NOISE     
+    7  06:DB92  30            .byte $30           ;initial duty_vol
+    8  06:DB93  0C            .byte ve_tinyDecy ;volume envelope
+    9  06:DB94  97 DB         .word noiseBlip_noise   ;pointer to stream
+   10  06:DB96  80            .byte $80           ;tempo
+   11                         
+   12  06:DB97            noiseBlip_noise:
+   13  06:DB97  81 04         .byte sixteenth, $04
+   14  06:DB99  A0            .byte endsound
+#[3]   External/sound_SongTable.asm
+#[2]   External/sound_engine.asm
+  579                         
 #[3]   External/sound_opcodes.asm
-  638                         .include "External/sound_opcodes.asm"    ;our opcode subroutines, jump table and aliases
+  580                         .include "External/sound_opcodes.asm"    ;our opcode subroutines, jump table and aliases
     1                     ;these are aliases to use in the sound data.
     2           00A0      endsound = $A0
     3           00A1      loop = $A1
@@ -7493,229 +7722,229 @@
    13                     
    14                     ;-----------------------------------------------------------------------
    15                     ;this is our JUMP TABLE!
-   16  06:DACB            sound_opcodes:
-   17  06:DACB  E1 DA         .word se_op_endsound            ;$A0
-   18  06:DACD  FA DA         .word se_op_infinite_loop       ;$A1
-   19  06:DACF  11 DB         .word se_op_change_ve           ;$A2
-   20  06:DAD1  1C DB         .word se_op_duty                ;$A3
-   21  06:DAD3  22 DB         .word se_op_set_loop1_counter   ;$A4
-   22  06:DAD5  28 DB         .word se_op_loop1               ;$A5
-   23  06:DAD7  35 DB         .word se_op_set_note_offset     ;$A6
-   24  06:DAD9  3B DB         .word se_op_adjust_note_offset  ;$A7
-   25  06:DADB  45 DB         .word se_op_transpose           ;$A8
-   26  06:DADD  65 DB             .word se_op_change_pe                   ;$A9
-   27  06:DADF  73 DB             .word se_op_change_arp
+   16  06:DB9A            sound_opcodes:
+   17  06:DB9A  B0 DB         .word se_op_endsound            ;$A0
+   18  06:DB9C  C9 DB         .word se_op_infinite_loop       ;$A1
+   19  06:DB9E  E0 DB         .word se_op_change_ve           ;$A2
+   20  06:DBA0  EB DB         .word se_op_duty                ;$A3
+   21  06:DBA2  F1 DB         .word se_op_set_loop1_counter   ;$A4
+   22  06:DBA4  F7 DB         .word se_op_loop1               ;$A5
+   23  06:DBA6  04 DC         .word se_op_set_note_offset     ;$A6
+   24  06:DBA8  0A DC         .word se_op_adjust_note_offset  ;$A7
+   25  06:DBAA  14 DC         .word se_op_transpose           ;$A8
+   26  06:DBAC  34 DC             .word se_op_change_pe                   ;$A9
+   27  06:DBAE  42 DC             .word se_op_change_arp
    28                         ;etc, 1 entry per subroutine
    29                     
    30                         
    31                     ;-----------------------------------------------------------------
    32                     ; these are the actual opcode subroutines
-   33  06:DAE1            se_op_endsound:
-   34  06:DAE1  BD 1B 03      lda stream_status, x    ;end of stream, so disable it and silence
-   35  06:DAE4  29 FE         and #%11111110
-   36  06:DAE6  9D 1B 03      sta stream_status, x    ;clear enable flag in status byte
+   33  06:DBB0            se_op_endsound:
+   34  06:DBB0  BD 1B 03      lda stream_status, x    ;end of stream, so disable it and silence
+   35  06:DBB3  29 FE         and #%11111110
+   36  06:DBB5  9D 1B 03      sta stream_status, x    ;clear enable flag in status byte
    37                         
-   38  06:DAE9  BD 21 03      lda stream_channel, x
-   39  06:DAEC  C9 02         cmp #TRIANGLE
-   40  06:DAEE  F0 04         beq .silence_tri        ;triangle is silenced differently from squares and noise
-   41  06:DAF0  A9 30         lda #$30                ;squares and noise silenced with #$30
-   42  06:DAF2  D0 02         bne .silence            ; (this will always branch.  bne is cheaper than a jmp)
-   43  06:DAF4            .silence_tri:
-   44  06:DAF4  A9 80         lda #$80                ;triangle silenced with #$80
-   45  06:DAF6            .silence:
-   46  06:DAF6  9D 3F 03      sta stream_vol_duty, x  ;store silence value in the stream's volume variable.
+   38  06:DBB8  BD 21 03      lda stream_channel, x
+   39  06:DBBB  C9 02         cmp #TRIANGLE
+   40  06:DBBD  F0 04         beq .silence_tri        ;triangle is silenced differently from squares and noise
+   41  06:DBBF  A9 30         lda #$30                ;squares and noise silenced with #$30
+   42  06:DBC1  D0 02         bne .silence            ; (this will always branch.  bne is cheaper than a jmp)
+   43  06:DBC3            .silence_tri:
+   44  06:DBC3  A9 80         lda #$80                ;triangle silenced with #$80
+   45  06:DBC5            .silence:
+   46  06:DBC5  9D 3F 03      sta stream_vol_duty, x  ;store silence value in the stream's volume variable.
    47                     
-   48  06:DAF9  60            rts
+   48  06:DBC8  60            rts
    49                         
-   50  06:DAFA            se_op_infinite_loop:
-   51  06:DAFA  B1 D2         lda [sound_ptr], y      ;read ptr LO from the data stream
-   52  06:DAFC  9D 27 03      sta stream_ptr_LO, x    ;update our data stream position
-   53  06:DAFF  C8            iny
-   54  06:DB00  B1 D2         lda [sound_ptr], y      ;read ptr HI from the data stream
-   55  06:DB02  9D 2D 03      sta stream_ptr_HI, x    ;update our data stream position
+   50  06:DBC9            se_op_infinite_loop:
+   51  06:DBC9  B1 D2         lda [sound_ptr], y      ;read ptr LO from the data stream
+   52  06:DBCB  9D 27 03      sta stream_ptr_LO, x    ;update our data stream position
+   53  06:DBCE  C8            iny
+   54  06:DBCF  B1 D2         lda [sound_ptr], y      ;read ptr HI from the data stream
+   55  06:DBD1  9D 2D 03      sta stream_ptr_HI, x    ;update our data stream position
    56                         
-   57  06:DB05  8D D3 00      sta sound_ptr+1         ;update the pointer to reflect the new position.
-   58  06:DB08  BD 27 03      lda stream_ptr_LO, x
-   59  06:DB0B  8D D2 00      sta sound_ptr
-   60  06:DB0E  A0 FF         ldy #$FF                ;after opcodes return, we do an iny.  Since we reset  
+   57  06:DBD4  8D D3 00      sta sound_ptr+1         ;update the pointer to reflect the new position.
+   58  06:DBD7  BD 27 03      lda stream_ptr_LO, x
+   59  06:DBDA  8D D2 00      sta sound_ptr
+   60  06:DBDD  A0 FF         ldy #$FF                ;after opcodes return, we do an iny.  Since we reset  
    61                                                 ;the stream buffer position, we will want y to start out at 0 again.
-   62  06:DB10  60            rts
+   62  06:DBDF  60            rts
    63                         
-   64  06:DB11            se_op_change_ve:
-   65  06:DB11  B1 D2         lda [sound_ptr], y      ;read the argument
-   66  06:DB13  9D 33 03      sta stream_ve, x        ;store it in our volume envelope variable
-   67  06:DB16  A9 00         lda #$00
-   68  06:DB18  9D 39 03      sta stream_ve_index, x  ;reset volume envelope index to the beginning
-   69  06:DB1B  60            rts
+   64  06:DBE0            se_op_change_ve:
+   65  06:DBE0  B1 D2         lda [sound_ptr], y      ;read the argument
+   66  06:DBE2  9D 33 03      sta stream_ve, x        ;store it in our volume envelope variable
+   67  06:DBE5  A9 00         lda #$00
+   68  06:DBE7  9D 39 03      sta stream_ve_index, x  ;reset volume envelope index to the beginning
+   69  06:DBEA  60            rts
    70                         
-   71  06:DB1C            se_op_duty:
-   72  06:DB1C  B1 D2         lda [sound_ptr], y
-   73  06:DB1E  9D 3F 03      sta stream_vol_duty, x
-   74  06:DB21  60            rts
+   71  06:DBEB            se_op_duty:
+   72  06:DBEB  B1 D2         lda [sound_ptr], y
+   73  06:DBED  9D 3F 03      sta stream_vol_duty, x
+   74  06:DBF0  60            rts
    75                         
-   76  06:DB22            se_op_set_loop1_counter:
-   77  06:DB22  B1 D2         lda [sound_ptr], y      ;read the argument (# times to loop)
-   78  06:DB24  9D 6F 03      sta stream_loop1, x     ;store it in the loop counter variable
-   79  06:DB27  60            rts
+   76  06:DBF1            se_op_set_loop1_counter:
+   77  06:DBF1  B1 D2         lda [sound_ptr], y      ;read the argument (# times to loop)
+   78  06:DBF3  9D 6F 03      sta stream_loop1, x     ;store it in the loop counter variable
+   79  06:DBF6  60            rts
    80                         
-   81  06:DB28            se_op_loop1:
-   82  06:DB28  DE 6F 03      dec stream_loop1, x     ;decrement the counter
-   83  06:DB2B  BD 6F 03      lda stream_loop1, x
-   84  06:DB2E  F0 03         beq .last_iteration     ;if zero, we are done looping
-   85  06:DB30  4C FA DA      jmp se_op_infinite_loop ;if not zero, jump back
-   86  06:DB33            .last_iteration:
-   87  06:DB33  C8            iny                     ;skip the first byte of the address argument
+   81  06:DBF7            se_op_loop1:
+   82  06:DBF7  DE 6F 03      dec stream_loop1, x     ;decrement the counter
+   83  06:DBFA  BD 6F 03      lda stream_loop1, x
+   84  06:DBFD  F0 03         beq .last_iteration     ;if zero, we are done looping
+   85  06:DBFF  4C C9 DB      jmp se_op_infinite_loop ;if not zero, jump back
+   86  06:DC02            .last_iteration:
+   87  06:DC02  C8            iny                     ;skip the first byte of the address argument
    88                                                 ; the second byte will be skipped automatically upon return
    89                                                 ; (see se_fetch_byte after "jsr se_opcode_launcher")
-   90  06:DB34  60            rts
+   90  06:DC03  60            rts
    91                         
-   92  06:DB35            se_op_set_note_offset:
-   93  06:DB35  B1 D2         lda [sound_ptr], y          ;read the argument
-   94  06:DB37  9D 75 03      sta stream_note_offset, x      ;set the note offset.
-   95  06:DB3A  60            rts
+   92  06:DC04            se_op_set_note_offset:
+   93  06:DC04  B1 D2         lda [sound_ptr], y          ;read the argument
+   94  06:DC06  9D 75 03      sta stream_note_offset, x      ;set the note offset.
+   95  06:DC09  60            rts
    96                         
-   97  06:DB3B            se_op_adjust_note_offset:
-   98  06:DB3B  B1 D2         lda [sound_ptr], y          ;read the argument (what value to add)
-   99  06:DB3D  18            clc
-  100  06:DB3E  7D 75 03      adc stream_note_offset, x   ;add it to the current offset
-  101  06:DB41  9D 75 03      sta stream_note_offset, x   ;and save.
-  102  06:DB44  60            rts
+   97  06:DC0A            se_op_adjust_note_offset:
+   98  06:DC0A  B1 D2         lda [sound_ptr], y          ;read the argument (what value to add)
+   99  06:DC0C  18            clc
+  100  06:DC0D  7D 75 03      adc stream_note_offset, x   ;add it to the current offset
+  101  06:DC10  9D 75 03      sta stream_note_offset, x   ;and save.
+  102  06:DC13  60            rts
   103                         
-  104  06:DB45            se_op_transpose:
-  105  06:DB45  B1 D2         lda [sound_ptr], y          ;read low byte of the pointer to our lookup table
-  106  06:DB47  8D D4 00      sta sound_ptr2              ;store it in a new pointer variable
-  107  06:DB4A  C8            iny
-  108  06:DB4B  B1 D2         lda [sound_ptr], y          ;read high byte of pointer to table
-  109  06:DB4D  8D D5 00      sta sound_ptr2+1
+  104  06:DC14            se_op_transpose:
+  105  06:DC14  B1 D2         lda [sound_ptr], y          ;read low byte of the pointer to our lookup table
+  106  06:DC16  8D D4 00      sta sound_ptr2              ;store it in a new pointer variable
+  107  06:DC19  C8            iny
+  108  06:DC1A  B1 D2         lda [sound_ptr], y          ;read high byte of pointer to table
+  109  06:DC1C  8D D5 00      sta sound_ptr2+1
   110                         
-  111  06:DB50  8C 01 03      sty sound_temp1             ;save y because we are about to destroy it
-  112  06:DB53  BD 6F 03      lda stream_loop1, x         ;get loop counter, put it in Y
-  113  06:DB56  A8            tay                         ;   this will be our index into the lookup table
-  114  06:DB57  88            dey                         ;subtract 1 because indexes start from 0.
+  111  06:DC1F  8C 01 03      sty sound_temp1             ;save y because we are about to destroy it
+  112  06:DC22  BD 6F 03      lda stream_loop1, x         ;get loop counter, put it in Y
+  113  06:DC25  A8            tay                         ;   this will be our index into the lookup table
+  114  06:DC26  88            dey                         ;subtract 1 because indexes start from 0.
   115                         
-  116  06:DB58  B1 D4         lda [sound_ptr2], y         ;read a value from the table.
-  117  06:DB5A  18            clc
-  118  06:DB5B  7D 75 03      adc stream_note_offset, x   ;add it to the note offset
-  119  06:DB5E  9D 75 03      sta stream_note_offset, x
+  116  06:DC27  B1 D4         lda [sound_ptr2], y         ;read a value from the table.
+  117  06:DC29  18            clc
+  118  06:DC2A  7D 75 03      adc stream_note_offset, x   ;add it to the note offset
+  119  06:DC2D  9D 75 03      sta stream_note_offset, x
   120                         
-  121  06:DB61  AC 01 03      ldy sound_temp1             ;restore Y
-  122  06:DB64  60            rts
+  121  06:DC30  AC 01 03      ldy sound_temp1             ;restore Y
+  122  06:DC33  60            rts
   123                             
-  124  06:DB65            se_op_change_pe:
-  125  06:DB65  B1 D2         lda [sound_ptr], y      ;read the argument
-  126  06:DB67  9D 7B 03      sta stream_pe, x        ;store it in our volume envelope variable
-  127  06:DB6A  A9 00         lda #$00
-  128  06:DB6C  9D 81 03      sta stream_pe_index, x  ;reset volume envelope index to the beginning
-  129  06:DB6F  9D 8D 03          sta stream_pe_delay, x
-  130  06:DB72  60            rts
+  124  06:DC34            se_op_change_pe:
+  125  06:DC34  B1 D2         lda [sound_ptr], y      ;read the argument
+  126  06:DC36  9D 7B 03      sta stream_pe, x        ;store it in our volume envelope variable
+  127  06:DC39  A9 00         lda #$00
+  128  06:DC3B  9D 81 03      sta stream_pe_index, x  ;reset volume envelope index to the beginning
+  129  06:DC3E  9D 8D 03          sta stream_pe_delay, x
+  130  06:DC41  60            rts
   131                             
-  132  06:DB73            se_op_change_arp:
-  133  06:DB73  B1 D2             lda [sound_ptr], y
-  134  06:DB75  9D 93 03          sta stream_arp, x
-  135  06:DB78  A9 00             lda #$00
-  136  06:DB7A  9D 99 03          sta stream_arp_index, x
-  137  06:DB7D  60                rts
+  132  06:DC42            se_op_change_arp:
+  133  06:DC42  B1 D2             lda [sound_ptr], y
+  134  06:DC44  9D 93 03          sta stream_arp, x
+  135  06:DC47  A9 00             lda #$00
+  136  06:DC49  9D 99 03          sta stream_arp_index, x
+  137  06:DC4C  60                rts
 #[2]   External/sound_engine.asm
 #[3]   External/note_table.i
-  639                         .include "External/note_table.i" ;period lookup table for notes
+  581                         .include "External/note_table.i" ;period lookup table for notes
     1                     ;NTSC Period Lookup Table.  Thanks Celius!
     2                     ;http://www.freewebs.com/the_bott/NotesTableNTSC.txt
-    3  06:DB7E            note_table:
-    4  06:DB7E  F1 07         .word                                                                $07F1, $0780, $0713 ; A1-B1 ($00-$02)
-       06:DB80  80 07     
-       06:DB82  13 07     
-    5  06:DB84  AD 06         .word $06AD, $064D, $05F3, $059D, $054D, $0500, $04B8, $0475, $0435, $03F8, $03BF, $0389 ; C2-B2 ($03-$0E)
-       06:DB86  4D 06     
-       06:DB88  F3 05     
-       06:DB8A  9D 05     
-       06:DB8C  4D 05     
-       06:DB8E  00 05     
-       06:DB90  B8 04     
-       06:DB92  75 04     
-       06:DB94  35 04     
-       06:DB96  F8 03     
-       06:DB98  BF 03     
-       06:DB9A  89 03     
-    6  06:DB9C  56 03         .word $0356, $0326, $02F9, $02CE, $02A6, $027F, $025C, $023A, $021A, $01FB, $01DF, $01C4 ; C3-B3 ($0F-$1A)
-       06:DB9E  26 03     
-       06:DBA0  F9 02     
-       06:DBA2  CE 02     
-       06:DBA4  A6 02     
-       06:DBA6  7F 02     
-       06:DBA8  5C 02     
-       06:DBAA  3A 02     
-       06:DBAC  1A 02     
-       06:DBAE  FB 01     
-       06:DBB0  DF 01     
-       06:DBB2  C4 01     
-    7  06:DBB4  AB 01         .word $01AB, $0193, $017C, $0167, $0151, $013F, $012D, $011C, $010C, $00FD, $00EF, $00E2 ; C4-B4 ($1B-$26)
-       06:DBB6  93 01     
-       06:DBB8  7C 01     
-       06:DBBA  67 01     
-       06:DBBC  51 01     
-       06:DBBE  3F 01     
-       06:DBC0  2D 01     
-       06:DBC2  1C 01     
-       06:DBC4  0C 01     
-       06:DBC6  FD 00     
-       06:DBC8  EF 00     
-       06:DBCA  E2 00     
-    8  06:DBCC  D2 00         .word $00D2, $00C9, $00BD, $00B3, $00A9, $009F, $0096, $008E, $0086, $007E, $0077, $0070 ; C5-B5 ($27-$32)
-       06:DBCE  C9 00     
-       06:DBD0  BD 00     
-       06:DBD2  B3 00     
-       06:DBD4  A9 00     
-       06:DBD6  9F 00     
-       06:DBD8  96 00     
-       06:DBDA  8E 00     
-       06:DBDC  86 00     
-       06:DBDE  7E 00     
-       06:DBE0  77 00     
-       06:DBE2  70 00     
-    9  06:DBE4  6A 00         .word $006A, $0064, $005E, $0059, $0054, $004F, $004B, $0046, $0042, $003F, $003B, $0038 ; C6-B6 ($33-$3E)
-       06:DBE6  64 00     
-       06:DBE8  5E 00     
-       06:DBEA  59 00     
-       06:DBEC  54 00     
-       06:DBEE  4F 00     
-       06:DBF0  4B 00     
-       06:DBF2  46 00     
-       06:DBF4  42 00     
-       06:DBF6  3F 00     
-       06:DBF8  3B 00     
-       06:DBFA  38 00     
-   10  06:DBFC  34 00         .word $0034, $0031, $002F, $002C, $0029, $0027, $0025, $0023, $0021, $001F, $001D, $001B ; C7-B7 ($3F-$4A)
-       06:DBFE  31 00     
-       06:DC00  2F 00     
-       06:DC02  2C 00     
-       06:DC04  29 00     
-       06:DC06  27 00     
-       06:DC08  25 00     
-       06:DC0A  23 00     
-       06:DC0C  21 00     
-       06:DC0E  1F 00     
-       06:DC10  1D 00     
-       06:DC12  1B 00     
-   11  06:DC14  1A 00         .word $001A, $0018, $0017, $0015, $0014, $0013, $0012, $0011, $0010, $000F, $000E, $000D ; C8-B8 ($4B-$56)
-       06:DC16  18 00     
-       06:DC18  17 00     
-       06:DC1A  15 00     
-       06:DC1C  14 00     
-       06:DC1E  13 00     
-       06:DC20  12 00     
-       06:DC22  11 00     
-       06:DC24  10 00     
-       06:DC26  0F 00     
-       06:DC28  0E 00     
-       06:DC2A  0D 00     
-   12  06:DC2C  0C 00         .word $000C, $000C, $000B, $000A, $000A, $0009, $0008                                    ; C9-F#9 ($57-$5D)
-       06:DC2E  0C 00     
-       06:DC30  0B 00     
-       06:DC32  0A 00     
-       06:DC34  0A 00     
-       06:DC36  09 00     
-       06:DC38  08 00     
-   13  06:DC3A  00 00         .word $0000 ;rest
+    3  06:DC4D            note_table:
+    4  06:DC4D  F1 07         .word                                                                $07F1, $0780, $0713 ; A1-B1 ($00-$02)
+       06:DC4F  80 07     
+       06:DC51  13 07     
+    5  06:DC53  AD 06         .word $06AD, $064D, $05F3, $059D, $054D, $0500, $04B8, $0475, $0435, $03F8, $03BF, $0389 ; C2-B2 ($03-$0E)
+       06:DC55  4D 06     
+       06:DC57  F3 05     
+       06:DC59  9D 05     
+       06:DC5B  4D 05     
+       06:DC5D  00 05     
+       06:DC5F  B8 04     
+       06:DC61  75 04     
+       06:DC63  35 04     
+       06:DC65  F8 03     
+       06:DC67  BF 03     
+       06:DC69  89 03     
+    6  06:DC6B  56 03         .word $0356, $0326, $02F9, $02CE, $02A6, $027F, $025C, $023A, $021A, $01FB, $01DF, $01C4 ; C3-B3 ($0F-$1A)
+       06:DC6D  26 03     
+       06:DC6F  F9 02     
+       06:DC71  CE 02     
+       06:DC73  A6 02     
+       06:DC75  7F 02     
+       06:DC77  5C 02     
+       06:DC79  3A 02     
+       06:DC7B  1A 02     
+       06:DC7D  FB 01     
+       06:DC7F  DF 01     
+       06:DC81  C4 01     
+    7  06:DC83  AB 01         .word $01AB, $0193, $017C, $0167, $0151, $013F, $012D, $011C, $010C, $00FD, $00EF, $00E2 ; C4-B4 ($1B-$26)
+       06:DC85  93 01     
+       06:DC87  7C 01     
+       06:DC89  67 01     
+       06:DC8B  51 01     
+       06:DC8D  3F 01     
+       06:DC8F  2D 01     
+       06:DC91  1C 01     
+       06:DC93  0C 01     
+       06:DC95  FD 00     
+       06:DC97  EF 00     
+       06:DC99  E2 00     
+    8  06:DC9B  D2 00         .word $00D2, $00C9, $00BD, $00B3, $00A9, $009F, $0096, $008E, $0086, $007E, $0077, $0070 ; C5-B5 ($27-$32)
+       06:DC9D  C9 00     
+       06:DC9F  BD 00     
+       06:DCA1  B3 00     
+       06:DCA3  A9 00     
+       06:DCA5  9F 00     
+       06:DCA7  96 00     
+       06:DCA9  8E 00     
+       06:DCAB  86 00     
+       06:DCAD  7E 00     
+       06:DCAF  77 00     
+       06:DCB1  70 00     
+    9  06:DCB3  6A 00         .word $006A, $0064, $005E, $0059, $0054, $004F, $004B, $0046, $0042, $003F, $003B, $0038 ; C6-B6 ($33-$3E)
+       06:DCB5  64 00     
+       06:DCB7  5E 00     
+       06:DCB9  59 00     
+       06:DCBB  54 00     
+       06:DCBD  4F 00     
+       06:DCBF  4B 00     
+       06:DCC1  46 00     
+       06:DCC3  42 00     
+       06:DCC5  3F 00     
+       06:DCC7  3B 00     
+       06:DCC9  38 00     
+   10  06:DCCB  34 00         .word $0034, $0031, $002F, $002C, $0029, $0027, $0025, $0023, $0021, $001F, $001D, $001B ; C7-B7 ($3F-$4A)
+       06:DCCD  31 00     
+       06:DCCF  2F 00     
+       06:DCD1  2C 00     
+       06:DCD3  29 00     
+       06:DCD5  27 00     
+       06:DCD7  25 00     
+       06:DCD9  23 00     
+       06:DCDB  21 00     
+       06:DCDD  1F 00     
+       06:DCDF  1D 00     
+       06:DCE1  1B 00     
+   11  06:DCE3  1A 00         .word $001A, $0018, $0017, $0015, $0014, $0013, $0012, $0011, $0010, $000F, $000E, $000D ; C8-B8 ($4B-$56)
+       06:DCE5  18 00     
+       06:DCE7  17 00     
+       06:DCE9  15 00     
+       06:DCEB  14 00     
+       06:DCED  13 00     
+       06:DCEF  12 00     
+       06:DCF1  11 00     
+       06:DCF3  10 00     
+       06:DCF5  0F 00     
+       06:DCF7  0E 00     
+       06:DCF9  0D 00     
+   12  06:DCFB  0C 00         .word $000C, $000C, $000B, $000A, $000A, $0009, $0008                                    ; C9-F#9 ($57-$5D)
+       06:DCFD  0C 00     
+       06:DCFF  0B 00     
+       06:DD01  0A 00     
+       06:DD03  0A 00     
+       06:DD05  09 00     
+       06:DD07  08 00     
+   13  06:DD09  00 00         .word $0000 ;rest
    14                     
    15                     ;Note: octaves in music traditionally start at C, not A    
    16           0000      A1 = $00    ;the "1" means Octave 1
@@ -7862,8 +8091,11 @@
   157                     
   158           005E      rest = $5e
 #[2]   External/sound_engine.asm
-#[3]   External/note_length_table.i
-  640                         .include "External/note_length_table.i"
+#[3]   External/sound_EffectTables.asm
+  582                             .include "External/sound_EffectTables.asm"
+    1                     
+#[4]   External/note_length_table.i
+    2                         .include "External/note_length_table.i"
     1                     ;note length constants (aliases)
     2           0080      thirtysecond = $80
     3           0081      sixteenth = $81
@@ -7886,178 +8118,178 @@
    20           0092      sixtyfourth = $92
    21                     
    22                     
-   23  06:DC3C            note_length_table:
-   24  06:DC3C  01            .byte $01   ;32nd note
-   25  06:DC3D  02            .byte $02   ;16th note
-   26  06:DC3E  04            .byte $04   ;8th note
-   27  06:DC3F  08            .byte $08   ;quarter note
-   28  06:DC40  10            .byte $10   ;half note
-   29  06:DC41  20            .byte $20   ;whole note
+   23  06:DD0B            note_length_table:
+   24  06:DD0B  01            .byte $01   ;32nd note
+   25  06:DD0C  02            .byte $02   ;16th note
+   26  06:DD0D  04            .byte $04   ;8th note
+   27  06:DD0E  08            .byte $08   ;quarter note
+   28  06:DD0F  10            .byte $10   ;half note
+   29  06:DD10  20            .byte $20   ;whole note
    30                                   ;---dotted notes
-   31  06:DC42  03            .byte $03   ;dotted 16th note
-   32  06:DC43  06            .byte $06   ;dotted 8th note
-   33  06:DC44  0C            .byte $0C   ;dotted quarter note
-   34  06:DC45  18            .byte $18   ;dotted half note
-   35  06:DC46  30            .byte $30   ;dotted whole note?
+   31  06:DD11  03            .byte $03   ;dotted 16th note
+   32  06:DD12  06            .byte $06   ;dotted 8th note
+   33  06:DD13  0C            .byte $0C   ;dotted quarter note
+   34  06:DD14  18            .byte $18   ;dotted half note
+   35  06:DD15  30            .byte $30   ;dotted whole note?
    36                                   ;---other
-   37  06:DC47  07            .byte $07   ;modified quarter to fit after d_sixteenth triplets
-   38  06:DC48  14            .byte $14   ;2 quarters plus an 8th
-   39  06:DC49  0A            .byte $0A   
-   40  06:DC4A  1E                .byte $1E       ;dotted half + dotted eighth
-   41  06:DC4B  2A                .byte $2A
-   42  06:DC4C  1C                .byte $1C
-   43  06:DC4D  22                .byte $22
-   44  06:DC4E  00                .byte $00
-#[2]   External/sound_engine.asm
-#[3]   External/vol_envelopes.i
-  641                         .include "External/vol_envelopes.i"
-    1  06:DC4F            volume_envelopes:
-    2  06:DC4F  6D DC         .word se_ve_1
-    3  06:DC51  75 DC         .word se_ve_2
-    4  06:DC53  8C DC         .word se_ve_3
-    5  06:DC55  AF DC         .word se_ve_tgl_1
-    6  06:DC57  B7 DC         .word se_ve_tgl_2
-    7  06:DC59  C2 DC         .word se_battlekid_loud
-    8  06:DC5B  C8 DC         .word se_battlekid_loud_long
-    9  06:DC5D  CE DC         .word se_battlekid_soft
-   10  06:DC5F  D4 DC         .word se_battlekid_soft_long
-   11  06:DC61  DA DC         .word se_drum_decay
-   12  06:DC63  E4 DC             .word se_hiHat_decay
-   13  06:DC65  E9 DC             .word se_long_decay
-   14  06:DC67  1C DD             .word se_tinyDecy
-   15  06:DC69  1F DD             .word se_noDecay
-   16  06:DC6B  21 DD             .word se_long_tremelo
+   37  06:DD16  07            .byte $07   ;modified quarter to fit after d_sixteenth triplets
+   38  06:DD17  14            .byte $14   ;2 quarters plus an 8th
+   39  06:DD18  0A            .byte $0A   
+   40  06:DD19  1E                .byte $1E       ;dotted half + dotted eighth
+   41  06:DD1A  2A                .byte $2A
+   42  06:DD1B  1C                .byte $1C
+   43  06:DD1C  22                .byte $22
+   44  06:DD1D  00                .byte $00
+#[3]   External/sound_EffectTables.asm
+#[4]   External/vol_envelopes.i
+    3                         .include "External/vol_envelopes.i"
+    1  06:DD1E            volume_envelopes:
+    2  06:DD1E  3C DD         .word se_ve_1
+    3  06:DD20  44 DD         .word se_ve_2
+    4  06:DD22  5B DD         .word se_ve_3
+    5  06:DD24  7E DD         .word se_ve_tgl_1
+    6  06:DD26  86 DD         .word se_ve_tgl_2
+    7  06:DD28  91 DD         .word se_battlekid_loud
+    8  06:DD2A  97 DD         .word se_battlekid_loud_long
+    9  06:DD2C  9D DD         .word se_battlekid_soft
+   10  06:DD2E  A3 DD         .word se_battlekid_soft_long
+   11  06:DD30  A9 DD         .word se_drum_decay
+   12  06:DD32  B3 DD             .word se_hiHat_decay
+   13  06:DD34  B8 DD             .word se_long_decay
+   14  06:DD36  EB DD             .word se_tinyDecy
+   15  06:DD38  EE DD             .word se_noDecay
+   16  06:DD3A  F0 DD             .word se_long_tremelo
    17                         
-   18  06:DC6D            se_ve_1:
-   19  06:DC6D  0F 0E 0D      .byte $0F, $0E, $0D, $0C, $09, $05, $00
-       06:DC70  0C 09 05  
-       06:DC73  00        
-   20  06:DC74  FF            .byte $FF
-   21  06:DC75            se_ve_2:
-   22  06:DC75  01 01 02      .byte $01, $01, $02, $02, $03, $03, $04, $04, $07, $07
-       06:DC78  02 03 03  
-       06:DC7B  04 04 07  
-       06:DC7E  07        
-   23  06:DC7F  08 08 0A      .byte $08, $08, $0A, $0A, $0C, $0C, $0D, $0D, $0E, $0E
-       06:DC82  0A 0C 0C  
-       06:DC85  0D 0D 0E  
-       06:DC88  0E        
-   24  06:DC89  0F 0F         .byte $0F, $0F
-   25  06:DC8B  FF            .byte $FF
-   26  06:DC8C            se_ve_3:
-   27  06:DC8C  0D 0D 0D      .byte $0D, $0D, $0D, $0C, $0B, $00, $00, $00, $00, $00
-       06:DC8F  0C 0B 00  
-       06:DC92  00 00 00  
-       06:DC95  00        
-   28  06:DC96  00 00 00      .byte $00, $00, $00, $00, $06, $06, $06, $05, $04, $00
-       06:DC99  00 06 06  
-       06:DC9C  06 05 04  
-       06:DC9F  00        
-   29  06:DCA0  00 00 00          .byte $00, $00, $00, $00, $00, $00, $00, $00, $03, $03
-       06:DCA3  00 00 00  
-       06:DCA6  00 00 03  
-       06:DCA9  03        
-   30  06:DCAA  03 02 01          .byte $03, $02, $01, $00
-       06:DCAD  00        
-   31  06:DCAE  FF            .byte $FF
+   18  06:DD3C            se_ve_1:
+   19  06:DD3C  0F 0E 0D      .byte $0F, $0E, $0D, $0C, $09, $05, $00
+       06:DD3F  0C 09 05  
+       06:DD42  00        
+   20  06:DD43  FF            .byte $FF
+   21  06:DD44            se_ve_2:
+   22  06:DD44  01 01 02      .byte $01, $01, $02, $02, $03, $03, $04, $04, $07, $07
+       06:DD47  02 03 03  
+       06:DD4A  04 04 07  
+       06:DD4D  07        
+   23  06:DD4E  08 08 0A      .byte $08, $08, $0A, $0A, $0C, $0C, $0D, $0D, $0E, $0E
+       06:DD51  0A 0C 0C  
+       06:DD54  0D 0D 0E  
+       06:DD57  0E        
+   24  06:DD58  0F 0F         .byte $0F, $0F
+   25  06:DD5A  FF            .byte $FF
+   26  06:DD5B            se_ve_3:
+   27  06:DD5B  0D 0D 0D      .byte $0D, $0D, $0D, $0C, $0B, $00, $00, $00, $00, $00
+       06:DD5E  0C 0B 00  
+       06:DD61  00 00 00  
+       06:DD64  00        
+   28  06:DD65  00 00 00      .byte $00, $00, $00, $00, $06, $06, $06, $05, $04, $00
+       06:DD68  00 06 06  
+       06:DD6B  06 05 04  
+       06:DD6E  00        
+   29  06:DD6F  00 00 00          .byte $00, $00, $00, $00, $00, $00, $00, $00, $03, $03
+       06:DD72  00 00 00  
+       06:DD75  00 00 03  
+       06:DD78  03        
+   30  06:DD79  03 02 01          .byte $03, $02, $01, $00
+       06:DD7C  00        
+   31  06:DD7D  FF            .byte $FF
    32                         
-   33  06:DCAF            se_ve_tgl_1:
-   34  06:DCAF  0F 0B 09      .byte $0F, $0B, $09, $08, $07, $06, $00
-       06:DCB2  08 07 06  
-       06:DCB5  00        
-   35  06:DCB6  FF            .byte $FF
+   33  06:DD7E            se_ve_tgl_1:
+   34  06:DD7E  0F 0B 09      .byte $0F, $0B, $09, $08, $07, $06, $00
+       06:DD81  08 07 06  
+       06:DD84  00        
+   35  06:DD85  FF            .byte $FF
    36                         
-   37  06:DCB7            se_ve_tgl_2:
-   38  06:DCB7  0B 0B 0A      .byte $0B, $0B, $0A, $09, $08, $07, $06, $06, $06, $05
-       06:DCBA  09 08 07  
-       06:DCBD  06 06 06  
-       06:DCC0  05        
-   39  06:DCC1  FF            .byte $FF
+   37  06:DD86            se_ve_tgl_2:
+   38  06:DD86  0B 0B 0A      .byte $0B, $0B, $0A, $09, $08, $07, $06, $06, $06, $05
+       06:DD89  09 08 07  
+       06:DD8C  06 06 06  
+       06:DD8F  05        
+   39  06:DD90  FF            .byte $FF
    40                         
    41                         
-   42  06:DCC2            se_battlekid_loud:
-   43  06:DCC2  0F 0E 0C      .byte $0f, $0e, $0c, $0a, $00
-       06:DCC5  0A 00     
-   44  06:DCC7  FF            .byte $FF
+   42  06:DD91            se_battlekid_loud:
+   43  06:DD91  0F 0E 0C      .byte $0f, $0e, $0c, $0a, $00
+       06:DD94  0A 00     
+   44  06:DD96  FF            .byte $FF
    45                         
-   46  06:DCC8            se_battlekid_loud_long:
-   47  06:DCC8  0F 0E 0C      .byte $0f, $0e, $0c, $0a, $09
-       06:DCCB  0A 09     
-   48  06:DCCD  FF            .byte $FF
+   46  06:DD97            se_battlekid_loud_long:
+   47  06:DD97  0F 0E 0C      .byte $0f, $0e, $0c, $0a, $09
+       06:DD9A  0A 09     
+   48  06:DD9C  FF            .byte $FF
    49                         
-   50  06:DCCE            se_battlekid_soft:
-   51  06:DCCE  09 08 06      .byte $09, $08, $06, $04, $00
-       06:DCD1  04 00     
-   52  06:DCD3  FF            .byte $FF
+   50  06:DD9D            se_battlekid_soft:
+   51  06:DD9D  09 08 06      .byte $09, $08, $06, $04, $00
+       06:DDA0  04 00     
+   52  06:DDA2  FF            .byte $FF
    53                         
-   54  06:DCD4            se_battlekid_soft_long:
-   55  06:DCD4  09 08 06      .byte $09, $08, $06, $04, $03
-       06:DCD7  04 03     
-   56  06:DCD9  FF            .byte $FF
+   54  06:DDA3            se_battlekid_soft_long:
+   55  06:DDA3  09 08 06      .byte $09, $08, $06, $04, $03
+       06:DDA6  04 03     
+   56  06:DDA8  FF            .byte $FF
    57                         
-   58  06:DCDA            se_drum_decay:
-   59  06:DCDA  0E 09 08      .byte $0E, $09, $08, $06, $04, $03, $02, $01, $00
-       06:DCDD  06 04 03  
-       06:DCE0  02 01 00  
-   60  06:DCE3  FF            .byte $FF
+   58  06:DDA9            se_drum_decay:
+   59  06:DDA9  0E 09 08      .byte $0E, $09, $08, $06, $04, $03, $02, $01, $00
+       06:DDAC  06 04 03  
+       06:DDAF  02 01 00  
+   60  06:DDB2  FF            .byte $FF
    61                             
-   62  06:DCE4            se_hiHat_decay:
-   63  06:DCE4  0E 06 02      .byte $0E, $06, $02, $00
-       06:DCE7  00        
-   64  06:DCE8  FF                .byte $FF
+   62  06:DDB3            se_hiHat_decay:
+   63  06:DDB3  0E 06 02      .byte $0E, $06, $02, $00
+       06:DDB6  00        
+   64  06:DDB7  FF                .byte $FF
    65                         
-   66  06:DCE9            se_long_decay:
+   66  06:DDB8            se_long_decay:
    67                             ;attack
-   68  06:DCE9  0E            .byte $0E
+   68  06:DDB8  0E            .byte $0E
    69                             ;decay
-   70  06:DCEA  0F 0F 0F          .byte $0F, $0F, $0F, $0E, $0E, $0E, $0D, $0D, $0D
-       06:DCED  0E 0E 0E  
-       06:DCF0  0D 0D 0D  
-   71  06:DCF3  0C 0C 0C          .byte $0C, $0C, $0C, $0B, $0B, $0B, $0A, $0A, $0A
-       06:DCF6  0B 0B 0B  
-       06:DCF9  0A 0A 0A  
-   72  06:DCFC  0A 0A 0A          .byte $0A, $0A, $0A, $09, $09, $09, $08, $08, $08
-       06:DCFF  09 09 09  
-       06:DD02  08 08 08  
-   73  06:DD05  07 07 07          .byte $07, $07, $07, $06, $06, $06, $05, $05, $05
-       06:DD08  06 06 06  
-       06:DD0B  05 05 05  
-   74  06:DD0E  04 04 04      .byte $04, $04, $04, $03, $03, $03, $02, $02, $02
-       06:DD11  03 03 03  
-       06:DD14  02 02 02  
-   75  06:DD17  01 01 01          .byte $01, $01, $01, $00
-       06:DD1A  00        
-   76  06:DD1B  FF            .byte $FF
+   70  06:DDB9  0F 0F 0F          .byte $0F, $0F, $0F, $0E, $0E, $0E, $0D, $0D, $0D
+       06:DDBC  0E 0E 0E  
+       06:DDBF  0D 0D 0D  
+   71  06:DDC2  0C 0C 0C          .byte $0C, $0C, $0C, $0B, $0B, $0B, $0A, $0A, $0A
+       06:DDC5  0B 0B 0B  
+       06:DDC8  0A 0A 0A  
+   72  06:DDCB  0A 0A 0A          .byte $0A, $0A, $0A, $09, $09, $09, $08, $08, $08
+       06:DDCE  09 09 09  
+       06:DDD1  08 08 08  
+   73  06:DDD4  07 07 07          .byte $07, $07, $07, $06, $06, $06, $05, $05, $05
+       06:DDD7  06 06 06  
+       06:DDDA  05 05 05  
+   74  06:DDDD  04 04 04      .byte $04, $04, $04, $03, $03, $03, $02, $02, $02
+       06:DDE0  03 03 03  
+       06:DDE3  02 02 02  
+   75  06:DDE6  01 01 01          .byte $01, $01, $01, $00
+       06:DDE9  00        
+   76  06:DDEA  FF            .byte $FF
    77                             
-   78  06:DD1C            se_tinyDecy:
-   79  06:DD1C  0F 00             .byte $0F, $00
-   80  06:DD1E  FF                .byte $FF
+   78  06:DDEB            se_tinyDecy:
+   79  06:DDEB  0F 00             .byte $0F, $00
+   80  06:DDED  FF                .byte $FF
    81                     
-   82  06:DD1F            se_noDecay:
-   83  06:DD1F  0F                .byte $0F
-   84  06:DD20  FF                .byte $FF
+   82  06:DDEE            se_noDecay:
+   83  06:DDEE  0F                .byte $0F
+   84  06:DDEF  FF                .byte $FF
    85                             
-   86  06:DD21            se_long_tremelo:
+   86  06:DDF0            se_long_tremelo:
    87                             ;attack
-   88  06:DD21  0E            .byte $0E
+   88  06:DDF0  0E            .byte $0E
    89                             ;decay
-   90  06:DD22  0F 0F 0F          .byte $0F, $0F, $0F, $09, $09, $09, $0E, $0E, $0E
-       06:DD25  09 09 09  
-       06:DD28  0E 0E 0E  
-   91  06:DD2B  08 08 08      .byte $08, $08, $08, $0D, $0D, $0D, $07, $07, $07
-       06:DD2E  0D 0D 0D  
-       06:DD31  07 07 07  
-   92  06:DD34  0C 0C 0C          .byte $0C, $0C, $0C, $06, $06, $06, $0B, $0B, $0B
-       06:DD37  06 06 06  
-       06:DD3A  0B 0B 0B  
-   93  06:DD3D  05 05 05          .byte $05, $05, $05, $0A, $0A, $0A, $04, $04, $04
-       06:DD40  0A 0A 0A  
-       06:DD43  04 04 04  
-   94  06:DD46  09 09 09          .byte $09, $09, $09, $03, $03, $03, $08, $08, $08
-       06:DD49  03 03 03  
-       06:DD4C  08 08 08  
-   95  06:DD4F  00            .byte $00
-   96  06:DD50  FF            .byte $FF
+   90  06:DDF1  0F 0F 0F          .byte $0F, $0F, $0F, $09, $09, $09, $0E, $0E, $0E
+       06:DDF4  09 09 09  
+       06:DDF7  0E 0E 0E  
+   91  06:DDFA  08 08 08      .byte $08, $08, $08, $0D, $0D, $0D, $07, $07, $07
+       06:DDFD  0D 0D 0D  
+       06:DE00  07 07 07  
+   92  06:DE03  0C 0C 0C          .byte $0C, $0C, $0C, $06, $06, $06, $0B, $0B, $0B
+       06:DE06  06 06 06  
+       06:DE09  0B 0B 0B  
+   93  06:DE0C  05 05 05          .byte $05, $05, $05, $0A, $0A, $0A, $04, $04, $04
+       06:DE0F  0A 0A 0A  
+       06:DE12  04 04 04  
+   94  06:DE15  09 09 09          .byte $09, $09, $09, $03, $03, $03, $08, $08, $08
+       06:DE18  03 03 03  
+       06:DE1B  08 08 08  
+   95  06:DE1E  00            .byte $00
+   96  06:DE1F  FF            .byte $FF
    97                     
    98                             
    99           0000      ve_short_staccato = $00
@@ -8075,299 +8307,78 @@
   111           000C      ve_tinyDecy = $0C
   112           000D      ve_noDecay = $0D
   113           000E      ve_long_tremelo = $0E
-#[2]   External/sound_engine.asm
-#[3]   External/pitch_envelopes.i
-  642                             .include "External/pitch_envelopes.i"
-    1  06:DD51            pitch_envelopes:
-    2  06:DD51  59 DD         .word se_pe_none
-    3  06:DD53  5B DD         .word se_pe_mod
-    4  06:DD55  6F DD             .word se_pe_sweep
-    5  06:DD57  85 DD             .word se_pe_bassKick
+#[3]   External/sound_EffectTables.asm
+#[4]   External/pitch_envelopes.i
+    4                             .include "External/pitch_envelopes.i"
+    1  06:DE20            pitch_envelopes:
+    2  06:DE20  28 DE         .word se_pe_none
+    3  06:DE22  2A DE         .word se_pe_mod
+    4  06:DE24  3E DE             .word se_pe_sweep
+    5  06:DE26  54 DE             .word se_pe_bassKick
     6                     
     7           0080      pe_loopLast = $80
     8           0081      pe_loopAll = $81
     9           0082      pe_loopPart = $82       ;requires byte timer amount after
    10           0083      pe_delay = $83          ;requires byte amount after - of negative, not yet reset. only allow if timer is currently 0
    11                     
-   12  06:DD59            se_pe_none:
-   13  06:DD59  00                .byte $00
-   14  06:DD5A  80                .byte pe_loopLast
+   12  06:DE28            se_pe_none:
+   13  06:DE28  00                .byte $00
+   14  06:DE29  80                .byte pe_loopLast
    15                     
-   16  06:DD5B            se_pe_mod:
+   16  06:DE2A            se_pe_mod:
    17                     
-   18  06:DD5B  00 83 0A          .byte $00, pe_delay, $0A, $00, $00, $FE, $FE, $FC, $FC, $FE, $FE, $00, $00, $02, $02, $04, $04, $02, $02
-       06:DD5E  00 00 FE  
-       06:DD61  FE FC FC  
-       06:DD64  FE FE 00  
-       06:DD67  00 02 02  
-       06:DD6A  04 04 02  
-       06:DD6D  02        
-   19  06:DD6E  81                .byte pe_loopAll
+   18  06:DE2A  00 83 0A          .byte $00, pe_delay, $0A, $00, $00, $FE, $FE, $FC, $FC, $FE, $FE, $00, $00, $02, $02, $04, $04, $02, $02
+       06:DE2D  00 00 FE  
+       06:DE30  FE FC FC  
+       06:DE33  FE FE 00  
+       06:DE36  00 02 02  
+       06:DE39  04 04 02  
+       06:DE3C  02        
+   19  06:DE3D  81                .byte pe_loopAll
    20                     
-   21  06:DD6F            se_pe_sweep:
+   21  06:DE3E            se_pe_sweep:
    22                             
-   23  06:DD6F  10 0C 08          .byte $10, $0C, $08, $04, $00, $00, $FE, $FE, $FC, $FC, $FE, $FE, $00, $00, $02, $02, $04, $04, $02, $02
-       06:DD72  04 00 00  
-       06:DD75  FE FE FC  
-       06:DD78  FC FE FE  
-       06:DD7B  00 00 02  
-       06:DD7E  02 04 04  
-       06:DD81  02 02     
-   24  06:DD83  82 10             .byte pe_loopPart, $10
+   23  06:DE3E  10 0C 08          .byte $10, $0C, $08, $04, $00, $00, $FE, $FE, $FC, $FC, $FE, $FE, $00, $00, $02, $02, $04, $04, $02, $02
+       06:DE41  04 00 00  
+       06:DE44  FE FE FC  
+       06:DE47  FC FE FE  
+       06:DE4A  00 00 02  
+       06:DE4D  02 04 04  
+       06:DE50  02 02     
+   24  06:DE52  82 10             .byte pe_loopPart, $10
    25                     
-   26  06:DD85            se_pe_bassKick:
-   27  06:DD85  90 C0 F0          .byte $90, $C0, $F0, $20, $50, $70
-       06:DD88  20 50 70  
-   28  06:DD8B  80                .byte pe_loopLast
+   26  06:DE54            se_pe_bassKick:
+   27  06:DE54  90 C0 F0          .byte $90, $C0, $F0, $20, $50, $70
+       06:DE57  20 50 70  
+   28  06:DE5A  80                .byte pe_loopLast
    29                     
    30           0000      pe_none = $00
    31           0001      pe_mod = $01
    32           0002      pe_sweep = $02
    33           0003      pe_bassKick = $03
    34                     
-#[2]   External/sound_engine.asm
-#[3]   External/arpeggios.i
-  643                             .include "External/arpeggios.i"
-    1  06:DD8C            arpeggios:
-    2  06:DD8C  90 DD             .word se_arp_none
-    3  06:DD8E  92 DD         .word se_arp_lowerThird
+#[3]   External/sound_EffectTables.asm
+#[4]   External/arpeggios.i
+    5                             .include "External/arpeggios.i"
+    1  06:DE5B            arpeggios:
+    2  06:DE5B  5F DE             .word se_arp_none
+    3  06:DE5D  61 DE         .word se_arp_lowerThird
     4                     
-    5  06:DD90            se_arp_none:
-    6  06:DD90  00                .byte $00
-    7  06:DD91  FF                .byte $FF
+    5  06:DE5F            se_arp_none:
+    6  06:DE5F  00                .byte $00
+    7  06:DE60  FF                .byte $FF
     8                     
-    9  06:DD92            se_arp_lowerThird:
-   10  06:DD92  00 00 01          .byte $00, $00, $01, $01
-       06:DD95  01        
-   11  06:DD96  FF                .byte $FF
+    9  06:DE61            se_arp_lowerThird:
+   10  06:DE61  00 00 01          .byte $00, $00, $01, $01
+       06:DE64  01        
+   11  06:DE65  FF                .byte $FF
    12                     
    13           0000      arp_none = $00
    14           0001      arp_lowerThird = $01
    15                     
    16                     
    17                     
-#[2]   External/sound_engine.asm
-#[3]   External/song0.i
-  644                         .include "External/song0.i"  ;holds the data for song 0 (header and data streams)
-    1                     ;silence song.  disables all streams
-    2                     
-    3  06:DD97            song0_header:
-    4  06:DD97  06            .byte 6          ;6 streams
-    5                         
-    6  06:DD98  00            .byte MUSIC_SQ1
-    7  06:DD99  00            .byte $00
-    8                             
-    9  06:DD9A  01                .byte MUSIC_SQ2
-   10  06:DD9B  00                .byte $00
-   11                             
-   12  06:DD9C  02                .byte MUSIC_TRI
-   13  06:DD9D  00                .byte $00
-   14                             
-   15  06:DD9E  03                .byte MUSIC_NOI
-   16  06:DD9F  00                .byte $00
-   17                             
-   18  06:DDA0  04                .byte SFX_1
-   19  06:DDA1  00                .byte $00
-   20                             
-   21  06:DDA2  05                .byte SFX_2
-   22  06:DDA3  00                .byte $00
-#[2]   External/sound_engine.asm
-#[3]   Music/Menu.i
-  645                             .include "Music/Menu.i"  ;holds the data for song 1
-    1  06:DDA4            menu_header:
-    2  06:DDA4  01            .byte $01           ;4 streams
-    3                         
-    4  06:DDA5  00            .byte MUSIC_SQ1     ;which stream
-    5  06:DDA6  00            .byte $00           ;status byte (stream enabled)
-#[2]   External/sound_engine.asm
-#[3]   Music/puzzleSolvedDrawImage.i
-  646                         .include "Music/puzzleSolvedDrawImage.i"  ;holds the data for song 1
-    1  06:DDA7            drawImg_header:
-    2  06:DDA7  01            .byte $01         ;1 streams
-    3                         
-    4  06:DDA8  00            .byte MUSIC_SQ1     ;which stream
-    5  06:DDA9  00            .byte $00           ;status byte (stream enabled)
-#[2]   External/sound_engine.asm
-#[3]   Music/EndScreen.i
-  647                             .include "Music/EndScreen.i"
-    1  06:DDAA            endScreen_header:
-    2  06:DDAA  04            .byte $04           ;4 streams
-    3                         
-    4  06:DDAB  00            .byte MUSIC_SQ1     ;which stream
-    5  06:DDAC  01            .byte $01           ;status byte (stream enabled)
-    6  06:DDAD  00            .byte SQUARE_1      ;which channel
-    7  06:DDAE  70            .byte $70           ;initial duty (01)
-    8  06:DDAF  02            .byte ve_blip_echo  ;volume envelope
-    9  06:DDB0  CB DD         .word endScreen_square1 ;pointer to stream
-   10  06:DDB2  3A            .byte $3A           ;tempo
-   11                         
-   12  06:DDB3  01            .byte MUSIC_SQ2     ;which stream
-   13  06:DDB4  01            .byte $01           ;status byte (stream enabled)
-   14  06:DDB5  01            .byte SQUARE_2      ;which channel
-   15  06:DDB6  B0            .byte $B0           ;initial duty (10)
-   16  06:DDB7  02            .byte ve_blip_echo  ;volume envelope
-   17  06:DDB8  EC DD         .word endScreen_square2 ;pointer to stream
-   18  06:DDBA  3A            .byte $3A           ;tempo
-   19                         
-   20  06:DDBB  02            .byte MUSIC_TRI     ;which stream
-   21  06:DDBC  01            .byte $01           ;status byte (stream enabled)
-   22  06:DDBD  02            .byte TRIANGLE      ;which channel
-   23  06:DDBE  80            .byte $80           ;initial volume (on)
-   24  06:DDBF  03            .byte ve_tgl_1      ;volume envelope
-   25  06:DDC0  0D DE         .word endScreen_tri     ;pointer to stream
-   26  06:DDC2  3A            .byte $3A           ;tempo
-   27                         
-   28  06:DDC3  03            .byte MUSIC_NOI     ;which stream
-   29  06:DDC4  01            .byte $01           ;enabled
-   30  06:DDC5  03            .byte NOISE     
-   31  06:DDC6  30            .byte $30           ;initial duty_vol
-   32  06:DDC7  0A            .byte ve_hiHat_decay ;volume envelope
-   33  06:DDC8  34 DE         .word endScreen_noise   ;pointer to stream
-   34  06:DDCA  3A            .byte $3A           ;tempo
-   35                     
-   36                         
-   37  06:DDCB            endScreen_square1:
-   38                     
-   39  06:DDCB  83            .byte quarter
-   40  06:DDCC  23                .byte Gs4
-   41  06:DDCD  82                .byte eighth
-   42  06:DDCE  23 21             .byte Gs4, Fs4
-   43  06:DDD0  84 5E             .byte half, rest
-   44  06:DDD2  83                .byte quarter
-   45  06:DDD3  1F                .byte E4
-   46  06:DDD4  82                .byte eighth
-   47  06:DDD5  1F 21             .byte E4, Fs4
-   48  06:DDD7  84 5E             .byte half, rest
-   49                             
-   50  06:DDD9  83                .byte quarter
-   51  06:DDDA  25                .byte As4
-   52  06:DDDB  82                .byte eighth
-   53  06:DDDC  25 23             .byte As4, Gs4
-   54  06:DDDE  84 5E             .byte half, rest
-   55  06:DDE0  82                .byte eighth
-   56  06:DDE1  21 23 21          .byte Fs4, Gs4, Fs4, F4
-       06:DDE4  20        
-   57  06:DDE5  10 17 20          .byte Cs3, Gs3, F4, Gs4
-       06:DDE8  23        
-   58                             
-   59                         
-   60  06:DDE9  A1            .byte loop                              ;infinite loop
-   61  06:DDEA  CB DD         .word endScreen_square1
-   62                     
-   63                         
-   64  06:DDEC            endScreen_square2:
-   65                     
-   66  06:DDEC  82            .byte eighth
-   67  06:DDED  20 17 20          .byte F4, Gs3, F4, Ds4
-       06:DDF0  1E        
-   68  06:DDF1  84 5E             .byte half, rest
-   69  06:DDF3  82                .byte eighth
-   70  06:DDF4  1C 15 1C          .byte Cs4, Fs3, Cs4, Ds4
-       06:DDF7  1E        
-   71  06:DDF8  84 5E             .byte half, rest
-   72                     
-   73  06:DDFA  82                .byte eighth
-   74  06:DDFB  28 21 28          .byte Cs5, Fs4, Cs5, B4
-       06:DDFE  26        
-   75  06:DDFF  84 5E             .byte half, rest
-   76  06:DE01  82                .byte eighth
-   77  06:DE02  24 26 24          .byte A4, B4, A4, Gs4
-       06:DE05  23        
-   78  06:DE06  17 1E 23          .byte Gs3, Ds4, Gs4, C5
-       06:DE09  27        
-   79  06:DE0A  A1            .byte loop
-   80  06:DE0B  EC DD         .word endScreen_square2
-   81                         
-   82  06:DE0D            endScreen_tri:
-   83                     
-   84  06:DE0D  83                .byte quarter
-   85  06:DE0E  1C                .byte Cs4
-   86  06:DE0F  82                .byte eighth
-   87  06:DE10  1C 1A 5E          .byte Cs4, B3, rest
-   88  06:DE13  0E 1A 0E          .byte B2, B3, B2
-   89  06:DE16  83                .byte quarter
-   90  06:DE17  18                .byte A3
-   91  06:DE18  82                .byte eighth
-   92  06:DE19  18 1A 5E          .byte A3, B3, rest
-   93  06:DE1C  0E 1A 0E          .byte B2, B3, B2
-   94                             
-   95  06:DE1F  83                .byte quarter
-   96  06:DE20  1E                .byte Ds4
-   97  06:DE21  82                .byte eighth
-   98  06:DE22  1E 1C 5E          .byte Ds4, Cs4, rest
-   99  06:DE25  10 1C 10          .byte Cs3, Cs4, Cs3
-  100  06:DE28  83                .byte quarter
-  101  06:DE29  1A                .byte B3
-  102  06:DE2A  82                .byte eighth
-  103  06:DE2B  1A 1C 5E          .byte B3, Cs4, rest
-  104  06:DE2E  10 1C 10          .byte Cs3, Cs4, Cs3
-  105                             
-  106  06:DE31  A1                .byte loop
-  107  06:DE32  0D DE         .word endScreen_tri
-  108                         
-  109  06:DE34            endScreen_noise:
-  110                     
-  111  06:DE34  82 04 04      .byte eighth, $04, $04
-  112  06:DE37  A2 09             .byte volume_envelope, ve_drum_decay 
-  113  06:DE39  82 04         .byte eighth, $04
-  114  06:DE3B  A2 0A             .byte volume_envelope, ve_hiHat_decay
-  115  06:DE3D  82 04             .byte eighth, $04
-  116                     
-  117  06:DE3F  A1            .byte loop
-  118  06:DE40  34 DE         .word endScreen_noise
-#[2]   External/sound_engine.asm
-#[3]   SFX/menuCursor.i
-  648                             .include "SFX/menuCursor.i"  ;holds the data for song 1
-    1  06:DE42            menuCursor_header:
-    2  06:DE42  01            .byte $01           ;1 stream
-    3                         
-    4  06:DE43  04            .byte SFX_1         ;which stream
-    5  06:DE44  01            .byte $01           ;status byte (stream enabled)
-    6  06:DE45  01            .byte SQUARE_2      ;which channel
-    7  06:DE46  70            .byte $70           ;duty (01)
-    8  06:DE47  0A            .byte ve_hiHat_decay  ;volume envelope
-    9  06:DE48  4B DE         .word menuCursor_square2 ;pointer to stream
-   10  06:DE4A  80            .byte $80           ;tempo
-   11                         
-   12                         
-   13  06:DE4B            menuCursor_square2:
-   14  06:DE4B  81 33         .byte sixteenth, C6
-   15  06:DE4D  A0            .byte endsound
-#[2]   External/sound_engine.asm
-#[3]   SFX/puzzleCursor.i
-  649                             .include "SFX/puzzleCursor.i"  ;holds the data for song 1
-    1  06:DE4E            puzzleCursor_header:
-    2  06:DE4E  01            .byte $01           ;1 stream
-    3                         
-    4  06:DE4F  05            .byte SFX_2         ;which stream
-    5  06:DE50  01            .byte $01           ;status byte (stream enabled)
-    6  06:DE51  02            .byte TRIANGLE      ;which channel
-    7  06:DE52  80            .byte $80           ;on
-    8  06:DE53  0A            .byte ve_hiHat_decay  ;volume envelope
-    9  06:DE54  57 DE         .word puzzleCursor_square2 ;pointer to stream
-   10  06:DE56  80            .byte $80           ;tempo
-   11                         
-   12                         
-   13  06:DE57            puzzleCursor_square2:
-   14  06:DE57  81 33         .byte sixteenth, C6
-   15  06:DE59  A0            .byte endsound
-#[2]   External/sound_engine.asm
-#[3]   SFX/noiseBlip.i
-  650                             .include "SFX/noiseBlip.i" 
-    1  06:DE5A            noiseBlip_header:
-    2  06:DE5A  01            .byte $01           ;1 stream
-    3                         
-    4  06:DE5B  05                .byte SFX_2     ;which stream
-    5  06:DE5C  01            .byte $01           ;enabled
-    6  06:DE5D  03            .byte NOISE     
-    7  06:DE5E  30            .byte $30           ;initial duty_vol
-    8  06:DE5F  0C            .byte ve_tinyDecy ;volume envelope
-    9  06:DE60  63 DE         .word noiseBlip_noise   ;pointer to stream
-   10  06:DE62  80            .byte $80           ;tempo
-   11                         
-   12  06:DE63            noiseBlip_noise:
-   13  06:DE63  81 04         .byte sixteenth, $04
-   14  06:DE65  A0            .byte endsound
+#[3]   External/sound_EffectTables.asm
 #[2]   External/sound_engine.asm
 #[1]   Picross.asm
   111                     ;;**************************;;
