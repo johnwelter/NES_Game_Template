@@ -1,5 +1,5 @@
 sound_init:
-    lda #$0F
+    lda #$1F
     sta $4015   ;enable Square 1, Square 2, Triangle and Noise channels
     
     lda #$00
@@ -15,6 +15,8 @@ se_silence:
     sta soft_apu_ports+12   ;set Noise volume to 0
     lda #$80
     sta soft_apu_ports+8     ;silence Triangle
+	lda #$00
+	sta soft_apu_ports+17	 ;silence DPMC
 
     rts
     
@@ -68,6 +70,7 @@ sound_load:
 	lda #pe_none
 	sta stream_pe, x
 	
+	;temp solution
 	lda #arp_none
 	sta stream_arp, x
     
@@ -136,7 +139,7 @@ sound_play_frame:
     jsr se_set_temp_ports   ;copy the current stream's sound data for the current frame into our temporary APU vars (soft_apu_ports)
 .endloop:
     inx
-    cpx #$06
+    cpx #$08
     bne .loop
     jsr se_set_apu      ;copy the temporary APU variables (soft_apu_ports) to the real APU ports ($4000, $4001, etc)
 .done:
@@ -186,6 +189,11 @@ se_fetch_byte:
     jsr se_do_noise
     jmp .reset_ve
 .not_noise:
+	cmp #DPMC
+	bcc .not_dpmc
+	jsr se_do_dpmc
+	jmp .reset_ve
+.not_dpmc:
     lda sound_temp2
     sty sound_temp1     ;save our index into the data stream
     clc
@@ -200,6 +208,7 @@ se_fetch_byte:
     ldy sound_temp1     ;restore data stream index
     
     ;check if it's a rest and modify the status flag appropriately
+
     jsr se_check_rest
 .reset_ve:    
     lda #$00
@@ -229,6 +238,45 @@ se_do_noise:
     lda sound_temp2
     sta stream_note_LO, x
     rts
+	
+se_do_dpmc:
+	TXA
+	PHA
+	
+	lda $4015
+	AND #$0F
+	sta $4015 ;DPCM disable
+	
+	lda sound_temp2		;load up sample index- we can cram in the pitch and keep ourselves to 6 samples (7 will be rest)
+	CMP #$70
+	BCS .leave
+
+	AND #$0F
+	sta $4010 ;pitch
+	LDA #$7F
+	sta $4011 ;temp = starting sample level
+	lda sound_temp2
+	AND #$F0
+	LSR A
+	LSR A
+	LSR A
+	LSR A
+	TAX
+	lda SampleStart,x
+	sta $4012 ;X = sample number
+	lda SampleLength,x
+	sta $4013
+	
+	lda $4015
+	AND #$0F
+	ORA #$10
+	STA $4015
+.leave:
+	PLA
+	TAX
+
+	rts
+	
 ;--------------------------------------------------
 ; se_check_rest will read a byte from the data stream and
 ;       determine if it is a rest or not.  It will set or clear the current
@@ -274,6 +322,11 @@ se_opcode_launcher:
 ;      input:
 ;           X: stream number
 se_set_temp_ports:
+
+	cpx #MUSIC_DPMC
+	bcc .contTempPorts
+	rts
+.contTempPorts:
     lda stream_channel, x
     asl a
     asl a
@@ -308,6 +361,7 @@ se_set_temp_ports:
 ;----------------------------------
 ;    
 se_set_stream_volume:
+	
     sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
     
     lda stream_ve, x            ;which volume envelope?
@@ -577,3 +631,5 @@ se_set_apu:
     .include "External/sound_opcodes.asm"    ;our opcode subroutines, jump table and aliases
     .include "External/note_table.i" ;period lookup table for notes
 	.include "External/sound_EffectTables.asm"
+
+BankSong:	;;label for bank song

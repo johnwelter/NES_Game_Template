@@ -107,7 +107,26 @@ GameLoopJumpTable:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;    AUDIO                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    .include "External/sound_engine.asm"
+    ;.include "External/sound_engine.asm"
+	;;test out DPCM here?
+
+	.ds (64-*)&63
+sample0:						;MOTHER bass kick
+	.incbin "DMC/sample0.dmc"
+sample0End:
+	.ds (64-*)&63
+sample1:						;MOTHER snare
+	.incbin "DMC/sample1.dmc"
+sample1End:
+
+SampleStart:
+	.db low(sample0 >> 6)
+	.db low(sample1 >> 6)
+
+SampleLength:
+	.db low((sample0End - sample0) >> 4)
+	.db low((sample1End - sample1) >> 4)
+
 ;;**************************;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;       PRG ROM DATA       ;;

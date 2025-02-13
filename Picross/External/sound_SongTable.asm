@@ -2,7 +2,7 @@
 song_headers:
 	
     .word song0_header
-	.word $A0D8
+	.word BankSong
 	.word menu_header
     .word drawImg_header  ;The Guardian Legend Boss song
 	.word endScreen_header

@@ -1,0 +1,2216 @@
+#[1]   SoundEnginePreComp.asm
+#[2]   Defines/Defines.asm
+    2                             .include "Defines/Defines.asm"
+    1                     ;; define 0 page stuff here, and SRAM stuff if we have it
+    2                     
+    3           0000        .rsset $0000
+#[3]   Defines/GeneralVars.asm
+    4                       .include "Defines/GeneralVars.asm"
+    1           0000      temp1                   .rs 1
+    2           0001      temp2                   .rs 1
+    3           0002      temp3                   .rs 1
+    4           0003      temp4                   .rs 1
+    5           0004      temp5                   .rs 1
+    6           0005      temp6                   .rs 1
+    7           0006      temp7                   .rs 1
+    8           0007      temp8                   .rs 1
+    9           0008      tempx                   .rs 1
+   10           0009      tempy                   .rs 1
+   11           000A      time                    .rs 1
+   12           000B      scaledTime              .rs 1
+   13           000C      sleeping                .rs 1
+   14           000D      mode_loadFlags  .rs 1
+   15                     ;;0rcb xxxx
+   16                     ;;r = read from save copy 
+   17                     ;;c = write to save copy
+   18           000E      game_mode               .rs 1
+   19           000F      mode_state              .rs 1
+   20           0010      NMI_locks               .rs 1
+   21           0011      game_locks              .rs 1
+   22           0012      pointer_address .rs 2
+   23           0014      pointerB_address .rs 2
+   24           0016      table_address   .rs 2
+   25           0018      jump_address    .rs 2
+   26                     
+   27                     ;game modes
+   28           0000      TITLE_IDX = $00
+   29           0001      GAME_IDX = $01
+   30           0002      GAMEOVER_IDX = $02
+   31                     
+   32                     ;locks for input and rendering
+   33           0001      BGLOAD_NMI_LOCK = %00000001
+   34           0001      EFFECT_GAME_LOCK = %00000001
+   35                     
+   36                     
+   37                     
+#[2]   Defines/Defines.asm
+#[3]   Defines/ControllerVars.asm
+    5                       .include "Defines/ControllerVars.asm"
+    1           0010      GAMEPAD_UP = $10
+    2           0020      GAMEPAD_DOWN = $20
+    3           0040      GAMEPAD_LEFT = $40
+    4           0080      GAMEPAD_RIGHT = $80
+    5           0001      GAMEPAD_A = $01
+    6           0002      GAMEPAD_B = $02
+    7           0004      GAMEPAD_SELECT = $04
+    8           0008      GAMEPAD_START = $08
+    9                     
+   10           00C0      GAMEPAD_HORI = $C0
+   11           0030      GAMEPAD_VERT = $30
+   12           00F0      GAMEPAD_MOVE = $F0
+   13                     
+   14           0003      GAMEPAD_AB = $03
+   15                     
+   16           0009      GAMEPAD_CONFIRM = $09
+   17                     
+   18           001A      gamepad                 .rs 1
+   19           001B      gamepadLast     .rs 1
+   20           001C      gamepadPressed  .rs 1
+#[2]   Defines/Defines.asm
+#[3]   Defines/PPUVariables.asm
+    6                       .include "Defines/PPUVariables.asm"
+    1           001D      PPU_Control                     .rs 1
+    2           001E      PPU_Mask                        .rs 1
+    3           001F      PPU_ScrollX                     .rs 1
+    4           0020      PPU_ScrollY                     .rs 1
+    5           0021      PPU_ScrollNT            .rs 1   ;first two bits
+    6           0022      PPU_NT                          .rs 1
+    7                     
+    8           0023      PPU_PendingWrite        .rs 1
+    9           0024      PPU_StringIdx           .rs 1
+   10           0025      PPU_String                      .rs 128
+   11                     
+   12           004F      PPU_STRINGMAX = $4F ;up to size of a full nametable, I think
+   13                     
+   14           0000      SPRITE_YPOS = $00
+   15           0001      SPRITE_ID   = $01
+   16           0003      SPRITE_XPOS = $03
+   17           0200      SPRITE_DATA = $0200
+   18                     
+   19           2000      PPU_CTRL = $2000
+   20           2001      PPU_MASK = $2001
+   21           2002      PPU_STATUS = $2002
+   22           2003      OAM_LO = $2003
+   23           2004      OAM_DATA = $2004
+   24           2005      PPU_SCROLL = $2005
+   25           2006      PPU_ADDR = $2006
+   26           2007      PPU_DATA = $2007
+   27           4014      OAM_HI = $4014
+   28                     
+   29           0080      DRAW_VERTICAL = $80
+   30           0000      DRAW_HORIZONTAL = $00
+   31                     
+   32           0040      SPRITE_0_MASK = %01000000
+#[2]   Defines/Defines.asm
+#[3]   Defines/MapperVars.asm
+    7                       .include "Defines/MapperVars.asm"
+    1           00A5      mapper_address  .rs 2
+    2           00A7      currentCHRBankA .rs 1
+    3           00A8      currentCHRBankB .rs 1
+    4           00A9      currentPRGBank  .rs 1
+    5           00AA      mapperDebugVar  .rs 1
+    6                     
+    7                     
+#[2]   Defines/Defines.asm
+#[3]   Defines/TitleVariables.asm
+    8                       .include "Defines/TitleVariables.asm"
+    1                     
+#[2]   Defines/Defines.asm
+#[3]   Defines/GameVariables.asm
+    9                       .include "Defines/GameVariables.asm"
+    1           A000      PUZZLE_TABLE = $A000
+    2           A036      NAMES_TABLE = $A036
+    3           A06C      SPRITES_TABLE = $A06C
+    4                     
+    5           00AB      tempBank                        .rs 1
+    6           00AC      tempPuzz                        .rs 1
+    7           00AD      puzzle_address          .rs 2
+    8           00AF      clues_address           .rs 2
+    9           00B1      title_address           .rs 2
+   10           00B3      pause_address           .rs 2
+   11           00B5      copy_address        .rs 2
+   12           00B7      pause_draw_address  .rs 2
+   13           00B9      title_draw_address      .rs 2
+   14           00BB      clue_start_address      .rs 2
+   15           00BD      clue_draw_address       .rs 2
+   16           00BF      clueTableIndex          .rs 1
+   17           00C0      clueLineIndex           .rs 1
+   18           00C1      clueOffsetShift         .rs 1
+   19           00C2      clueDrawAdd                     .rs 1
+   20           00C3      clueDrawOffset          .rs 2
+   21           00C5      clueDrawDecSize         .rs 1
+   22           00C6      clueParity                      .rs 1
+   23           00C7      mouse_location          .rs 2
+   24           00C9      mouse_index                     .rs 2
+   25           00CB      currentPaintTile        .rs 1
+   26           00CC      pauseState                      .rs 1
+   27           00CD      pauseInputLock          .rs 1
+   28           00CE      holdTimer                       .rs 1
+   29           00CF      targetGameMode          .rs 1
+   30           00D0      targetScreenLoad        .rs 1
+   31           00D1      recordSet                       .rs 1
+#[2]   Defines/Defines.asm
+#[3]   External/SoundVariables_ZP.asm
+   10                       .include "External/SoundVariables_ZP.asm"
+    1           00D2      sound_ptr .rs 2
+    2           00D4      sound_ptr2 .rs 2
+    3           00D6      current_song .rs 1
+#[2]   Defines/Defines.asm
+   11                     
+   12                     ;; 0100 is the stack
+   13                     ;; 0200 is sprite ram
+   14           0300        .rsset $0300
+#[3]   External/SoundVariables.asm
+   15                       .include "External/SoundVariables.asm"
+    1           0000      SQUARE_1 = $00 ;these are channel constants
+    2           0001      SQUARE_2 = $01
+    3           0002      TRIANGLE = $02
+    4           0003      NOISE = $03
+    5           0004      DPMC = $04
+    6                     
+    7           0000      MUSIC_SQ1       = $00 ;these are stream # constants
+    8           0001      MUSIC_SQ2       = $01 ;stream # is used to index into variables
+    9           0002      MUSIC_TRI       = $02
+   10           0003      MUSIC_NOI       = $03
+   11           0004      SFX_1           = $04
+   12           0005      SFX_2           = $05
+   13           0006      MUSIC_DPMC      = $06
+   14           0007      SFX_DPMC        = $07
+   15                     
+   16           0000      ve_short_staccato = $00
+   17           0001      ve_fade_in = $01
+   18           0002      ve_blip_echo = $02
+   19           0003      ve_tgl_1 = $03
+   20           0004      ve_tgl_2 = $04
+   21           0005      ve_battlekid_1 = $05
+   22           0006      ve_battlekid_1b = $06
+   23           0007      ve_battlekid_2 = $07
+   24           0008      ve_battlekid_2b = $08
+   25           0009      ve_drum_decay = $09
+   26           000A      ve_hiHat_decay = $0A
+   27           000B      ve_long_decay = $0B
+   28           000C      ve_tinyDecy = $0C
+   29           000D      ve_noDecay = $0D
+   30           000E      ve_long_tremelo = $0E
+   31                     
+   32                     ;these are aliases to use in the sound data.
+   33           00A0      endsound = $A0
+   34           00A1      loop = $A1
+   35           00A2      volume_envelope = $A2
+   36           00A3      duty = $A3
+   37           00A4      set_loop1_counter = $A4
+   38           00A5      loop1 = $A5
+   39           00A6      set_note_offset = $A6
+   40           00A7      adjust_note_offset = $A7
+   41           00A8      transpose = $A8
+   42           00A9      pitch_envelope = $A9
+   43           00AA      arpeggio = $AA
+   44                     
+   45           0000      pe_none = $00
+   46           0001      pe_mod = $01
+   47           0002      pe_sweep = $02
+   48           0003      pe_bassKick = $03
+   49                     
+   50                     ;Note: octaves in music traditionally start at C, not A    
+   51           0000      A1 = $00    ;the "1" means Octave 1
+   52           0001      As1 = $01   ;the "s" means "sharp"
+   53           0001      Bb1 = $01   ;the "b" means "flat"  A# == Bb, so same value
+   54           0002      B1 = $02
+   55                     
+   56           0003      C2 = $03
+   57           0004      Cs2 = $04
+   58           0004      Db2 = $04
+   59           0005      D2 = $05
+   60           0006      Ds2 = $06
+   61           0006      Eb2 = $06
+   62           0007      E2 = $07
+   63           0008      F2 = $08
+   64           0009      Fs2 = $09
+   65           0009      Gb2 = $09
+   66           000A      G2 = $0A
+   67           000B      Gs2 = $0B
+   68           000B      Ab2 = $0B
+   69           000C      A2 = $0C
+   70           000D      As2 = $0D
+   71           000D      Bb2 = $0D
+   72           000E      B2 = $0E
+   73                     
+   74           000F      C3 = $0F
+   75           0010      Cs3 = $10
+   76           0010      Db3 = $10
+   77           0011      D3 = $11
+   78           0012      Ds3 = $12
+   79           0012      Eb3 = $12
+   80           0013      E3 = $13
+   81           0014      F3 = $14
+   82           0015      Fs3 = $15
+   83           0015      Gb3 = $15
+   84           0016      G3 = $16
+   85           0017      Gs3 = $17
+   86           0017      Ab3 = $17
+   87           0018      A3 = $18
+   88           0019      As3 = $19
+   89           0019      Bb3 = $19
+   90           001A      B3 = $1a
+   91                     
+   92           001B      C4 = $1b
+   93           001C      Cs4 = $1c
+   94           001C      Db4 = $1c
+   95           001D      D4 = $1d
+   96           001E      Ds4 = $1e
+   97           001E      Eb4 = $1e
+   98           001F      E4 = $1f
+   99           0020      F4 = $20
+  100           0021      Fs4 = $21
+  101           0021      Gb4 = $21
+  102           0022      G4 = $22
+  103           0023      Gs4 = $23
+  104           0023      Ab4 = $23
+  105           0024      A4 = $24
+  106           0025      As4 = $25
+  107           0025      Bb4 = $25
+  108           0026      B4 = $26
+  109                     
+  110           0027      C5 = $27
+  111           0028      Cs5 = $28
+  112           0028      Db5 = $28
+  113           0029      D5 = $29
+  114           002A      Ds5 = $2a
+  115           002A      Eb5 = $2a
+  116           002B      E5 = $2b
+  117           002C      F5 = $2c
+  118           002D      Fs5 = $2d
+  119           002D      Gb5 = $2d
+  120           002E      G5 = $2e
+  121           002F      Gs5 = $2f
+  122           002F      Ab5 = $2f
+  123           0030      A5 = $30
+  124           0031      As5 = $31
+  125           0031      Bb5 = $31
+  126           0032      B5 = $32
+  127                     
+  128           0033      C6 = $33
+  129           0034      Cs6 = $34
+  130           0034      Db6 = $34
+  131           0035      D6 = $35
+  132           0036      Ds6 = $36
+  133           0036      Eb6 = $36
+  134           0037      E6 = $37
+  135           0038      F6 = $38
+  136           0039      Fs6 = $39
+  137           0039      Gb6 = $39
+  138           003A      G6 = $3a
+  139           003B      Gs6 = $3b
+  140           003B      Ab6 = $3b
+  141           003C      A6 = $3c
+  142           003D      As6 = $3d
+  143           003D      Bb6 = $3d
+  144           003E      B6 = $3e
+  145                     
+  146           003F      C7 = $3f
+  147           0040      Cs7 = $40
+  148           0040      Db7 = $40
+  149           0041      D7 = $41
+  150           0042      Ds7 = $42
+  151           0042      Eb7 = $42
+  152           0043      E7 = $43
+  153           0044      F7 = $44
+  154           0045      Fs7 = $45
+  155           0045      Gb7 = $45
+  156           0046      G7 = $46
+  157           0047      Gs7 = $47
+  158           0047      Ab7 = $47
+  159           0048      A7 = $48
+  160           0049      As7 = $49
+  161           0049      Bb7 = $49
+  162           004A      B7 = $4a
+  163                     
+  164           004B      C8 = $4b
+  165           004C      Cs8 = $4c
+  166           004C      Db8 = $4c
+  167           004D      D8 = $4d
+  168           004E      Ds8 = $4e
+  169           004E      Eb8 = $4e
+  170           004F      E8 = $4f
+  171           0050      F8 = $50
+  172           0051      Fs8 = $51
+  173           0051      Gb8 = $51
+  174           0052      G8 = $52
+  175           0053      Gs8 = $53
+  176           0053      Ab8 = $53
+  177           0054      A8 = $54
+  178           0055      As8 = $55
+  179           0055      Bb8 = $55
+  180           0056      B8 = $56
+  181                     
+  182           0057      C9 = $57
+  183           0058      Cs9 = $58
+  184           0058      Db9 = $58
+  185           0059      D9 = $59
+  186           005A      Ds9 = $5a
+  187           005A      Eb9 = $5a
+  188           005B      E9 = $5b
+  189           005C      F9 = $5c
+  190           005D      Fs9 = $5d
+  191           005D      Gb9 = $5d
+  192                     
+  193           005E      rest = $5e
+  194           0070      d_rest = $70
+  195                     
+  196                     ;note length constants (aliases)
+  197           0080      thirtysecond = $80
+  198           0081      sixteenth = $81
+  199           0082      eighth = $82
+  200           0083      quarter = $83
+  201           0084      half = $84
+  202           0085      whole = $85
+  203           0086      d_sixteenth = $86
+  204           0087      d_eighth = $87
+  205           0088      d_quarter = $88
+  206           0089      d_half = $89
+  207           008A      d_whole = $8A   ;don't forget we are counting in hex
+  208           008B      t_quarter = $8B
+  209           008C      five_eighths =$8C
+  210           008D      five_sixteenths=$8D
+  211           008E      d_half_d_eight = $8E
+  212           008F      whole_quarter_sixteenth = $8F
+  213           0090      d_half_eighth = $90
+  214           0091      whole_sixteenth = $91
+  215           0092      sixtyfourth = $92
+  216                     
+  217           0000      arp_none = $00
+  218           0001      arp_lowerThird = $01
+  219                     
+  220                     
+  221           0300      sound_disable_flag  .rs 1   ;a flag variable that keeps track of whether the sound engine is disabled or not. 
+  222           0301      sound_temp1 .rs 1           ;temporary variables
+  223           0302      sound_temp2 .rs 1
+  224           0303      sound_sq1_old .rs 1  ;the last value written to $4003
+  225           0304      sound_sq2_old .rs 1  ;the last value written to $4007
+  226           0305      soft_apu_ports .rs 20
+  227                     
+  228                     ;reserve 6 bytes, one for each stream
+  229           0319      stream_curr_sound .rs 8     ;current song/sfx loaded
+  230           0321      stream_status .rs 8         ;status byte.   bit0: (1: stream enabled; 0: stream disabled)
+  231           0329      stream_channel .rs 8        ;what channel is this stream playing on?
+  232           0331      stream_ptr_LO .rs 8         ;low byte of pointer to data stream
+  233           0339      stream_ptr_HI .rs 8         ;high byte of pointer to data stream
+  234           0341      stream_ve .rs 8             ;current volume envelope
+  235           0349      stream_ve_index .rs 8       ;current position within the volume envelope
+  236           0351      stream_vol_duty .rs 8       ;stream volume/duty settings
+  237           0359      stream_note_idx .rs 8
+  238           0361      stream_note_LO .rs 8        ;low 8 bits of period for the current note on a stream
+  239           0369      stream_note_HI .rs 8        ;high 3 bits of period for the current note on a stream 
+  240           0371      stream_tempo .rs 8          ;the value to add to our ticker total each frame
+  241           0379      stream_ticker_total .rs 8   ;our running ticker total.
+  242           0381      stream_note_length_counter .rs 8
+  243           0389      stream_note_length .rs 8
+  244           0391      stream_loop1 .rs 8          ;loop counter
+  245           0399      stream_note_offset .rs 6
+  246           039F      stream_pe .rs 8             ;current volume envelope
+  247           03A7      stream_pe_index .rs 8       ;current position within the volume envelope
+  248           03AF      stream_pe_offset .rs 8
+  249           03B7      stream_pe_delay .rs 8
+  250           03BF      stream_arp .rs 8
+  251           03C7      stream_arp_index .rs 8
+  252           03CF      stream_arp_offset .rs 8
+#[2]   Defines/Defines.asm
+   16           0400        .rsset $0400
+   17           0500        .rsset $0500
+   18           0600        .rsset $0600
+   19           0700        .rsset $0700
+   20           6000        .rsset $6000
+#[3]   Defines/ScreenStateVariables.asm
+   21                       .include "Defines/ScreenStateVariables.asm"
+    1           6000      Screen_Copy             .rs 1024
+    2           6400      ScreenB_Copy    .rs 1024
+    3           6800      SaveScreen_Copy .rs 1024
+    4           6C00      Palette_Copy    .rs 32
+#[2]   Defines/Defines.asm
+   22           7000        .rsset $7000
+#[3]   Defines/SaveVariables.asm
+   23                       .include "Defines/SaveVariables.asm"
+    1           7000      hasContinue .rs 1
+    2           7001      solutionCount           .rs 1
+    3           7002      nonSolutionCount        .rs 1
+    4           7003      GameTime                        .rs 4   ;in order - second, ten second, minute, 10 minute - max out at 99 minutes
+    5           7007      bank_index      .rs 1
+    6           7008      puzzle_index .rs 1
+    7           7009      image_table_offset .rs 1
+    8                     ;we can save these for the continue
+    9                     ;on a continue- we just need to load the back ground as it was
+   10                     ;we'll save out data for the puzzles- just need to know if it's 1) complete and 2) the time
+   11                     ;we can do that in 4 bytes each, so 324 bytes
+   12           700A      puzzle_clear_bank0 .rs 108
+   13           7076      puzzle_clear_bank1 .rs 108
+   14           70E2      puzzle_clear_bank2 .rs 108
+   15                     
+#[2]   Defines/Defines.asm
+   24                     
+   25                     
+   26                     ;precompiled labels
+   27                     
+   28                       ;.include "SoundEnginePreComp.fns"
+#[3]   Picross.fns
+   29                       .include "Picross.fns"
+    1                     ; Picross.asm
+    2           8172      test5Image                       = $8172
+    3           CCD8      UpdateGameOverJumpTable          = $CCD8
+    4           CBCD      UpdateUnloadPauseScreen          = $CBCD
+    5           E01A      GameOver_Screens                 = $E01A
+    6           C48F      UpdateGame                       = $C48F
+    7           CFBD      Dynamic_Jump                     = $CFBD
+    8           CCC2      PuzzleSaveLocations              = $CCC2
+    9           8000      frog                             = $8000
+   10           CB4C      UpdatePauseScreen                = $CB4C
+   11           C46B      PlayMenuCursorSound              = $C46B
+   12           D8B1      SampleStart                      = $D8B1
+   13           80A2      catName                          = $80A2
+   14           A87B      bank2_header                     = $A87B
+   15           8181      test10                           = $8181
+   16           8076      houseImage                       = $8076
+   17           CE1B      UpdateGameOverExit               = $CE1B
+   18           C576      UpdateDrawVertClues              = $C576
+   19           8068      catImage                         = $8068
+   20           D190      TurnOffSprites                   = $D190
+   21           C474      PlayPuzzleCursorSound            = $C474
+   22           C278      SetSpriteXPosition               = $C278
+   23           CE95      DrawSaveText                     = $CE95
+   24           D6CC      NMIJumpTable                     = $D6CC
+   25           817A      test5Name                        = $817A
+   26           D695      update_controllers               = $D695
+   27           CF9A      LoadGameModeSprites              = $CF9A
+   28           ADEF      bank0_noise                      = $ADEF
+   29           C923      UpdateGameFadeOut                = $C923
+   30           AC03      bank0_tri                        = $AC03
+   31           CB30      UpdateLoadPauseScreen            = $CB30
+   32           8115      testImage                        = $8115
+   33           A87B      bank0_header                     = $A87B
+   34           D166      WaitSprite0                      = $D166
+   35           C055      Forever                          = $C055
+   36           D20E      NameTableMemList                 = $D20E
+   37           CCBC      PuzzleScrollVert                 = $CCBC
+   38           CCC8      UpdateGameOver                   = $CCC8
+   39           CB22      UpdatePause                      = $CB22
+   40           80A4      frogName                         = $80A4
+   41           D8B3      SampleLength                     = $D8B3
+   42           D128      LoadSprites_impl                 = $D128
+   43           8247      myGlyphImage                     = $8247
+   44           8000      house                            = $8000
+   45           D15F      WaitNotSprite0                   = $D15F
+   46           CCBF      PuzzleHeaderSkips                = $CCBF
+   47           FCCE      PuzzleClearLines                 = $FCCE
+   48           C258      InitPointer                      = $C258
+   49           C365      LoadBank                         = $C365
+   50           D187      TurnOnSprites                    = $D187
+   51           C26D      SetSpriteYPosition               = $C26D
+   52           CEFE      LoadGameModeScreen               = $CEFE
+   53           D678      ImageTitleLowerHalfPos           = $D678
+   54           D173      SetNametableFromIndex            = $D173
+   55           C49F      UpdateGameJumpTable              = $C49F
+   56           EC7C      Game_10                          = $EC7C
+   57           CCE2      UpdateGameOverInit               = $CCE2
+   58           C869      UpdateDrawImage                  = $C869
+   59           D6D2      WakeUp                           = $D6D2
+   60           C283      SetSpriteImage                   = $C283
+   61           CFF0      LoadFullPaletteFromTable         = $CFF0
+   62           D6E2      UpdateGameOverNMI                = $D6E2
+   63           D1BC      FadeOutPalettes                  = $D1BC
+   64           D256      SendMapperCommand                = $D256
+   65           CCAD      MouseMinimums                    = $CCAD
+   66           D333      AddToClueDrawAddress             = $D333
+   67           D35F      AddToClueDrawAddressHi           = $D35F
+   68           CCD2      DoUpdateGameOver                 = $CCD2
+   69           D612      ApplyGameTimeToPPUString         = $D612
+   70           FD28      Sprites                          = $FD28
+   71           CBEA      CheckNewBestTime                 = $CBEA
+   72           C964      MoveMouse                        = $C964
+   73           E07C      Title_Screen                     = $E07C
+   74           E000      Palettes                         = $E000
+   75           D07C      ProcessPPUString                 = $D07C
+   76           CFE3      GetTableAtIndex                  = $CFE3
+   77           C114      UpdateScroll                     = $C114
+   78           CFE9      SetTableAddress                  = $CFE9
+   79           D740      sample0                          = $D740
+   80           FCCA      EndScreens                       = $FCCA
+   81           CE06      UpdateGameOverFadeOut            = $CE06
+   82           FD0D      SelectDefaultName                = $FD0D
+   83           CA5E      UpdateMouseScreenPos             = $CA5E
+   84           F07C      Game_15                          = $F07C
+   85           F87C      Blank_Screen                     = $F87C
+   86           C08A      UpdateTitleJumpTable             = $C08A
+   87           CD31      UpdateDrawMessage                = $CD31
+   88           81C1      test10Image                      = $81C1
+   89           D47C      DrawImage                        = $D47C
+   90           AC0C      bank2_tri                        = $AC0C
+   91           E012      Title_Screens                    = $E012
+   92           D7C0      sample1                          = $D7C0
+   93           C486      ContinueText                     = $C486
+   94           D675      ImageDrawWrapOffsets             = $D675
+   95           CD56      UpdateGameOverWaitInput          = $CD56
+   96           C90D      UpdateWaitInput                  = $C90D
+   97           AE15      bank0_dpcm                       = $AE15
+   98           806A      frogImage                        = $806A
+   99           E014      Game_Screens                     = $E014
+  100           C245      InitPuzzlePointer                = $C245
+  101           8155      test5                            = $8155
+  102           C084      DoUpdateTitle                    = $C084
+  103           CCB9      PuzzleScrollHori                 = $CCB9
+  104           C23D      InitBankPointer                  = $C23D
+  105           C2F3      UpdatePuzzlePointer              = $C2F3
+  106           C074      GameLoopJumpTable                = $C074
+  107           C47D      PlayNoiseBlipSound               = $C47D
+  108           D3E1      LoadPauseScreen                  = $D3E1
+  109           A89E      bank0_square1                    = $A89E
+  110           C29A      GetSpriteData                    = $C29A
+  111           D15F      DetectSprite0                    = $D15F
+  112           E006      NameTables                       = $E006
+  113           F47C      GameOver_Screen                  = $F47C
+  114           D36C      CreateOffsetFromIndex            = $D36C
+  115           C2E3      SetBankPointerFromIndex          = $C2E3
+  116           D235      LoadPRGBank                      = $D235
+  117           D22A      SetMapperControls                = $D22A
+  118           D7B1      sample0End                       = $D7B1
+  119           A884      bank1_square1                    = $A884
+  120           AA10      bank0_square2                    = $AA10
+  121           C28E      GetSpriteDataIndexInX            = $C28E
+  122           D672      PuzzleImageSizes                 = $D672
+  123           D6FC      ReadControllers                  = $D6FC
+  124           CC32      CheckAgainstSolution             = $CC32
+  125           A89C      bank2_square1                    = $A89C
+  126           D349      SubFromClueDrawAddress           = $D349
+  127           CEBB      FlashTime                        = $CEBB
+  128           C014      vblankwait1                      = $C014
+  129           FC7C      Pause_Menu                       = $FC7C
+  130           D326      ResetClueDrawAddress             = $D326
+  131           D216      PalettesMemList                  = $D216
+  132           CF39      LoadGameModeBackground           = $CF39
+  133           AA0C      bank2_square2                    = $AA0C
+  134           C043      vblankwait2                      = $C043
+  135           C07A      UpdateTitle                      = $C07A
+  136           FD2E      Title_Sprites                    = $FD2E
+  137           E47C      Title_Second                     = $E47C
+  138           C019      clrmem                           = $C019
+  139           80B0      houseName                        = $80B0
+  140           D39A      ClearPuzzle                      = $D39A
+  141           D01F      LoadFullBackgroundFromTable      = $D01F
+  142           FD22      DefaultTimeString                = $FD22
+  143           C000      RESET                            = $C000
+  144           CBE9      ExitPause                        = $CBE9
+  145           D27D      PopulateClues                    = $D27D
+  146           D153      ClearPPUString                   = $D153
+  147           D8B1      sample1End                       = $D8B1
+  148           D1AB      InitPPUControl                   = $D1AB
+  149           D20D      FadeInPalettes                   = $D20D
+  150           D112      WriteToPPUFromTable              = $D112
+  151           C499      DoUpdateGame                     = $C499
+  152           ADF8      bank2_noise                      = $ADF8
+  153           FD40      GameOver_Sprites                 = $FD40
+  154           E01C      Title_Palette                    = $E01C
+  155           8281      myGlyphName                      = $8281
+  156           D16F      WaitScanline                     = $D16F
+  157           E00C      NameTables2                      = $E00C
+  158           D6A6      NMIUpdate                        = $D6A6
+  159           CFBA      gameModeInitCHRROMA              = $CFBA
+  160           E05C      GameOver_Palette                 = $E05C
+  161           D683      nmi_started                      = $D683
+  162           CEEA      FlashColors                      = $CEEA
+  163           D240      LoadCHRBankA                     = $D240
+  164           C06E      GameLoop                         = $C06E
+  165           C5A3      UpdateDrawHoriClues              = $C5A3
+  166           C7F0      UpdateMoveScreen                 = $C7F0
+  167           CFB7      gameModeInitCHRROMB              = $CFB7
+  168           D67E      NMI                              = $D67E
+  169           D651      ClearLineDefs                    = $D651
+  170           CEEC      ChangeGameMode                   = $CEEC
+  171           D6DD      UpdateTitleNMI                   = $D6DD
+  172           D24B      LoadCHRBankB                     = $D24B
+  173           CCB3      MouseMaximums                    = $CCB3
+  174           C5FD      UpdateGamePlay                   = $C5FD
+  175           C949      UpdateGameExit                   = $C949
+  176           C13D      UpdatePuzzleSelection            = $C13D
+  177           C25F      SetPointerPosition               = $C25F
+  178           D226      ResetMapper                      = $D226
+  179           C372      UpdatePuzzleInfo                 = $C372
+  180           8000      cat                              = $8000
+  181           81DB      test10Name                       = $81DB
+  182           CB28      UpdatePauseJumpTable             = $CB28
+  183           C24D      ResetMouseIndex                  = $C24D
+  184           CAD2      UpdateTimeDisplay                = $CAD2
+  185           81E3      myGlyph                          = $81E3
+  186           C7DD      UpdateClearPuzzle                = $C7DD
+  187           D66F      PuzzleSizes                      = $D66F
+  188           D6C6      StateNMIUpdate                   = $D6C6
+  189           C2A1      UpdateBankPointer                = $C2A1
+  190           C096      UpdateTitleInit                  = $C096
+  191           D2D6      WriteClueByteToPPUString         = $D2D6
+  192           D13F      WriteToPPUString                 = $D13F
+  193           D6E3      ReadControllersSafe              = $D6E3
+  194           A87B      bank1_header                     = $A87B
+  195           E87C      Game_5                           = $E87C
+  196           80B7      test                             = $80B7
+  197           D6E1      UpdateGameNMI                    = $D6E1
+  198           C4B3      UpdateGameInit                   = $C4B3
+  199           D267      ResetBanks                       = $D267
+  200           D199      UpdatePPUControl                 = $D199
+  201           D428      ClearPauseScreen                 = $D428
+  202           FD20      SelectDefaultTime                = $FD20
+  203           FD37      Game_Sprites                     = $FD37
+  204           814F      testName                         = $814F
+  205           C19B      UpdateScrollBack                 = $C19B
+  206           CE2C      DrawClearText                    = $CE2C
+  207           E03C      Game_Palette                     = $E03C
+  208           C0D7      UpdateBankSelection              = $C0D7
+  209           FCFD      PuzzleSavedLines                 = $FCFD
+  210           D5D3      DrawTitle                        = $D5D3
+  211           C1BA      UpdateTitleExit                  = $C1BA
+#[2]   Defines/Defines.asm
+   30                       
+#[1]   SoundEnginePreComp.asm
+    3           A0D8              .org $A0D8
+#[2]   External/sound_Engine.asm
+    4                             .include "External/sound_Engine.asm"
+    1  00:A0D8            sound_init:
+    2  00:A0D8  A9 1F         lda #$1F
+    3  00:A0DA  8D 15 40      sta $4015   ;enable Square 1, Square 2, Triangle and Noise channels
+    4                         
+    5  00:A0DD  A9 00         lda #$00
+    6  00:A0DF  8D 00 03      sta sound_disable_flag  ;clear disable flag
+    7                         ;later, if we have other variables we want to initialize, we will do that here.
+    8  00:A0E2  A9 FF         lda #$FF
+    9  00:A0E4  8D 03 03      sta sound_sq1_old   ;initializing these to $FF ensures that the first notes of the first song isn't skipped
+   10  00:A0E7  8D 04 03      sta sound_sq2_old
+   11  00:A0EA            se_silence:
+   12  00:A0EA  A9 30         lda #$30
+   13  00:A0EC  8D 05 03      sta soft_apu_ports      ;set Square 1 volume to 0
+   14  00:A0EF  8D 09 03      sta soft_apu_ports+4    ;set Square 2 volume to 0
+   15  00:A0F2  8D 11 03      sta soft_apu_ports+12   ;set Noise volume to 0
+   16  00:A0F5  A9 80         lda #$80
+   17  00:A0F7  8D 0D 03      sta soft_apu_ports+8     ;silence Triangle
+   18  00:A0FA  A9 00             lda #$00
+   19  00:A0FC  8D 16 03          sta soft_apu_ports+17    ;silence DPMC
+   20                     
+   21  00:A0FF  60            rts
+   22                         
+   23  00:A100            sound_disable:
+   24  00:A100  A9 00         lda #$00
+   25  00:A102  8D 15 40      sta $4015   ;disable all channels
+   26  00:A105  A9 01         lda #$01
+   27  00:A107  8D 00 03      sta sound_disable_flag  ;set disable flag
+   28  00:A10A  60            rts
+   29                         
+   30                     ;-------------------------------------
+   31                     ; load_sound will prepare the sound engine to play a song or sfx.
+   32                     ;   input:
+   33                     ;       A: song/sfx number to play
+   34  00:A10B            sound_load:
+   35  00:A10B  8D 01 03      sta sound_temp1         ;save song number
+   36  00:A10E  0A            asl a                   ;multiply by 2.  We are indexing into a table of pointers (words)
+   37  00:A10F  A8            tay
+   38  00:A110  B9 D0 A4      lda song_headers, y     ;setup the pointer to our song header
+   39  00:A113  8D D2 00      sta sound_ptr
+   40  00:A116  B9 D1 A4      lda song_headers+1, y
+   41  00:A119  8D D3 00      sta sound_ptr+1
+   42                         
+   43  00:A11C  A0 00         ldy #$00
+   44  00:A11E  B1 D2         lda [sound_ptr], y      ;read the first byte: # streams
+   45  00:A120  8D 02 03      sta sound_temp2         ;store in a temp variable.  We will use this as a loop counter: how many streams to read stream headers for
+   46  00:A123  C8            iny
+   47  00:A124            .loop:
+   48  00:A124  B1 D2         lda [sound_ptr], y      ;stream number
+   49  00:A126  AA            tax                     ;stream number acts as our variable index
+   50  00:A127  C8            iny
+   51                         
+   52  00:A128  B1 D2         lda [sound_ptr], y      ;status byte.  1= enable, 0=disable
+   53  00:A12A  9D 21 03      sta stream_status, x
+   54  00:A12D  F0 49         beq .next_stream        ;if status byte is 0, stream disabled, so we are done
+   55  00:A12F  C8            iny
+   56                         
+   57  00:A130  B1 D2         lda [sound_ptr], y      ;channel number
+   58  00:A132  9D 29 03      sta stream_channel, x
+   59  00:A135  C8            iny
+   60                         
+   61  00:A136  B1 D2         lda [sound_ptr], y      ;initial duty and volume settings
+   62  00:A138  9D 51 03      sta stream_vol_duty, x
+   63  00:A13B  C8            iny
+   64                         
+   65  00:A13C  B1 D2         lda [sound_ptr], y
+   66  00:A13E  9D 41 03      sta stream_ve, x
+   67  00:A141  C8            iny
+   68                             
+   69                             ;temp solution
+   70  00:A142  A9 00             lda #pe_none
+   71  00:A144  9D 9F 03          sta stream_pe, x
+   72                             
+   73                             ;temp solution
+   74  00:A147  A9 00             lda #arp_none
+   75  00:A149  9D BF 03          sta stream_arp, x
+   76                         
+   77  00:A14C  B1 D2         lda [sound_ptr], y      ;pointer to stream data.  Little endian, so low byte first
+   78  00:A14E  9D 31 03      sta stream_ptr_LO, x
+   79  00:A151  C8            iny
+   80                         
+   81  00:A152  B1 D2         lda [sound_ptr], y
+   82  00:A154  9D 39 03      sta stream_ptr_HI, x
+   83  00:A157  C8            iny
+   84                         
+   85  00:A158  B1 D2         lda [sound_ptr], y
+   86  00:A15A  9D 71 03      sta stream_tempo, x
+   87                         
+   88  00:A15D  A9 A0         lda #$A0
+   89  00:A15F  9D 79 03      sta stream_ticker_total, x
+   90                         
+   91  00:A162  A9 01         lda #$01
+   92  00:A164  9D 81 03      sta stream_note_length_counter,x
+   93                         
+   94  00:A167  A9 00         lda #$00
+   95  00:A169  9D 49 03      sta stream_ve_index, x
+   96  00:A16C  9D A7 03          sta stream_pe_index, x
+   97  00:A16F  9D C7 03          sta stream_arp_index, x
+   98  00:A172  9D 91 03      sta stream_loop1, x
+   99  00:A175  9D 99 03      sta stream_note_offset, x
+  100  00:A178            .next_stream:
+  101  00:A178  C8            iny
+  102                         
+  103  00:A179  AD 01 03      lda sound_temp1         ;song number
+  104  00:A17C  9D 19 03      sta stream_curr_sound, x
+  105                         
+  106  00:A17F  CE 02 03      dec sound_temp2         ;our loop counter
+  107  00:A182  D0 A0         bne .loop
+  108  00:A184  60            rts
+  109                     
+  110                     ;--------------------------
+  111                     ; sound_play_frame advances the sound engine by one frame
+  112  00:A185            sound_play_frame:
+  113  00:A185  AD 00 03      lda sound_disable_flag
+  114  00:A188  D0 31         bne .done   ;if disable flag is set, don't advance a frame
+  115                     
+  116  00:A18A  20 EA A0      jsr se_silence  ;silence all channels.  se_set_apu will set volume later for all channels that are enabled.
+  117                                         ;the purpose of this subroutine call is to silence channels that aren't used by any streams.
+  118  00:A18D  A2 00         ldx #$00
+  119  00:A18F            .loop:
+  120  00:A18F  BD 21 03      lda stream_status, x
+  121  00:A192  29 01         and #$01    ;check whether the stream is active
+  122  00:A194  F0 1D         beq .endloop  ;if the stream isn't active, skip it
+  123                         
+  124                         ;add the tempo to the ticker total.  If there is a FF-> 0 transition, there is a tick
+  125  00:A196  BD 79 03      lda stream_ticker_total, x
+  126  00:A199  18            clc
+  127  00:A19A  7D 71 03      adc stream_tempo, x
+  128  00:A19D  9D 79 03      sta stream_ticker_total, x
+  129  00:A1A0  90 0E         bcc .set_buffer    ;carry clear = no tick.  if no tick, we are done with this stream
+  130                         
+  131  00:A1A2  DE 81 03      dec stream_note_length_counter, x   ;else there is a tick. decrement the note length counter
+  132  00:A1A5  D0 09         bne .set_buffer    ;if counter is non-zero, our note isn't finished playing yet
+  133  00:A1A7  BD 89 03      lda stream_note_length, x   ;else our note is finished. reload the note length counter
+  134  00:A1AA  9D 81 03      sta stream_note_length_counter, x
+  135                         
+  136  00:A1AD  20 BC A1      jsr se_fetch_byte   ;read the next byte from the data stream
+  137                         
+  138  00:A1B0            .set_buffer:
+  139  00:A1B0  20 D1 A2      jsr se_set_temp_ports   ;copy the current stream's sound data for the current frame into our temporary APU vars (soft_apu_ports)
+  140  00:A1B3            .endloop:
+  141  00:A1B3  E8            inx
+  142  00:A1B4  E0 08         cpx #$08
+  143  00:A1B6  D0 D7         bne .loop
+  144  00:A1B8  20 6B A4      jsr se_set_apu      ;copy the temporary APU variables (soft_apu_ports) to the real APU ports ($4000, $4001, etc)
+  145  00:A1BB            .done:
+  146  00:A1BB  60            rts
+  147                     
+  148                     ;--------------------------
+  149                     ; se_fetch_byte reads one byte from a sound data stream and handles it
+  150                     ;   input: 
+  151                     ;       X: stream number    
+  152  00:A1BC            se_fetch_byte:
+  153  00:A1BC  BD 31 03      lda stream_ptr_LO, x
+  154  00:A1BF  8D D2 00      sta sound_ptr
+  155  00:A1C2  BD 39 03      lda stream_ptr_HI, x
+  156  00:A1C5  8D D3 00      sta sound_ptr+1
+  157                         
+  158  00:A1C8  A0 00         ldy #$00
+  159  00:A1CA            .fetch:
+  160  00:A1CA  B1 D2         lda [sound_ptr], y
+  161  00:A1CC  10 26         bpl .note                ;if < #$80, it's a Note
+  162  00:A1CE  C9 A0         cmp #$A0
+  163  00:A1D0  90 0C         bcc .note_length         ;else if < #$A0, it's a Note Length
+  164  00:A1D2            .opcode:                     ;else it's an opcode
+  165                         ;do Opcode stuff
+  166  00:A1D2  20 B6 A2      jsr se_opcode_launcher
+  167  00:A1D5  C8            iny                      ;next position in the data stream
+  168  00:A1D6  BD 21 03      lda stream_status, x
+  169  00:A1D9  29 01         and #%00000001
+  170  00:A1DB  D0 ED         bne .fetch               ;after our opcode is done, grab another byte unless the stream is disabled
+  171  00:A1DD  60            rts                      ; in which case we quit  (explained below)
+  172  00:A1DE            .note_length:
+  173                         ;do note length stuff
+  174  00:A1DE  29 7F         and #%01111111          ;chop off bit7
+  175  00:A1E0  8C 01 03      sty sound_temp1         ;save Y because we are about to destroy it
+  176  00:A1E3  A8            tay
+  177  00:A1E4  B9 20 A7      lda note_length_table, y    ;get the note length count value
+  178  00:A1E7  9D 89 03      sta stream_note_length, x
+  179  00:A1EA  9D 81 03      sta stream_note_length_counter, x   ;stick it in our note length counter
+  180  00:A1ED  AC 01 03      ldy sound_temp1         ;restore Y
+  181  00:A1F0  C8            iny                     ;set index to next byte in the stream
+  182  00:A1F1  4C CA A1      jmp .fetch              ;fetch another byte
+  183  00:A1F4            .note:
+  184                         ;do Note stuff
+  185  00:A1F4  8D 02 03      sta sound_temp2
+  186  00:A1F7  BD 29 03      lda stream_channel, x
+  187  00:A1FA  C9 03         cmp #NOISE
+  188  00:A1FC  D0 06         bne .not_noise
+  189  00:A1FE  20 4C A2      jsr se_do_noise
+  190  00:A201  4C 2F A2      jmp .reset_ve
+  191  00:A204            .not_noise:
+  192  00:A204  C9 04             cmp #DPMC
+  193  00:A206  90 06             bcc .not_dpmc
+  194  00:A208  20 62 A2          jsr se_do_dpmc
+  195  00:A20B  4C 2F A2          jmp .reset_ve
+  196  00:A20E            .not_dpmc:
+  197  00:A20E  AD 02 03      lda sound_temp2
+  198  00:A211  8C 01 03      sty sound_temp1     ;save our index into the data stream
+  199  00:A214  18            clc
+  200  00:A215  7D 99 03      adc stream_note_offset, x   ;add note offset
+  201  00:A218  0A            asl a
+  202  00:A219  A8            tay
+  203  00:A21A  9D 59 03          sta stream_note_idx, x
+  204  00:A21D  B9 62 A6      lda note_table, y
+  205  00:A220  9D 61 03      sta stream_note_LO, x
+  206  00:A223  B9 63 A6      lda note_table+1, y
+  207  00:A226  9D 69 03      sta stream_note_HI, x
+  208  00:A229  AC 01 03      ldy sound_temp1     ;restore data stream index
+  209                         
+  210                         ;check if it's a rest and modify the status flag appropriately
+  211                     
+  212  00:A22C  20 A0 A2      jsr se_check_rest
+  213  00:A22F            .reset_ve:    
+  214  00:A22F  A9 00         lda #$00
+  215  00:A231  9D 49 03      sta stream_ve_index, x  
+  216  00:A234  9D A7 03          sta stream_pe_index, x
+  217  00:A237  9D B7 03          sta stream_pe_delay, x
+  218  00:A23A  9D C7 03          sta stream_arp_index,x
+  219  00:A23D            .update_pointer:
+  220  00:A23D  C8            iny
+  221  00:A23E  98            tya
+  222  00:A23F  18            clc
+  223  00:A240  7D 31 03      adc stream_ptr_LO, x
+  224  00:A243  9D 31 03      sta stream_ptr_LO, x
+  225  00:A246  90 03         bcc .end
+  226  00:A248  FE 39 03      inc stream_ptr_HI, x
+  227  00:A24B            .end:
+  228  00:A24B  60            rts
+  229                     
+  230  00:A24C            se_do_noise:
+  231  00:A24C  AD 02 03      lda sound_temp2
+  232  00:A24F  29 10         and #%00010000
+  233  00:A251  F0 08         beq .mode0
+  234  00:A253  AD 02 03      lda sound_temp2
+  235  00:A256  09 80         ora #%10000000      ;set bit 7 to set mode1
+  236  00:A258  8D 02 03      sta sound_temp2
+  237  00:A25B            .mode0:
+  238  00:A25B  AD 02 03      lda sound_temp2
+  239  00:A25E  9D 61 03      sta stream_note_LO, x
+  240  00:A261  60            rts
+  241                             
+  242  00:A262            se_do_dpmc:
+  243  00:A262  8A                TXA
+  244  00:A263  48                PHA
+  245                             
+  246  00:A264  AD 15 40          lda $4015
+  247  00:A267  29 0F             AND #$0F
+  248  00:A269  8D 15 40          sta $4015 ;DPCM disable
+  249                             
+  250  00:A26C  AD 02 03          lda sound_temp2         ;load up sample index- we can cram in the pitch and keep ourselves to 6 samples (7 will be rest)
+  251  00:A26F  C9 70             CMP #$70
+  252  00:A271  B0 2A             BCS .leave
+  253                     
+  254  00:A273  29 0F             AND #$0F
+  255  00:A275  8D 10 40          sta $4010 ;pitch
+  256  00:A278  A9 7F             LDA #$7F
+  257  00:A27A  8D 11 40          sta $4011 ;temp = starting sample level
+  258  00:A27D  AD 02 03          lda sound_temp2
+  259  00:A280  29 F0             AND #$F0
+  260  00:A282  4A                LSR A
+  261  00:A283  4A                LSR A
+  262  00:A284  4A                LSR A
+  263  00:A285  4A                LSR A
+  264  00:A286  AA                TAX
+  265  00:A287  BD B1 D8          lda SampleStart,x
+  266  00:A28A  8D 12 40          sta $4012 ;X = sample number
+  267  00:A28D  BD B3 D8          lda SampleLength,x
+  268  00:A290  8D 13 40          sta $4013
+  269                             
+  270  00:A293  AD 15 40          lda $4015
+  271  00:A296  29 0F             AND #$0F
+  272  00:A298  09 10             ORA #$10
+  273  00:A29A  8D 15 40          STA $4015
+  274  00:A29D            .leave:
+  275  00:A29D  68                PLA
+  276  00:A29E  AA                TAX
+  277                     
+  278  00:A29F  60                rts
+  279                             
+  280                     ;--------------------------------------------------
+  281                     ; se_check_rest will read a byte from the data stream and
+  282                     ;       determine if it is a rest or not.  It will set or clear the current
+  283                     ;       stream's rest flag accordingly.
+  284                     ;       input:
+  285                     ;           X: stream number
+  286                     ;           Y: data stream index
+  287  00:A2A0            se_check_rest:
+  288  00:A2A0  B1 D2         lda [sound_ptr], y  ;read the note byte again
+  289  00:A2A2  C9 5E         cmp #rest
+  290  00:A2A4  D0 07         bne .not_rest
+  291  00:A2A6  BD 21 03      lda stream_status, x
+  292  00:A2A9  09 02         ora #%00000010  ;set the rest bit in the status byte
+  293  00:A2AB  D0 05         bne .store  ;this will always branch.  bne is cheaper than a jmp.
+  294  00:A2AD            .not_rest:
+  295  00:A2AD  BD 21 03      lda stream_status, x
+  296  00:A2B0  29 FD         and #%11111101  ;clear the rest bit in the status byte
+  297  00:A2B2            .store:
+  298  00:A2B2  9D 21 03      sta stream_status, x
+  299  00:A2B5  60            rts
+  300                         
+  301                     ;-----------------------------------------
+  302                     ; se_opcode_launcher will read an address from the opcode jump table and indirect jump there.
+  303                     ;    input: A: opcode byte
+  304                     ;               Y: data stream position
+  305                     ;               X: stream number
+  306  00:A2B6            se_opcode_launcher:
+  307  00:A2B6  8C 01 03      sty sound_temp1         ;save y register, because we are about to destroy it
+  308  00:A2B9  38            sec
+  309  00:A2BA  E9 A0         sbc #$A0                ;turn our opcode byte into a table index by subtracting $A0
+  310  00:A2BC  0A            asl a                   ;multiply by 2 because we index into a table of addresses (words)
+  311  00:A2BD  A8            tay
+  312  00:A2BE  B9 AF A5      lda sound_opcodes, y    ;get low byte of subroutine address
+  313  00:A2C1  8D D4 00      sta sound_ptr2
+  314  00:A2C4  B9 B0 A5      lda sound_opcodes+1, y  ;get high byte
+  315  00:A2C7  8D D5 00      sta sound_ptr2+1
+  316  00:A2CA  AC 01 03      ldy sound_temp1         ;restore our y register
+  317  00:A2CD  C8            iny                     ;set to next position in data stream (assume an argument)
+  318  00:A2CE  6C D4 00      jmp [sound_ptr2]           ;indirect jump to our opcode subroutine    
+  319                         
+  320                     ;----------------------------------------------------
+  321                     ; se_set_temp_ports will copy a stream's sound data to the temporary apu variables
+  322                     ;      input:
+  323                     ;           X: stream number
+  324  00:A2D1            se_set_temp_ports:
+  325                     
+  326  00:A2D1  E0 06             cpx #MUSIC_DPMC
+  327  00:A2D3  90 01             bcc .contTempPorts
+  328  00:A2D5  60                rts
+  329  00:A2D6            .contTempPorts:
+  330  00:A2D6  BD 29 03      lda stream_channel, x
+  331  00:A2D9  0A            asl a
+  332  00:A2DA  0A            asl a
+  333  00:A2DB  A8            tay
+  334                         
+  335  00:A2DC  20 FF A2      jsr se_set_stream_volume
+  336                             
+  337                         
+  338  00:A2DF  A9 08         lda #$08
+  339  00:A2E1  99 06 03      sta soft_apu_ports+1, y     ;sweep
+  340                         
+  341                             
+  342  00:A2E4  BD BF 03          LDA stream_arp, x
+  343  00:A2E7  F0 06             BEQ .updatePitch
+  344                             
+  345  00:A2E9  20 5B A3          JSR se_set_stream_arpeggio
+  346  00:A2EC  4C FE A2          JMP .leaveTempSet
+  347                             
+  348  00:A2EF            .updatePitch:
+  349  00:A2EF  BD 61 03      lda stream_note_LO, x
+  350  00:A2F2  99 07 03      sta soft_apu_ports+2, y     ;period LO
+  351                         
+  352  00:A2F5  BD 69 03      lda stream_note_HI, x
+  353  00:A2F8  99 08 03      sta soft_apu_ports+3, y     ;period HI
+  354                             
+  355                     
+  356  00:A2FB  20 B3 A3          jsr se_set_stream_pitch
+  357                     
+  358  00:A2FE            .leaveTempSet:
+  359  00:A2FE  60            rts    
+  360                     
+  361                     ;----------------------------------
+  362                     ;    
+  363  00:A2FF            se_set_stream_volume:
+  364                             
+  365  00:A2FF  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+  366                         
+  367  00:A302  BD 41 03      lda stream_ve, x            ;which volume envelope?
+  368  00:A305  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+  369  00:A306  A8            tay
+  370  00:A307  B9 33 A7      lda volume_envelopes, y     ;get the low byte of the address from the pointer table
+  371  00:A30A  8D D2 00      sta sound_ptr               ;put it into our pointer variable
+  372  00:A30D  B9 34 A7      lda volume_envelopes+1, y   ;get the high byte of the address
+  373  00:A310  8D D3 00      sta sound_ptr+1
+  374                         
+  375  00:A313            .read_ve:
+  376  00:A313  BC 49 03      ldy stream_ve_index, x      ;our current position within the volume envelope.
+  377  00:A316  B1 D2         lda [sound_ptr], y          ;grab the value.
+  378  00:A318  C9 FF         cmp #$FF
+  379  00:A31A  D0 06         bne .set_vol                ;if not FF, set the volume
+  380  00:A31C  DE 49 03      dec stream_ve_index, x      ;else if FF, go back one and read again
+  381  00:A31F  4C 13 A3      jmp .read_ve                ;  FF essentially tells us to repeat the last
+  382                                                     ;  volume value for the remainder of the note
+  383  00:A322            .set_vol:
+  384  00:A322  8D 02 03      sta sound_temp2             ;save our new volume value (about to destroy A)
+  385                         
+  386  00:A325  E0 02         cpx #TRIANGLE               
+  387  00:A327  D0 09         bne .squares                ;if not triangle channel, go ahead
+  388  00:A329  AD 02 03      lda sound_temp2
+  389  00:A32C  D0 04         bne .squares                ;else if volume not zero, go ahead (treat same as squares)
+  390  00:A32E  A9 80         lda #$80
+  391  00:A330  30 08         bmi .store_vol              ;else silence the channel with #$80
+  392  00:A332            .squares:
+  393  00:A332  BD 51 03      lda stream_vol_duty, x      ;get current vol/duty settings
+  394  00:A335  29 F0         and #$F0                    ;zero out the old volume
+  395  00:A337  0D 02 03      ora sound_temp2             ;OR our new volume in.
+  396                     
+  397  00:A33A            .store_vol:
+  398  00:A33A  AC 01 03      ldy sound_temp1             ;get our index into soft_apu_ports
+  399  00:A33D  99 05 03      sta soft_apu_ports, y       ;store the volume in our temp port
+  400  00:A340  FE 49 03      inc stream_ve_index, x      ;set our volume envelop index to the next position
+  401                     
+  402  00:A343            .rest_check:
+  403                         ;check the rest flag. if set, overwrite volume with silence value 
+  404  00:A343  BD 21 03      lda stream_status, x
+  405  00:A346  29 02         and #%00000010
+  406  00:A348  F0 10         beq .done                   ;if clear, no rest, so quit
+  407  00:A34A  BD 29 03      lda stream_channel, x
+  408  00:A34D  C9 02         cmp #TRIANGLE               ;if triangle, silence with #$80
+  409  00:A34F  F0 04         beq .tri                    ;else, silence with #$30
+  410  00:A351  A9 30         lda #$30        
+  411  00:A353  D0 02         bne .store                  ;this always branches.  bne is cheaper than a jmp
+  412  00:A355            .tri:
+  413  00:A355  A9 80         lda #$80
+  414  00:A357            .store:    
+  415  00:A357  99 05 03      sta soft_apu_ports, y
+  416  00:A35A            .done:
+  417  00:A35A  60            rts   
+  418                             
+  419                     ;---------------------------------------
+  420                     ;
+  421  00:A35B            se_set_stream_arpeggio:
+  422                         
+  423  00:A35B  BD 21 03          lda stream_status, x
+  424  00:A35E  29 02         and #%00000010
+  425  00:A360  F0 01             beq .continue
+  426  00:A362  60                rts
+  427                             
+  428  00:A363            .continue:
+  429  00:A363  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+  430                         
+  431  00:A366  BD BF 03      lda stream_arp, x            ;which volume envelope?
+  432  00:A369  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+  433  00:A36A  A8            tay
+  434  00:A36B  B9 70 A8      lda arpeggios, y     ;get the low byte of the address from the pointer table
+  435  00:A36E  8D D2 00      sta sound_ptr               ;put it into our pointer variable
+  436  00:A371  B9 71 A8      lda arpeggios+1, y   ;get the high byte of the address
+  437  00:A374  8D D3 00      sta sound_ptr+1
+  438                         
+  439  00:A377            .read_arp:
+  440  00:A377  BC C7 03      ldy stream_arp_index, x      ;our current position within the volume envelope.
+  441  00:A37A  B1 D2         lda [sound_ptr], y          ;grab the value.
+  442  00:A37C  C9 FF         cmp #$FF
+  443  00:A37E  D0 08         bne .set_arp                ;if not FF, set the volume
+  444  00:A380  A9 00             LDA #$00
+  445  00:A382  9D C7 03      STA stream_arp_index, x      ;else if FF, go back one and read again
+  446  00:A385  4C 77 A3      jmp .read_arp                ;  FF essentially tells us to repeat the last
+  447                                                     ;  volume value for the remainder of the note
+  448  00:A388            .set_arp:
+  449  00:A388  8D 02 03      STA sound_temp2             ;save our new volume value (about to destroy A)
+  450  00:A38B  BD 59 03          LDA stream_note_idx, x
+  451  00:A38E  18                CLC
+  452  00:A38F  6D 02 03          ADC sound_temp2
+  453  00:A392  8D 02 03          STA sound_temp2
+  454                             
+  455                             
+  456  00:A395  AC 01 03          LDY sound_temp1
+  457  00:A398  8E 01 03          STX sound_temp1
+  458  00:A39B  AA                TAX 
+  459                     
+  460  00:A39C  BD 62 A6          LDA note_table, x
+  461  00:A39F  99 07 03          STA soft_apu_ports+2, y
+  462  00:A3A2  BD 63 A6          LDA note_table+1, x
+  463  00:A3A5  99 08 03          STA soft_apu_ports+3, y
+  464                             
+  465  00:A3A8  AE 01 03          LDX sound_temp1
+  466                             
+  467  00:A3AB  FE C7 03      inc stream_arp_index, x      ;set our volume envelop index to the next position
+  468                             
+  469  00:A3AE  98                TYA
+  470  00:A3AF  8D 01 03          STA sound_temp1
+  471                     
+  472  00:A3B2  60            rts 
+  473                     ;--------------------------------------
+  474                     ;
+  475  00:A3B3            se_set_stream_pitch:
+  476  00:A3B3  8C 01 03      sty sound_temp1             ;save our index into soft_apu_ports (we are about to destroy y)
+  477                         
+  478  00:A3B6  BD 9F 03      lda stream_pe, x            ;which volume envelope?
+  479  00:A3B9  0A            asl a                       ;multiply by 2 because we are indexing into a table of addresses (words)
+  480  00:A3BA  A8            tay
+  481  00:A3BB  B9 35 A8      lda pitch_envelopes, y     ;get the low byte of the address from the pointer table
+  482  00:A3BE  8D D2 00      sta sound_ptr               ;put it into our pointer variable
+  483  00:A3C1  B9 36 A8      lda pitch_envelopes+1, y   ;get the high byte of the address
+  484  00:A3C4  8D D3 00      sta sound_ptr+1
+  485                             
+  486  00:A3C7  BD B7 03          LDA stream_pe_delay, x
+  487                             ;if not 0, decrement
+  488  00:A3CA  29 7F             AND #$7F                        ;check if, without minus flag, the delay is 0
+  489  00:A3CC  F0 04             BEQ .read_pe
+  490  00:A3CE  DE B7 03          DEC stream_pe_delay, x
+  491  00:A3D1  60                RTS
+  492                         
+  493  00:A3D2            .read_pe:
+  494  00:A3D2  BC A7 03      ldy stream_pe_index, x      ;our current position within the volume envelope.
+  495  00:A3D5  B1 D2         lda [sound_ptr], y          ;grab the value.
+  496  00:A3D7  C9 80         cmp #pe_loopLast
+  497  00:A3D9  D0 06             BNE .notLoopLast
+  498  00:A3DB  DE A7 03          dec stream_pe_index, x      ;else if loop last, go back one and read again
+  499  00:A3DE  4C D2 A3          jmp .read_pe 
+  500                     
+  501  00:A3E1            .notLoopLast:
+  502  00:A3E1  C9 81             cmp #pe_loopAll
+  503  00:A3E3  D0 08             BNE .notLoopAll
+  504  00:A3E5  A9 00             LDA #$00
+  505  00:A3E7  9D A7 03          STA stream_pe_index, x
+  506  00:A3EA  4C D2 A3          jmp .read_pe
+  507                             
+  508  00:A3ED            .notLoopAll:
+  509  00:A3ED  C9 82             cmp #pe_loopPart
+  510  00:A3EF  D0 0D             BNE .notLoopPart
+  511  00:A3F1  C8                iny
+  512  00:A3F2  BD A7 03          lda stream_pe_index, x
+  513  00:A3F5  38                SEC
+  514  00:A3F6  F1 D2             SBC [sound_ptr], y
+  515  00:A3F8  9D A7 03          STA stream_pe_index, x
+  516  00:A3FB  4C D2 A3          jmp .read_pe
+  517                     
+  518  00:A3FE            .notLoopPart:
+  519  00:A3FE  C9 83             cmp #pe_delay
+  520  00:A400  D0 1C             BNE .notLoopDelay
+  521  00:A402  BD B7 03          LDA stream_pe_delay, x
+  522  00:A405  30 0E             BMI .delayUsed  ;negative, delay was already used this time
+  523  00:A407  C8                iny
+  524  00:A408  B1 D2             lda [sound_ptr], y
+  525  00:A40A  09 80             ORA #$80
+  526  00:A40C  9D B7 03          STA stream_pe_delay, x
+  527  00:A40F  FE A7 03          inc stream_pe_index, x
+  528  00:A412  4C 5B A4          jmp .finish_pitchShift
+  529  00:A415            .delayUsed:
+  530  00:A415  FE A7 03          inc stream_pe_index, x
+  531  00:A418  FE A7 03          inc stream_pe_index, x
+  532  00:A41B  4C D2 A3          jmp .read_pe
+  533                             
+  534  00:A41E            .notLoopDelay:
+  535  00:A41E            .set_pitch:
+  536                     
+  537  00:A41E  9D AF 03      sta stream_pe_offset, x      ;get current vol/duty settings
+  538  00:A421  8D 02 03          STA sound_temp2
+  539  00:A424  AC 01 03          LDY sound_temp1
+  540  00:A427  AD 02 03          LDA sound_temp2
+  541  00:A42A  10 1D             BPL .add_pitch
+  542                             
+  543  00:A42C            .sub_pitch:
+  544                             
+  545  00:A42C  49 FF             EOR #$FF        ;flip bits
+  546  00:A42E  18                CLC
+  547  00:A42F  69 01             ADC #$01        ;add one - two's compliment
+  548  00:A431  8D 02 03          STA sound_temp2
+  549                             
+  550  00:A434  B9 07 03          LDA soft_apu_ports+2, y       
+  551  00:A437  38                SEC
+  552  00:A438  ED 02 03          SBC sound_temp2
+  553  00:A43B  99 07 03          STA soft_apu_ports+2, y
+  554  00:A43E  B9 08 03          LDA soft_apu_ports+3, y
+  555  00:A441  E9 00             SBC #$00
+  556  00:A443  99 08 03          STA soft_apu_ports+3, y
+  557                             
+  558  00:A446  4C 5B A4          JMP .finish_pitchShift
+  559                     
+  560  00:A449            .add_pitch:
+  561                     
+  562  00:A449  B9 07 03      LDA soft_apu_ports+2, y       
+  563  00:A44C  18                CLC
+  564  00:A44D  6D 02 03          ADC sound_temp2
+  565  00:A450  99 07 03          STA soft_apu_ports+2, y
+  566  00:A453  B9 08 03          LDA soft_apu_ports+3, y
+  567  00:A456  69 00             ADC #$00
+  568  00:A458  99 08 03          STA soft_apu_ports+3, y
+  569                             
+  570  00:A45B            .finish_pitchShift:
+  571  00:A45B  FE A7 03      inc stream_pe_index, x      ;set our volume envelop index to the next position
+  572                     
+  573  00:A45E            .rest_check:
+  574                         ;check the rest flag. if set, overwrite volume with silence value 
+  575  00:A45E  BD 21 03      lda stream_status, x
+  576  00:A461  29 02         and #%00000010
+  577  00:A463  F0 05         beq .done                   ;if clear, no rest, so quit
+  578                        
+  579  00:A465  A9 00         LDA #$00
+  580  00:A467  9D AF 03          STA stream_pe_offset, x
+  581  00:A46A            .done:
+  582  00:A46A  60            rts    
+  583                     
+  584                     ;--------------------------
+  585                     ; se_set_apu copies the temporary RAM ports to the APU ports
+  586  00:A46B            se_set_apu:
+  587  00:A46B            .square1:
+  588  00:A46B  AD 05 03      lda soft_apu_ports+0
+  589  00:A46E  8D 00 40      sta $4000
+  590  00:A471  AD 06 03      lda soft_apu_ports+1
+  591  00:A474  8D 01 40      sta $4001
+  592  00:A477  AD 07 03      lda soft_apu_ports+2
+  593  00:A47A  8D 02 40      sta $4002
+  594  00:A47D  AD 08 03      lda soft_apu_ports+3
+  595  00:A480  CD 03 03      cmp sound_sq1_old       ;compare to last write
+  596  00:A483  F0 06         beq .square2            ;don't write this frame if they were equal
+  597  00:A485  8D 03 40      sta $4003
+  598  00:A488  8D 03 03      sta sound_sq1_old       ;save the value we just wrote to $4003
+  599  00:A48B            .square2:
+  600  00:A48B  AD 09 03      lda soft_apu_ports+4
+  601  00:A48E  8D 04 40      sta $4004
+  602  00:A491  AD 0A 03      lda soft_apu_ports+5
+  603  00:A494  8D 05 40      sta $4005
+  604  00:A497  AD 0B 03      lda soft_apu_ports+6
+  605  00:A49A  8D 06 40      sta $4006
+  606  00:A49D  AD 0C 03      lda soft_apu_ports+7
+  607  00:A4A0  CD 04 03      cmp sound_sq2_old
+  608  00:A4A3  F0 06         beq .triangle
+  609  00:A4A5  8D 07 40      sta $4007
+  610  00:A4A8  8D 04 03      sta sound_sq2_old       ;save the value we just wrote to $4007
+  611  00:A4AB            .triangle:
+  612  00:A4AB  AD 0D 03      lda soft_apu_ports+8
+  613  00:A4AE  8D 08 40      sta $4008
+  614  00:A4B1  AD 0F 03      lda soft_apu_ports+10   ;there is no $4009, so we skip it
+  615  00:A4B4  8D 0A 40      sta $400A
+  616  00:A4B7  AD 10 03      lda soft_apu_ports+11
+  617  00:A4BA  8D 0B 40      sta $400B
+  618  00:A4BD            .noise:
+  619  00:A4BD  AD 11 03      lda soft_apu_ports+12
+  620  00:A4C0  8D 0C 40      sta $400C
+  621  00:A4C3  AD 13 03      lda soft_apu_ports+14   ;there is no $400D, so we skip it
+  622  00:A4C6  8D 0E 40      sta $400E
+  623  00:A4C9  AD 14 03      lda soft_apu_ports+15
+  624  00:A4CC  8D 0F 40      sta $400F
+  625  00:A4CF  60            rts
+  626                         
+  627                        
+  628                     
+#[3]   External/sound_SongTable.asm
+  629                             .include "External/sound_SongTable.asm"    ;our opcode subroutines, jump table and aliases
+    1                     ;this is our pointer table.  Each entry is a pointer to a song header                
+    2  00:A4D0            song_headers:
+    3                             
+    4  00:A4D0  E0 A4         .word song0_header
+    5  00:A4D2  7B A8             .word BankSong
+    6  00:A4D4  ED A4             .word menu_header
+    7  00:A4D6  F0 A4         .word drawImg_header  ;The Guardian Legend Boss song
+    8  00:A4D8  F3 A4             .word endScreen_header
+    9  00:A4DA  8B A5             .word menuCursor_header
+   10  00:A4DC  97 A5             .word puzzleCursor_header
+   11  00:A4DE  A3 A5             .word noiseBlip_header
+   12                                     
+#[4]   External/song0.i
+   13                         .include "External/song0.i"  ;holds the data for song 0 (header and data streams)
+    1                     ;silence song.  disables all streams
+    2                     
+    3  00:A4E0            song0_header:
+    4  00:A4E0  06            .byte 6          ;6 streams
+    5                         
+    6  00:A4E1  00            .byte MUSIC_SQ1
+    7  00:A4E2  00            .byte $00
+    8                             
+    9  00:A4E3  01                .byte MUSIC_SQ2
+   10  00:A4E4  00                .byte $00
+   11                             
+   12  00:A4E5  02                .byte MUSIC_TRI
+   13  00:A4E6  00                .byte $00
+   14                             
+   15  00:A4E7  03                .byte MUSIC_NOI
+   16  00:A4E8  00                .byte $00
+   17                             
+   18  00:A4E9  04                .byte SFX_1
+   19  00:A4EA  00                .byte $00
+   20                             
+   21  00:A4EB  05                .byte SFX_2
+   22  00:A4EC  00                .byte $00
+#[3]   External/sound_SongTable.asm
+#[4]   Music/Menu.i
+   14                             .include "Music/Menu.i"  ;holds the data for song 1
+    1  00:A4ED            menu_header:
+    2  00:A4ED  01            .byte $01           ;4 streams
+    3                         
+    4  00:A4EE  00            .byte MUSIC_SQ1     ;which stream
+    5  00:A4EF  00            .byte $00           ;status byte (stream enabled)
+#[3]   External/sound_SongTable.asm
+#[4]   Music/puzzleSolvedDrawImage.i
+   15                         .include "Music/puzzleSolvedDrawImage.i"  ;holds the data for song 1
+    1  00:A4F0            drawImg_header:
+    2  00:A4F0  01            .byte $01         ;1 streams
+    3                         
+    4  00:A4F1  00            .byte MUSIC_SQ1     ;which stream
+    5  00:A4F2  00            .byte $00           ;status byte (stream enabled)
+#[3]   External/sound_SongTable.asm
+#[4]   Music/EndScreen.i
+   16                             .include "Music/EndScreen.i"
+    1  00:A4F3            endScreen_header:
+    2  00:A4F3  04            .byte $04           ;4 streams
+    3                         
+    4  00:A4F4  00            .byte MUSIC_SQ1     ;which stream
+    5  00:A4F5  01            .byte $01           ;status byte (stream enabled)
+    6  00:A4F6  00            .byte SQUARE_1      ;which channel
+    7  00:A4F7  70            .byte $70           ;initial duty (01)
+    8  00:A4F8  02            .byte ve_blip_echo  ;volume envelope
+    9  00:A4F9  14 A5         .word endScreen_square1 ;pointer to stream
+   10  00:A4FB  3A            .byte $3A           ;tempo
+   11                         
+   12  00:A4FC  01            .byte MUSIC_SQ2     ;which stream
+   13  00:A4FD  01            .byte $01           ;status byte (stream enabled)
+   14  00:A4FE  01            .byte SQUARE_2      ;which channel
+   15  00:A4FF  B0            .byte $B0           ;initial duty (10)
+   16  00:A500  02            .byte ve_blip_echo  ;volume envelope
+   17  00:A501  35 A5         .word endScreen_square2 ;pointer to stream
+   18  00:A503  3A            .byte $3A           ;tempo
+   19                         
+   20  00:A504  02            .byte MUSIC_TRI     ;which stream
+   21  00:A505  01            .byte $01           ;status byte (stream enabled)
+   22  00:A506  02            .byte TRIANGLE      ;which channel
+   23  00:A507  80            .byte $80           ;initial volume (on)
+   24  00:A508  03            .byte ve_tgl_1      ;volume envelope
+   25  00:A509  56 A5         .word endScreen_tri     ;pointer to stream
+   26  00:A50B  3A            .byte $3A           ;tempo
+   27                         
+   28  00:A50C  03            .byte MUSIC_NOI     ;which stream
+   29  00:A50D  01            .byte $01           ;enabled
+   30  00:A50E  03            .byte NOISE     
+   31  00:A50F  30            .byte $30           ;initial duty_vol
+   32  00:A510  0A            .byte ve_hiHat_decay ;volume envelope
+   33  00:A511  7D A5         .word endScreen_noise   ;pointer to stream
+   34  00:A513  3A            .byte $3A           ;tempo
+   35                     
+   36                         
+   37  00:A514            endScreen_square1:
+   38                     
+   39  00:A514  83            .byte quarter
+   40  00:A515  23                .byte Gs4
+   41  00:A516  82                .byte eighth
+   42  00:A517  23 21             .byte Gs4, Fs4
+   43  00:A519  84 5E             .byte half, rest
+   44  00:A51B  83                .byte quarter
+   45  00:A51C  1F                .byte E4
+   46  00:A51D  82                .byte eighth
+   47  00:A51E  1F 21             .byte E4, Fs4
+   48  00:A520  84 5E             .byte half, rest
+   49                             
+   50  00:A522  83                .byte quarter
+   51  00:A523  25                .byte As4
+   52  00:A524  82                .byte eighth
+   53  00:A525  25 23             .byte As4, Gs4
+   54  00:A527  84 5E             .byte half, rest
+   55  00:A529  82                .byte eighth
+   56  00:A52A  21 23 21          .byte Fs4, Gs4, Fs4, F4
+       00:A52D  20        
+   57  00:A52E  10 17 20          .byte Cs3, Gs3, F4, Gs4
+       00:A531  23        
+   58                             
+   59                         
+   60  00:A532  A1            .byte loop                              ;infinite loop
+   61  00:A533  14 A5         .word endScreen_square1
+   62                     
+   63                         
+   64  00:A535            endScreen_square2:
+   65                     
+   66  00:A535  82            .byte eighth
+   67  00:A536  20 17 20          .byte F4, Gs3, F4, Ds4
+       00:A539  1E        
+   68  00:A53A  84 5E             .byte half, rest
+   69  00:A53C  82                .byte eighth
+   70  00:A53D  1C 15 1C          .byte Cs4, Fs3, Cs4, Ds4
+       00:A540  1E        
+   71  00:A541  84 5E             .byte half, rest
+   72                     
+   73  00:A543  82                .byte eighth
+   74  00:A544  28 21 28          .byte Cs5, Fs4, Cs5, B4
+       00:A547  26        
+   75  00:A548  84 5E             .byte half, rest
+   76  00:A54A  82                .byte eighth
+   77  00:A54B  24 26 24          .byte A4, B4, A4, Gs4
+       00:A54E  23        
+   78  00:A54F  17 1E 23          .byte Gs3, Ds4, Gs4, C5
+       00:A552  27        
+   79  00:A553  A1            .byte loop
+   80  00:A554  35 A5         .word endScreen_square2
+   81                         
+   82  00:A556            endScreen_tri:
+   83                     
+   84  00:A556  83                .byte quarter
+   85  00:A557  1C                .byte Cs4
+   86  00:A558  82                .byte eighth
+   87  00:A559  1C 1A 5E          .byte Cs4, B3, rest
+   88  00:A55C  0E 1A 0E          .byte B2, B3, B2
+   89  00:A55F  83                .byte quarter
+   90  00:A560  18                .byte A3
+   91  00:A561  82                .byte eighth
+   92  00:A562  18 1A 5E          .byte A3, B3, rest
+   93  00:A565  0E 1A 0E          .byte B2, B3, B2
+   94                             
+   95  00:A568  83                .byte quarter
+   96  00:A569  1E                .byte Ds4
+   97  00:A56A  82                .byte eighth
+   98  00:A56B  1E 1C 5E          .byte Ds4, Cs4, rest
+   99  00:A56E  10 1C 10          .byte Cs3, Cs4, Cs3
+  100  00:A571  83                .byte quarter
+  101  00:A572  1A                .byte B3
+  102  00:A573  82                .byte eighth
+  103  00:A574  1A 1C 5E          .byte B3, Cs4, rest
+  104  00:A577  10 1C 10          .byte Cs3, Cs4, Cs3
+  105                             
+  106  00:A57A  A1                .byte loop
+  107  00:A57B  56 A5         .word endScreen_tri
+  108                         
+  109  00:A57D            endScreen_noise:
+  110                     
+  111  00:A57D  82 04 04      .byte eighth, $04, $04
+  112  00:A580  A2 09             .byte volume_envelope, ve_drum_decay 
+  113  00:A582  82 04         .byte eighth, $04
+  114  00:A584  A2 0A             .byte volume_envelope, ve_hiHat_decay
+  115  00:A586  82 04             .byte eighth, $04
+  116                     
+  117  00:A588  A1            .byte loop
+  118  00:A589  7D A5         .word endScreen_noise
+#[3]   External/sound_SongTable.asm
+#[4]   SFX/menuCursor.i
+   17                             .include "SFX/menuCursor.i"  ;holds the data for song 1
+    1  00:A58B            menuCursor_header:
+    2  00:A58B  01            .byte $01           ;1 stream
+    3                         
+    4  00:A58C  04            .byte SFX_1         ;which stream
+    5  00:A58D  01            .byte $01           ;status byte (stream enabled)
+    6  00:A58E  01            .byte SQUARE_2      ;which channel
+    7  00:A58F  70            .byte $70           ;duty (01)
+    8  00:A590  0A            .byte ve_hiHat_decay  ;volume envelope
+    9  00:A591  94 A5         .word menuCursor_square2 ;pointer to stream
+   10  00:A593  80            .byte $80           ;tempo
+   11                         
+   12                         
+   13  00:A594            menuCursor_square2:
+   14  00:A594  81 33         .byte sixteenth, C6
+   15  00:A596  A0            .byte endsound
+#[3]   External/sound_SongTable.asm
+#[4]   SFX/puzzleCursor.i
+   18                             .include "SFX/puzzleCursor.i"  ;holds the data for song 1
+    1  00:A597            puzzleCursor_header:
+    2  00:A597  01            .byte $01           ;1 stream
+    3                         
+    4  00:A598  05            .byte SFX_2         ;which stream
+    5  00:A599  01            .byte $01           ;status byte (stream enabled)
+    6  00:A59A  02            .byte TRIANGLE      ;which channel
+    7  00:A59B  80            .byte $80           ;on
+    8  00:A59C  0A            .byte ve_hiHat_decay  ;volume envelope
+    9  00:A59D  A0 A5         .word puzzleCursor_square2 ;pointer to stream
+   10  00:A59F  80            .byte $80           ;tempo
+   11                         
+   12                         
+   13  00:A5A0            puzzleCursor_square2:
+   14  00:A5A0  81 33         .byte sixteenth, C6
+   15  00:A5A2  A0            .byte endsound
+#[3]   External/sound_SongTable.asm
+#[4]   SFX/noiseBlip.i
+   19                             .include "SFX/noiseBlip.i" 
+    1  00:A5A3            noiseBlip_header:
+    2  00:A5A3  01            .byte $01           ;1 stream
+    3                         
+    4  00:A5A4  05                .byte SFX_2     ;which stream
+    5  00:A5A5  01            .byte $01           ;enabled
+    6  00:A5A6  03            .byte NOISE     
+    7  00:A5A7  30            .byte $30           ;initial duty_vol
+    8  00:A5A8  0C            .byte ve_tinyDecy ;volume envelope
+    9  00:A5A9  AC A5         .word noiseBlip_noise   ;pointer to stream
+   10  00:A5AB  80            .byte $80           ;tempo
+   11                         
+   12  00:A5AC            noiseBlip_noise:
+   13  00:A5AC  81 04         .byte sixteenth, $04
+   14  00:A5AE  A0            .byte endsound
+#[3]   External/sound_SongTable.asm
+#[2]   External/sound_Engine.asm
+  630                         
+#[3]   External/sound_opcodes.asm
+  631                         .include "External/sound_opcodes.asm"    ;our opcode subroutines, jump table and aliases
+    1                     ;these are aliases to use in the sound data.
+    2           00A0      endsound = $A0
+    3           00A1      loop = $A1
+    4           00A2      volume_envelope = $A2
+    5           00A3      duty = $A3
+    6           00A4      set_loop1_counter = $A4
+    7           00A5      loop1 = $A5
+    8           00A6      set_note_offset = $A6
+    9           00A7      adjust_note_offset = $A7
+   10           00A8      transpose = $A8
+   11           00A9      pitch_envelope = $A9
+   12           00AA      arpeggio = $AA
+   13                     
+   14                     ;-----------------------------------------------------------------------
+   15                     ;this is our JUMP TABLE!
+   16  00:A5AF            sound_opcodes:
+   17  00:A5AF  C5 A5         .word se_op_endsound            ;$A0
+   18  00:A5B1  DE A5         .word se_op_infinite_loop       ;$A1
+   19  00:A5B3  F5 A5         .word se_op_change_ve           ;$A2
+   20  00:A5B5  00 A6         .word se_op_duty                ;$A3
+   21  00:A5B7  06 A6         .word se_op_set_loop1_counter   ;$A4
+   22  00:A5B9  0C A6         .word se_op_loop1               ;$A5
+   23  00:A5BB  19 A6         .word se_op_set_note_offset     ;$A6
+   24  00:A5BD  1F A6         .word se_op_adjust_note_offset  ;$A7
+   25  00:A5BF  29 A6         .word se_op_transpose           ;$A8
+   26  00:A5C1  49 A6             .word se_op_change_pe                   ;$A9
+   27  00:A5C3  57 A6             .word se_op_change_arp
+   28                         ;etc, 1 entry per subroutine
+   29                     
+   30                         
+   31                     ;-----------------------------------------------------------------
+   32                     ; these are the actual opcode subroutines
+   33  00:A5C5            se_op_endsound:
+   34  00:A5C5  BD 21 03      lda stream_status, x    ;end of stream, so disable it and silence
+   35  00:A5C8  29 FE         and #%11111110
+   36  00:A5CA  9D 21 03      sta stream_status, x    ;clear enable flag in status byte
+   37                         
+   38  00:A5CD  BD 29 03      lda stream_channel, x
+   39  00:A5D0  C9 02         cmp #TRIANGLE
+   40  00:A5D2  F0 04         beq .silence_tri        ;triangle is silenced differently from squares and noise
+   41  00:A5D4  A9 30         lda #$30                ;squares and noise silenced with #$30
+   42  00:A5D6  D0 02         bne .silence            ; (this will always branch.  bne is cheaper than a jmp)
+   43  00:A5D8            .silence_tri:
+   44  00:A5D8  A9 80         lda #$80                ;triangle silenced with #$80
+   45  00:A5DA            .silence:
+   46  00:A5DA  9D 51 03      sta stream_vol_duty, x  ;store silence value in the stream's volume variable.
+   47                     
+   48  00:A5DD  60            rts
+   49                         
+   50  00:A5DE            se_op_infinite_loop:
+   51  00:A5DE  B1 D2         lda [sound_ptr], y      ;read ptr LO from the data stream
+   52  00:A5E0  9D 31 03      sta stream_ptr_LO, x    ;update our data stream position
+   53  00:A5E3  C8            iny
+   54  00:A5E4  B1 D2         lda [sound_ptr], y      ;read ptr HI from the data stream
+   55  00:A5E6  9D 39 03      sta stream_ptr_HI, x    ;update our data stream position
+   56                         
+   57  00:A5E9  8D D3 00      sta sound_ptr+1         ;update the pointer to reflect the new position.
+   58  00:A5EC  BD 31 03      lda stream_ptr_LO, x
+   59  00:A5EF  8D D2 00      sta sound_ptr
+   60  00:A5F2  A0 FF         ldy #$FF                ;after opcodes return, we do an iny.  Since we reset  
+   61                                                 ;the stream buffer position, we will want y to start out at 0 again.
+   62  00:A5F4  60            rts
+   63                         
+   64  00:A5F5            se_op_change_ve:
+   65  00:A5F5  B1 D2         lda [sound_ptr], y      ;read the argument
+   66  00:A5F7  9D 41 03      sta stream_ve, x        ;store it in our volume envelope variable
+   67  00:A5FA  A9 00         lda #$00
+   68  00:A5FC  9D 49 03      sta stream_ve_index, x  ;reset volume envelope index to the beginning
+   69  00:A5FF  60            rts
+   70                         
+   71  00:A600            se_op_duty:
+   72  00:A600  B1 D2         lda [sound_ptr], y
+   73  00:A602  9D 51 03      sta stream_vol_duty, x
+   74  00:A605  60            rts
+   75                         
+   76  00:A606            se_op_set_loop1_counter:
+   77  00:A606  B1 D2         lda [sound_ptr], y      ;read the argument (# times to loop)
+   78  00:A608  9D 91 03      sta stream_loop1, x     ;store it in the loop counter variable
+   79  00:A60B  60            rts
+   80                         
+   81  00:A60C            se_op_loop1:
+   82  00:A60C  DE 91 03      dec stream_loop1, x     ;decrement the counter
+   83  00:A60F  BD 91 03      lda stream_loop1, x
+   84  00:A612  F0 03         beq .last_iteration     ;if zero, we are done looping
+   85  00:A614  4C DE A5      jmp se_op_infinite_loop ;if not zero, jump back
+   86  00:A617            .last_iteration:
+   87  00:A617  C8            iny                     ;skip the first byte of the address argument
+   88                                                 ; the second byte will be skipped automatically upon return
+   89                                                 ; (see se_fetch_byte after "jsr se_opcode_launcher")
+   90  00:A618  60            rts
+   91                         
+   92  00:A619            se_op_set_note_offset:
+   93  00:A619  B1 D2         lda [sound_ptr], y          ;read the argument
+   94  00:A61B  9D 99 03      sta stream_note_offset, x      ;set the note offset.
+   95  00:A61E  60            rts
+   96                         
+   97  00:A61F            se_op_adjust_note_offset:
+   98  00:A61F  B1 D2         lda [sound_ptr], y          ;read the argument (what value to add)
+   99  00:A621  18            clc
+  100  00:A622  7D 99 03      adc stream_note_offset, x   ;add it to the current offset
+  101  00:A625  9D 99 03      sta stream_note_offset, x   ;and save.
+  102  00:A628  60            rts
+  103                         
+  104  00:A629            se_op_transpose:
+  105  00:A629  B1 D2         lda [sound_ptr], y          ;read low byte of the pointer to our lookup table
+  106  00:A62B  8D D4 00      sta sound_ptr2              ;store it in a new pointer variable
+  107  00:A62E  C8            iny
+  108  00:A62F  B1 D2         lda [sound_ptr], y          ;read high byte of pointer to table
+  109  00:A631  8D D5 00      sta sound_ptr2+1
+  110                         
+  111  00:A634  8C 01 03      sty sound_temp1             ;save y because we are about to destroy it
+  112  00:A637  BD 91 03      lda stream_loop1, x         ;get loop counter, put it in Y
+  113  00:A63A  A8            tay                         ;   this will be our index into the lookup table
+  114  00:A63B  88            dey                         ;subtract 1 because indexes start from 0.
+  115                         
+  116  00:A63C  B1 D4         lda [sound_ptr2], y         ;read a value from the table.
+  117  00:A63E  18            clc
+  118  00:A63F  7D 99 03      adc stream_note_offset, x   ;add it to the note offset
+  119  00:A642  9D 99 03      sta stream_note_offset, x
+  120                         
+  121  00:A645  AC 01 03      ldy sound_temp1             ;restore Y
+  122  00:A648  60            rts
+  123                             
+  124  00:A649            se_op_change_pe:
+  125  00:A649  B1 D2         lda [sound_ptr], y      ;read the argument
+  126  00:A64B  9D 9F 03      sta stream_pe, x        ;store it in our volume envelope variable
+  127  00:A64E  A9 00         lda #$00
+  128  00:A650  9D A7 03      sta stream_pe_index, x  ;reset volume envelope index to the beginning
+  129  00:A653  9D B7 03          sta stream_pe_delay, x
+  130  00:A656  60            rts
+  131                             
+  132  00:A657            se_op_change_arp:
+  133  00:A657  B1 D2             lda [sound_ptr], y
+  134  00:A659  9D BF 03          sta stream_arp, x
+  135  00:A65C  A9 00             lda #$00
+  136  00:A65E  9D C7 03          sta stream_arp_index, x
+  137  00:A661  60                rts
+#[2]   External/sound_Engine.asm
+#[3]   External/note_table.i
+  632                         .include "External/note_table.i" ;period lookup table for notes
+    1                     ;NTSC Period Lookup Table.  Thanks Celius!
+    2                     ;http://www.freewebs.com/the_bott/NotesTableNTSC.txt
+    3  00:A662            note_table:
+    4  00:A662  F1 07         .word                                                                $07F1, $0780, $0713 ; A1-B1 ($00-$02)
+       00:A664  80 07     
+       00:A666  13 07     
+    5  00:A668  AD 06         .word $06AD, $064D, $05F3, $059D, $054D, $0500, $04B8, $0475, $0435, $03F8, $03BF, $0389 ; C2-B2 ($03-$0E)
+       00:A66A  4D 06     
+       00:A66C  F3 05     
+       00:A66E  9D 05     
+       00:A670  4D 05     
+       00:A672  00 05     
+       00:A674  B8 04     
+       00:A676  75 04     
+       00:A678  35 04     
+       00:A67A  F8 03     
+       00:A67C  BF 03     
+       00:A67E  89 03     
+    6  00:A680  56 03         .word $0356, $0326, $02F9, $02CE, $02A6, $027F, $025C, $023A, $021A, $01FB, $01DF, $01C4 ; C3-B3 ($0F-$1A)
+       00:A682  26 03     
+       00:A684  F9 02     
+       00:A686  CE 02     
+       00:A688  A6 02     
+       00:A68A  7F 02     
+       00:A68C  5C 02     
+       00:A68E  3A 02     
+       00:A690  1A 02     
+       00:A692  FB 01     
+       00:A694  DF 01     
+       00:A696  C4 01     
+    7  00:A698  AB 01         .word $01AB, $0193, $017C, $0167, $0151, $013F, $012D, $011C, $010C, $00FD, $00EF, $00E2 ; C4-B4 ($1B-$26)
+       00:A69A  93 01     
+       00:A69C  7C 01     
+       00:A69E  67 01     
+       00:A6A0  51 01     
+       00:A6A2  3F 01     
+       00:A6A4  2D 01     
+       00:A6A6  1C 01     
+       00:A6A8  0C 01     
+       00:A6AA  FD 00     
+       00:A6AC  EF 00     
+       00:A6AE  E2 00     
+    8  00:A6B0  D2 00         .word $00D2, $00C9, $00BD, $00B3, $00A9, $009F, $0096, $008E, $0086, $007E, $0077, $0070 ; C5-B5 ($27-$32)
+       00:A6B2  C9 00     
+       00:A6B4  BD 00     
+       00:A6B6  B3 00     
+       00:A6B8  A9 00     
+       00:A6BA  9F 00     
+       00:A6BC  96 00     
+       00:A6BE  8E 00     
+       00:A6C0  86 00     
+       00:A6C2  7E 00     
+       00:A6C4  77 00     
+       00:A6C6  70 00     
+    9  00:A6C8  6A 00         .word $006A, $0064, $005E, $0059, $0054, $004F, $004B, $0046, $0042, $003F, $003B, $0038 ; C6-B6 ($33-$3E)
+       00:A6CA  64 00     
+       00:A6CC  5E 00     
+       00:A6CE  59 00     
+       00:A6D0  54 00     
+       00:A6D2  4F 00     
+       00:A6D4  4B 00     
+       00:A6D6  46 00     
+       00:A6D8  42 00     
+       00:A6DA  3F 00     
+       00:A6DC  3B 00     
+       00:A6DE  38 00     
+   10  00:A6E0  34 00         .word $0034, $0031, $002F, $002C, $0029, $0027, $0025, $0023, $0021, $001F, $001D, $001B ; C7-B7 ($3F-$4A)
+       00:A6E2  31 00     
+       00:A6E4  2F 00     
+       00:A6E6  2C 00     
+       00:A6E8  29 00     
+       00:A6EA  27 00     
+       00:A6EC  25 00     
+       00:A6EE  23 00     
+       00:A6F0  21 00     
+       00:A6F2  1F 00     
+       00:A6F4  1D 00     
+       00:A6F6  1B 00     
+   11  00:A6F8  1A 00         .word $001A, $0018, $0017, $0015, $0014, $0013, $0012, $0011, $0010, $000F, $000E, $000D ; C8-B8 ($4B-$56)
+       00:A6FA  18 00     
+       00:A6FC  17 00     
+       00:A6FE  15 00     
+       00:A700  14 00     
+       00:A702  13 00     
+       00:A704  12 00     
+       00:A706  11 00     
+       00:A708  10 00     
+       00:A70A  0F 00     
+       00:A70C  0E 00     
+       00:A70E  0D 00     
+   12  00:A710  0C 00         .word $000C, $000C, $000B, $000A, $000A, $0009, $0008                                    ; C9-F#9 ($57-$5D)
+       00:A712  0C 00     
+       00:A714  0B 00     
+       00:A716  0A 00     
+       00:A718  0A 00     
+       00:A71A  09 00     
+       00:A71C  08 00     
+   13  00:A71E  00 00         .word $0000 ;rest
+   14                     
+   15                     ;Note: octaves in music traditionally start at C, not A    
+   16           0000      A1 = $00    ;the "1" means Octave 1
+   17           0001      As1 = $01   ;the "s" means "sharp"
+   18           0001      Bb1 = $01   ;the "b" means "flat"  A# == Bb, so same value
+   19           0002      B1 = $02
+   20                     
+   21           0003      C2 = $03
+   22           0004      Cs2 = $04
+   23           0004      Db2 = $04
+   24           0005      D2 = $05
+   25           0006      Ds2 = $06
+   26           0006      Eb2 = $06
+   27           0007      E2 = $07
+   28           0008      F2 = $08
+   29           0009      Fs2 = $09
+   30           0009      Gb2 = $09
+   31           000A      G2 = $0A
+   32           000B      Gs2 = $0B
+   33           000B      Ab2 = $0B
+   34           000C      A2 = $0C
+   35           000D      As2 = $0D
+   36           000D      Bb2 = $0D
+   37           000E      B2 = $0E
+   38                     
+   39           000F      C3 = $0F
+   40           0010      Cs3 = $10
+   41           0010      Db3 = $10
+   42           0011      D3 = $11
+   43           0012      Ds3 = $12
+   44           0012      Eb3 = $12
+   45           0013      E3 = $13
+   46           0014      F3 = $14
+   47           0015      Fs3 = $15
+   48           0015      Gb3 = $15
+   49           0016      G3 = $16
+   50           0017      Gs3 = $17
+   51           0017      Ab3 = $17
+   52           0018      A3 = $18
+   53           0019      As3 = $19
+   54           0019      Bb3 = $19
+   55           001A      B3 = $1a
+   56                     
+   57           001B      C4 = $1b
+   58           001C      Cs4 = $1c
+   59           001C      Db4 = $1c
+   60           001D      D4 = $1d
+   61           001E      Ds4 = $1e
+   62           001E      Eb4 = $1e
+   63           001F      E4 = $1f
+   64           0020      F4 = $20
+   65           0021      Fs4 = $21
+   66           0021      Gb4 = $21
+   67           0022      G4 = $22
+   68           0023      Gs4 = $23
+   69           0023      Ab4 = $23
+   70           0024      A4 = $24
+   71           0025      As4 = $25
+   72           0025      Bb4 = $25
+   73           0026      B4 = $26
+   74                     
+   75           0027      C5 = $27
+   76           0028      Cs5 = $28
+   77           0028      Db5 = $28
+   78           0029      D5 = $29
+   79           002A      Ds5 = $2a
+   80           002A      Eb5 = $2a
+   81           002B      E5 = $2b
+   82           002C      F5 = $2c
+   83           002D      Fs5 = $2d
+   84           002D      Gb5 = $2d
+   85           002E      G5 = $2e
+   86           002F      Gs5 = $2f
+   87           002F      Ab5 = $2f
+   88           0030      A5 = $30
+   89           0031      As5 = $31
+   90           0031      Bb5 = $31
+   91           0032      B5 = $32
+   92                     
+   93           0033      C6 = $33
+   94           0034      Cs6 = $34
+   95           0034      Db6 = $34
+   96           0035      D6 = $35
+   97           0036      Ds6 = $36
+   98           0036      Eb6 = $36
+   99           0037      E6 = $37
+  100           0038      F6 = $38
+  101           0039      Fs6 = $39
+  102           0039      Gb6 = $39
+  103           003A      G6 = $3a
+  104           003B      Gs6 = $3b
+  105           003B      Ab6 = $3b
+  106           003C      A6 = $3c
+  107           003D      As6 = $3d
+  108           003D      Bb6 = $3d
+  109           003E      B6 = $3e
+  110                     
+  111           003F      C7 = $3f
+  112           0040      Cs7 = $40
+  113           0040      Db7 = $40
+  114           0041      D7 = $41
+  115           0042      Ds7 = $42
+  116           0042      Eb7 = $42
+  117           0043      E7 = $43
+  118           0044      F7 = $44
+  119           0045      Fs7 = $45
+  120           0045      Gb7 = $45
+  121           0046      G7 = $46
+  122           0047      Gs7 = $47
+  123           0047      Ab7 = $47
+  124           0048      A7 = $48
+  125           0049      As7 = $49
+  126           0049      Bb7 = $49
+  127           004A      B7 = $4a
+  128                     
+  129           004B      C8 = $4b
+  130           004C      Cs8 = $4c
+  131           004C      Db8 = $4c
+  132           004D      D8 = $4d
+  133           004E      Ds8 = $4e
+  134           004E      Eb8 = $4e
+  135           004F      E8 = $4f
+  136           0050      F8 = $50
+  137           0051      Fs8 = $51
+  138           0051      Gb8 = $51
+  139           0052      G8 = $52
+  140           0053      Gs8 = $53
+  141           0053      Ab8 = $53
+  142           0054      A8 = $54
+  143           0055      As8 = $55
+  144           0055      Bb8 = $55
+  145           0056      B8 = $56
+  146                     
+  147           0057      C9 = $57
+  148           0058      Cs9 = $58
+  149           0058      Db9 = $58
+  150           0059      D9 = $59
+  151           005A      Ds9 = $5a
+  152           005A      Eb9 = $5a
+  153           005B      E9 = $5b
+  154           005C      F9 = $5c
+  155           005D      Fs9 = $5d
+  156           005D      Gb9 = $5d
+  157                     
+  158           005E      rest = $5e
+#[2]   External/sound_Engine.asm
+#[3]   External/sound_EffectTables.asm
+  633                             .include "External/sound_EffectTables.asm"
+    1                     
+#[4]   External/note_length_table.i
+    2                         .include "External/note_length_table.i"
+    1                     ;note length constants (aliases)
+    2           0080      thirtysecond = $80
+    3           0081      sixteenth = $81
+    4           0082      eighth = $82
+    5           0083      quarter = $83
+    6           0084      half = $84
+    7           0085      whole = $85
+    8           0086      d_sixteenth = $86
+    9           0087      d_eighth = $87
+   10           0088      d_quarter = $88
+   11           0089      d_half = $89
+   12           008A      d_whole = $8A   ;don't forget we are counting in hex
+   13           008B      t_quarter = $8B
+   14           008C      five_eighths =$8C
+   15           008D      five_sixteenths=$8D
+   16           008E      d_half_d_eight = $8E
+   17           008F      whole_quarter_sixteenth = $8F
+   18           0090      d_half_eighth = $90
+   19           0091      whole_sixteenth = $91
+   20           0092      sixtyfourth = $92
+   21                     
+   22                     
+   23  00:A720            note_length_table:
+   24  00:A720  01            .byte $01   ;32nd note
+   25  00:A721  02            .byte $02   ;16th note
+   26  00:A722  04            .byte $04   ;8th note
+   27  00:A723  08            .byte $08   ;quarter note
+   28  00:A724  10            .byte $10   ;half note
+   29  00:A725  20            .byte $20   ;whole note
+   30                                   ;---dotted notes
+   31  00:A726  03            .byte $03   ;dotted 16th note
+   32  00:A727  06            .byte $06   ;dotted 8th note
+   33  00:A728  0C            .byte $0C   ;dotted quarter note
+   34  00:A729  18            .byte $18   ;dotted half note
+   35  00:A72A  30            .byte $30   ;dotted whole note?
+   36                                   ;---other
+   37  00:A72B  07            .byte $07   ;modified quarter to fit after d_sixteenth triplets
+   38  00:A72C  14            .byte $14   ;2 quarters plus an 8th
+   39  00:A72D  0A            .byte $0A   
+   40  00:A72E  1E                .byte $1E       ;dotted half + dotted eighth
+   41  00:A72F  2A                .byte $2A
+   42  00:A730  1C                .byte $1C
+   43  00:A731  22                .byte $22
+   44  00:A732  00                .byte $00
+#[3]   External/sound_EffectTables.asm
+#[4]   External/vol_envelopes.i
+    3                         .include "External/vol_envelopes.i"
+    1  00:A733            volume_envelopes:
+    2  00:A733  51 A7         .word se_ve_1
+    3  00:A735  59 A7         .word se_ve_2
+    4  00:A737  70 A7         .word se_ve_3
+    5  00:A739  93 A7         .word se_ve_tgl_1
+    6  00:A73B  9B A7         .word se_ve_tgl_2
+    7  00:A73D  A6 A7         .word se_battlekid_loud
+    8  00:A73F  AC A7         .word se_battlekid_loud_long
+    9  00:A741  B2 A7         .word se_battlekid_soft
+   10  00:A743  B8 A7         .word se_battlekid_soft_long
+   11  00:A745  BE A7         .word se_drum_decay
+   12  00:A747  C8 A7             .word se_hiHat_decay
+   13  00:A749  CD A7             .word se_long_decay
+   14  00:A74B  00 A8             .word se_tinyDecy
+   15  00:A74D  03 A8             .word se_noDecay
+   16  00:A74F  05 A8             .word se_long_tremelo
+   17                         
+   18  00:A751            se_ve_1:
+   19  00:A751  0F 0E 0D      .byte $0F, $0E, $0D, $0C, $09, $05, $00
+       00:A754  0C 09 05  
+       00:A757  00        
+   20  00:A758  FF            .byte $FF
+   21  00:A759            se_ve_2:
+   22  00:A759  01 01 02      .byte $01, $01, $02, $02, $03, $03, $04, $04, $07, $07
+       00:A75C  02 03 03  
+       00:A75F  04 04 07  
+       00:A762  07        
+   23  00:A763  08 08 0A      .byte $08, $08, $0A, $0A, $0C, $0C, $0D, $0D, $0E, $0E
+       00:A766  0A 0C 0C  
+       00:A769  0D 0D 0E  
+       00:A76C  0E        
+   24  00:A76D  0F 0F         .byte $0F, $0F
+   25  00:A76F  FF            .byte $FF
+   26  00:A770            se_ve_3:
+   27  00:A770  0D 0D 0D      .byte $0D, $0D, $0D, $0C, $0B, $00, $00, $00, $00, $00
+       00:A773  0C 0B 00  
+       00:A776  00 00 00  
+       00:A779  00        
+   28  00:A77A  00 00 00      .byte $00, $00, $00, $00, $06, $06, $06, $05, $04, $00
+       00:A77D  00 06 06  
+       00:A780  06 05 04  
+       00:A783  00        
+   29  00:A784  00 00 00          .byte $00, $00, $00, $00, $00, $00, $00, $00, $03, $03
+       00:A787  00 00 00  
+       00:A78A  00 00 03  
+       00:A78D  03        
+   30  00:A78E  03 02 01          .byte $03, $02, $01, $00
+       00:A791  00        
+   31  00:A792  FF            .byte $FF
+   32                         
+   33  00:A793            se_ve_tgl_1:
+   34  00:A793  0F 0B 09      .byte $0F, $0B, $09, $08, $07, $06, $00
+       00:A796  08 07 06  
+       00:A799  00        
+   35  00:A79A  FF            .byte $FF
+   36                         
+   37  00:A79B            se_ve_tgl_2:
+   38  00:A79B  0B 0B 0A      .byte $0B, $0B, $0A, $09, $08, $07, $06, $06, $06, $05
+       00:A79E  09 08 07  
+       00:A7A1  06 06 06  
+       00:A7A4  05        
+   39  00:A7A5  FF            .byte $FF
+   40                         
+   41                         
+   42  00:A7A6            se_battlekid_loud:
+   43  00:A7A6  0F 0E 0C      .byte $0f, $0e, $0c, $0a, $00
+       00:A7A9  0A 00     
+   44  00:A7AB  FF            .byte $FF
+   45                         
+   46  00:A7AC            se_battlekid_loud_long:
+   47  00:A7AC  0F 0E 0C      .byte $0f, $0e, $0c, $0a, $09
+       00:A7AF  0A 09     
+   48  00:A7B1  FF            .byte $FF
+   49                         
+   50  00:A7B2            se_battlekid_soft:
+   51  00:A7B2  09 08 06      .byte $09, $08, $06, $04, $00
+       00:A7B5  04 00     
+   52  00:A7B7  FF            .byte $FF
+   53                         
+   54  00:A7B8            se_battlekid_soft_long:
+   55  00:A7B8  09 08 06      .byte $09, $08, $06, $04, $03
+       00:A7BB  04 03     
+   56  00:A7BD  FF            .byte $FF
+   57                         
+   58  00:A7BE            se_drum_decay:
+   59  00:A7BE  0E 09 08      .byte $0E, $09, $08, $06, $04, $03, $02, $01, $00
+       00:A7C1  06 04 03  
+       00:A7C4  02 01 00  
+   60  00:A7C7  FF            .byte $FF
+   61                             
+   62  00:A7C8            se_hiHat_decay:
+   63  00:A7C8  0E 06 02      .byte $0E, $06, $02, $00
+       00:A7CB  00        
+   64  00:A7CC  FF                .byte $FF
+   65                         
+   66  00:A7CD            se_long_decay:
+   67                             ;attack
+   68  00:A7CD  0E            .byte $0E
+   69                             ;decay
+   70  00:A7CE  0F 0F 0F          .byte $0F, $0F, $0F, $0E, $0E, $0E, $0D, $0D, $0D
+       00:A7D1  0E 0E 0E  
+       00:A7D4  0D 0D 0D  
+   71  00:A7D7  0C 0C 0C          .byte $0C, $0C, $0C, $0B, $0B, $0B, $0A, $0A, $0A
+       00:A7DA  0B 0B 0B  
+       00:A7DD  0A 0A 0A  
+   72  00:A7E0  0A 0A 0A          .byte $0A, $0A, $0A, $09, $09, $09, $08, $08, $08
+       00:A7E3  09 09 09  
+       00:A7E6  08 08 08  
+   73  00:A7E9  07 07 07          .byte $07, $07, $07, $06, $06, $06, $05, $05, $05
+       00:A7EC  06 06 06  
+       00:A7EF  05 05 05  
+   74  00:A7F2  04 04 04      .byte $04, $04, $04, $03, $03, $03, $02, $02, $02
+       00:A7F5  03 03 03  
+       00:A7F8  02 02 02  
+   75  00:A7FB  01 01 01          .byte $01, $01, $01, $00
+       00:A7FE  00        
+   76  00:A7FF  FF            .byte $FF
+   77                             
+   78  00:A800            se_tinyDecy:
+   79  00:A800  0F 00             .byte $0F, $00
+   80  00:A802  FF                .byte $FF
+   81                     
+   82  00:A803            se_noDecay:
+   83  00:A803  0F                .byte $0F
+   84  00:A804  FF                .byte $FF
+   85                             
+   86  00:A805            se_long_tremelo:
+   87                             ;attack
+   88  00:A805  0E            .byte $0E
+   89                             ;decay
+   90  00:A806  0F 0F 0F          .byte $0F, $0F, $0F, $09, $09, $09, $0E, $0E, $0E
+       00:A809  09 09 09  
+       00:A80C  0E 0E 0E  
+   91  00:A80F  08 08 08      .byte $08, $08, $08, $0D, $0D, $0D, $07, $07, $07
+       00:A812  0D 0D 0D  
+       00:A815  07 07 07  
+   92  00:A818  0C 0C 0C          .byte $0C, $0C, $0C, $06, $06, $06, $0B, $0B, $0B
+       00:A81B  06 06 06  
+       00:A81E  0B 0B 0B  
+   93  00:A821  05 05 05          .byte $05, $05, $05, $0A, $0A, $0A, $04, $04, $04
+       00:A824  0A 0A 0A  
+       00:A827  04 04 04  
+   94  00:A82A  09 09 09          .byte $09, $09, $09, $03, $03, $03, $08, $08, $08
+       00:A82D  03 03 03  
+       00:A830  08 08 08  
+   95  00:A833  00            .byte $00
+   96  00:A834  FF            .byte $FF
+   97                     
+   98                             
+   99           0000      ve_short_staccato = $00
+  100           0001      ve_fade_in = $01
+  101           0002      ve_blip_echo = $02
+  102           0003      ve_tgl_1 = $03
+  103           0004      ve_tgl_2 = $04
+  104           0005      ve_battlekid_1 = $05
+  105           0006      ve_battlekid_1b = $06
+  106           0007      ve_battlekid_2 = $07
+  107           0008      ve_battlekid_2b = $08
+  108           0009      ve_drum_decay = $09
+  109           000A      ve_hiHat_decay = $0A
+  110           000B      ve_long_decay = $0B
+  111           000C      ve_tinyDecy = $0C
+  112           000D      ve_noDecay = $0D
+  113           000E      ve_long_tremelo = $0E
+#[3]   External/sound_EffectTables.asm
+#[4]   External/pitch_envelopes.i
+    4                             .include "External/pitch_envelopes.i"
+    1  00:A835            pitch_envelopes:
+    2  00:A835  3D A8         .word se_pe_none
+    3  00:A837  3F A8         .word se_pe_mod
+    4  00:A839  53 A8             .word se_pe_sweep
+    5  00:A83B  69 A8             .word se_pe_bassKick
+    6                     
+    7           0080      pe_loopLast = $80
+    8           0081      pe_loopAll = $81
+    9           0082      pe_loopPart = $82       ;requires byte timer amount after
+   10           0083      pe_delay = $83          ;requires byte amount after - of negative, not yet reset. only allow if timer is currently 0
+   11                     
+   12  00:A83D            se_pe_none:
+   13  00:A83D  00                .byte $00
+   14  00:A83E  80                .byte pe_loopLast
+   15                     
+   16  00:A83F            se_pe_mod:
+   17                     
+   18  00:A83F  00 83 0A          .byte $00, pe_delay, $0A, $00, $00, $FE, $FE, $FC, $FC, $FE, $FE, $00, $00, $02, $02, $04, $04, $02, $02
+       00:A842  00 00 FE  
+       00:A845  FE FC FC  
+       00:A848  FE FE 00  
+       00:A84B  00 02 02  
+       00:A84E  04 04 02  
+       00:A851  02        
+   19  00:A852  81                .byte pe_loopAll
+   20                     
+   21  00:A853            se_pe_sweep:
+   22                             
+   23  00:A853  10 0C 08          .byte $10, $0C, $08, $04, $00, $00, $FE, $FE, $FC, $FC, $FE, $FE, $00, $00, $02, $02, $04, $04, $02, $02
+       00:A856  04 00 00  
+       00:A859  FE FE FC  
+       00:A85C  FC FE FE  
+       00:A85F  00 00 02  
+       00:A862  02 04 04  
+       00:A865  02 02     
+   24  00:A867  82 10             .byte pe_loopPart, $10
+   25                     
+   26  00:A869            se_pe_bassKick:
+   27  00:A869  90 C0 F0          .byte $90, $C0, $F0, $20, $50, $70
+       00:A86C  20 50 70  
+   28  00:A86F  80                .byte pe_loopLast
+   29                     
+   30           0000      pe_none = $00
+   31           0001      pe_mod = $01
+   32           0002      pe_sweep = $02
+   33           0003      pe_bassKick = $03
+   34                     
+#[3]   External/sound_EffectTables.asm
+#[4]   External/arpeggios.i
+    5                             .include "External/arpeggios.i"
+    1  00:A870            arpeggios:
+    2  00:A870  74 A8             .word se_arp_none
+    3  00:A872  76 A8         .word se_arp_lowerThird
+    4                     
+    5  00:A874            se_arp_none:
+    6  00:A874  00                .byte $00
+    7  00:A875  FF                .byte $FF
+    8                     
+    9  00:A876            se_arp_lowerThird:
+   10  00:A876  00 00 01          .byte $00, $00, $01, $01
+       00:A879  01        
+   11  00:A87A  FF                .byte $FF
+   12                     
+   13           0000      arp_none = $00
+   14           0001      arp_lowerThird = $01
+   15                     
+   16                     
+   17                     
+#[3]   External/sound_EffectTables.asm
+#[2]   External/sound_Engine.asm
+  634                     
+  635  00:A87B            BankSong:       ;;label for bank song
+#[1]   SoundEnginePreComp.asm

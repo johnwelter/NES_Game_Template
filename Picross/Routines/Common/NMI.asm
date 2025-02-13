@@ -18,9 +18,8 @@ nmi_started:
   JMP WakeUp
 
 update_controllers:
-
-  .include "Routines/Common/ReadControllers.asm"
   
+  JSR ReadControllers
   JSR ProcessPPUString
   
   
@@ -74,3 +73,4 @@ WakeUp:
   .include "Routines/NMI_States/UpdateTitleNMI.asm"
   .include "Routines/NMI_States/UpdateGameNMI.asm"
   .include "Routines/NMI_States/UpdateGameOverNMI.asm"
+  .include "Routines/Common/ReadControllers.asm"

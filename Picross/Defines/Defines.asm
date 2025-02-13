@@ -22,3 +22,9 @@
   .rsset $7000
   .include "Defines/SaveVariables.asm"
 
+
+;precompiled labels
+
+  .include "SoundEnginePreComp.fns"
+  ;.include "Picross.fns"
+  
