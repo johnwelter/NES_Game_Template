@@ -1,19 +1,12 @@
   .bank 4
   .org $8000
   
-  .include "Puzzles/cat.asm"
+  .include "Puzzles/B2.asm"
 
   .bank 5
   .org $A000
   
-;puzzles
-  .word cat, cat, cat, cat, cat, cat, cat, cat, cat 
-  .word cat, cat, cat, cat, cat, cat, cat, cat, cat 
-  .word cat, cat, cat, cat, cat, cat, cat, cat, cat
-;puzzle names
-  .word catName, catName, catName, catName, catName, catName, catName, catName, catName 
-  .word catName, catName, catName, catName, catName, catName, catName, catName, catName 
-  .word catName, catName, catName, catName, catName, catName, catName, catName, catName
+  .include "Puzzles/B2Tables.asm"
 ;puzzle sprites
   .db $00, $00, $00, $00
   .db $00, $00, $00, $00

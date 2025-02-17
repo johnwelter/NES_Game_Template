@@ -587,67 +587,19 @@ UpdateDrawImage:
   ;;do a palette draw
   ;;puzzle address + 03 has the desired palette offset
 
+  MACROAddPPUStringEntryRawData #$3F, #$01, #DRAW_HORIZONTAL, #03
   LDY #$03
   LDA [puzzle_address],y
-  AND #$0F
-  TAX
-  
+  STA Palette_Copy-2, y
+  JSR WriteToPPUString
+  INY
   LDA [puzzle_address],y
-  AND #$10
-  BEQ .storeBottomVals
-  
-  TXA
-  ORA #$10
-  STA temp2
-  TXA
-  ORA #$20
-  STA temp3
-  TXA
-  ORA #$30
-  STA temp4
-
-  JMP .checkKeepWhite
-  
-.storeBottomVals:
-
-  TXA
-  ORA #$00
-  STA temp2
-  TXA
-  ORA #$10
-  STA temp3
-  TXA
-  ORA #$20
-  STA temp4
-  
-.checkKeepWhite:
-  
+  STA Palette_Copy-2, y
+  JSR WriteToPPUString
+  INY
   LDA [puzzle_address],y
-  AND #$20
-  BEQ .loadPalToPPUStr
-  
-  LDA #$30
-  STA temp4
-  
-  
-.loadPalToPPUStr:
-  
-  MACROAddPPUStringEntryRawData #$3F, #$01, #DRAW_HORIZONTAL, #03
-  LDA temp2
+  STA Palette_Copy-2, y
   JSR WriteToPPUString
-  LDA temp3
-  JSR WriteToPPUString
-  LDA temp4
-  JSR WriteToPPUString
-  
-  LDX #$01
-.copyLoop:
-  ;;also store in the copy 
-  LDA temp1, x
-  STA Palette_Copy, x
-  INX
-  CPX #$04
-  BNE .copyLoop
   
   LDY #$00
   LDA [puzzle_address], y
@@ -1195,7 +1147,7 @@ CheckAgainstSolution:
 .skipDouble:
   LDA temp1
   CLC
-  ADC #$04 ;; add to get past header
+  ADC #$06 ;; add to get past header
   STA temp1
   
   ;;div X position by 8 to get the byte index
@@ -1288,7 +1240,7 @@ PuzzleScrollVert:
   
 PuzzleHeaderSkips:
 
-  .db $09, $18, $22
+  .db $0B, $1A, $24
   
 PuzzleSaveLocations:
   .word puzzle_clear_bank0, puzzle_clear_bank1, puzzle_clear_bank2

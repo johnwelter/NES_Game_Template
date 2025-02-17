@@ -1,19 +1,12 @@
   .bank 2
   .org $8000
   
-  .include "Puzzles/frog.asm"
+  .include "Puzzles/B1.asm"
 
   .bank 3
   .org $A000
  
-;puzzles
-  .word frog, frog, frog, frog, frog, frog, frog, frog, frog
-  .word frog, frog, frog, frog, frog, frog, frog, frog, frog
-  .word frog, frog, frog, frog, frog, frog, frog, frog, frog
-;puzzle names
-  .word frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName
-  .word frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName
-  .word frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName, frogName
+  .include "Puzzles/B1Tables.asm"
 ;puzzle sprites
   .db $00, $00, $00, $00
   .db $00, $00, $00, $00

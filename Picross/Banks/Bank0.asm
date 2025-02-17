@@ -3,22 +3,12 @@
   .bank 0
   .org $8000
   
-  .include "Puzzles/house.asm" 
-  .include "Puzzles/test.asm"
-  .include "Puzzles/test5.asm"
-  .include "Puzzles/test10.asm"
-  .include "Puzzles/myGlyph.asm"
+  .include "Puzzles/B0.asm"
 
   .bank 1
   .org $A000
-;puzzles
-  .word test5, test10, myGlyph, test, test, test, test, test, test
-  .word house, test, test, test, test, test, test, test, test
-  .word house, test, test, test, test, test, test, test, test
-;puzzle names
-  .word test5Name, test10Name, myGlyphName, testName, testName, testName, testName, testName, testName
-  .word houseName, testName, testName, testName, testName, testName, testName, testName, testName
-  .word houseName, testName, testName, testName, testName, testName, testName, testName, testName
+
+  .include "Puzzles/B0Tables.asm"
 ;puzzle sprites
   .db $00, $00, $00, $00
   .db $00, $00, $00, $00

@@ -14,6 +14,17 @@ ReadControllersSafe:
 	CMP gamepad
 	BNE .reRead
 	
+.finishARead:
+	;;comapre last to current, find the pressed buttons this frame
+	LDA gamepadLast
+	EOR #$FF
+	AND gamepad
+	STA gamepadPressed
+	
+	
+	LDA gamepad
+	STA gamepadLast
+	
 	PLA
 	TAY
 	PLA
@@ -41,15 +52,6 @@ ReadControllers:
 	BCC .readControllerABytesLoop
 
 	
-.finishARead:
-	;;comapre last to current, find the pressed buttons this frame
-	LDA gamepadLast
-	EOR #$FF
-	AND gamepad
-	STA gamepadPressed
-	
-	
-	LDA gamepad
-	STA gamepadLast
+
 	
 	RTS

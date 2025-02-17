@@ -1,7 +1,7 @@
 ;silence song.  disables all streams
 
 song0_header:
-    .byte 6          ;6 streams
+    .byte 8          ;6 streams
     
     .byte MUSIC_SQ1
     .byte $00
@@ -19,4 +19,10 @@ song0_header:
 	.byte $00
 	
 	.byte SFX_2
+	.byte $00
+	
+	.byte MUSIC_DPMC
+	.byte $00
+	
+	.byte SFX_DPMC
 	.byte $00

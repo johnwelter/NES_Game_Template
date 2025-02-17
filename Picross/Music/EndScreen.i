@@ -1,5 +1,5 @@
 endScreen_header:
-    .byte $04           ;4 streams
+    .byte $05           ;5 streams
     
     .byte MUSIC_SQ1     ;which stream
     .byte $01           ;status byte (stream enabled)
@@ -32,6 +32,9 @@ endScreen_header:
     .byte ve_hiHat_decay ;volume envelope
     .word endScreen_noise   ;pointer to stream
     .byte $3A           ;tempo
+	
+	.byte MUSIC_DPMC
+	.byte $00
 
     
 endScreen_square1:

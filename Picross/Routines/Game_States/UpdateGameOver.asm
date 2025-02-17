@@ -169,9 +169,23 @@ UpdateGameOverWaitInput:
 .loadNext:  
 
   INC puzzle_index
-  CMP #$28
+  LDA puzzle_index
+  CMP #27
+  BNE .goToNextPuzzle
+
+  ;; load a new bank, first
+  INC bank_index
+  LDA bank_index
+  CMP #03
   BEQ .loadTitle
   
+  LDA #$00
+  STA puzzle_index
+  JSR LoadBank
+  
+  
+.goToNextPuzzle:
+
   MACROGetLabelPointer PUZZLE_TABLE, table_address
   MACROGetDoubleIndex puzzle_index
   JSR GetTableAtIndex

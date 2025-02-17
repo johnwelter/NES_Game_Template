@@ -19,7 +19,7 @@ nmi_started:
 
 update_controllers:
   
-  JSR ReadControllers
+  JSR ReadControllersSafe
   JSR ProcessPPUString
   
   
