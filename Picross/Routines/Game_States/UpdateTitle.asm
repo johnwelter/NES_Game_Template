@@ -90,6 +90,10 @@ UpdateBankSelection:
   JSR ResetMapper
   LDA tempBank
   JSR LoadPRGBank
+  JSR ResetMapper
+  LDA tempBank
+  ASL A
+  JSR LoadCHRBankA
 
 .goToNext:
   INC mode_state
@@ -156,6 +160,7 @@ UpdatePuzzleSelection:
   LDA #$FF
   LDX #$01
   JSR SetSpriteImage
+  JSR SetPuzzleDisplaySprite
   JSR InitBankPointer
   LDA tempBank
   STA mouse_index
@@ -197,6 +202,9 @@ UpdateScrollBack:
   
 UpdateTitleExit:
   
+  LDA #$FF
+  JSR SetPuzzleDisplaySprite
+  
   lda #$00
   sta current_song
   lda current_song
@@ -216,7 +224,7 @@ UpdateTitleExit:
   
   ASL temp1
   JMP .setupPuzzle
-  
+    
 .loadPuzzle:
   ;; we can also pick out the puzzle index
   ;; we have the mouse indexes - one vert, one hori
@@ -549,6 +557,9 @@ UpdatePuzzleInfo:
   
   MACROAddPPUStringEntryRepeat #$26, #$47, #DRAW_HORIZONTAL, #$10, #$63
   MACROAddPPUStringEntryTable temp1, temp2, #DRAW_HORIZONTAL, DefaultTimeString
+  ;;also set the display sprite to all FF
+  LDA #$FF
+  JSR SetPuzzleDisplaySprite
   JMP .leave
 
 .drawTitle:
@@ -566,6 +577,14 @@ UpdatePuzzleInfo:
   STA title_draw_address+1
   
   JSR DrawTitle
+
+  LDA tempPuzz
+  ASL A
+  ASL A
+  CLC 
+  ADC #$10
+  JSR SetPuzzleDisplaySprite
+ 
 .leave:
   RTS
 
@@ -589,6 +608,36 @@ PlayNoiseBlipSound:
   JSR sound_load
   RTS 
   
+SetPuzzleDisplaySprite:
+
+  ;;A has starting sprite index, will never go over FF
+  LDX #$02
+  PHA
+  LDA #SPRITE_ID
+  JSR GetSpriteDataIndexInX
+  PLA
+  STA SPRITE_DATA, x 
+  LDY #$01
+	
+.loop:
+  CPY #$04
+  BEQ .leave
+  CMP #$FF
+  BEQ .skipSpriteInc
+  CLC
+  ADC #1
+.skipSpriteInc:
+  ;;increment to the next sprite data, by adding 4 to x
+  INX
+  INX
+  INX
+  INX
+  STA SPRITE_DATA, x
+  INY
+  BNE .loop	;;should never get to 0 again
+  
+.leave:
+  RTS
 
 ContinueText:
 

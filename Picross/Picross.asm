@@ -240,16 +240,24 @@ SampleLength:
   
   .bank 8
   .org $0000
-  .incbin "CHRROM/Bank0.chr"   ;includes 8KB graphics file from SMB1
+  .incbin "CHRROM/FirstSixteenSprites.chr"
+  .incbin "CHRROM/B0Sprites.chr"  
+  .incbin "CHRROM/BGTiles.chr"
   
   .bank 9
   .org $0000
-  .incbin "CHRROM/Bank1.chr"
+  .incbin "CHRROM/FirstSixteenSprites.chr"
+  .incbin "CHRROM/B1Sprites.chr"  
+  .incbin "CHRROM/BGTiles.chr"
   
   .bank 10
   .org $0000
-  .incbin "CHRROM/Bank2.chr"
+  .incbin "CHRROM/FirstSixteenSprites.chr"
+  .incbin "CHRROM/B1Sprites.chr"  
+  .incbin "CHRROM/BGTiles.chr"
   
   .bank 11
   .org $0000
-  .incbin "CHRROM/Bank3.chr"
+  .incbin "CHRROM/FirstSixteenSprites.chr"
+  .incbin "CHRROM/B0Sprites.chr"  
+  .incbin "CHRROM/BGTiles.chr"
